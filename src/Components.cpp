@@ -1,5 +1,8 @@
 #include "Components.h"
 #include "VulkanRenderer.h"
+#include "core/VulkanDescriptor.h"
+#include "core/VulkanSwapChain.h"
+#include "core/VulkanPipeline.h"
 
 VulkanRenderer& vulkanRender = VulkanRenderer::getInstance();
 
@@ -22,12 +25,6 @@ void Entity::render(VkCommandBuffer commandBuffer, const CameraComponent &camera
     if (transform.scale == glm::vec3(0.0f)) {
         transform.scale = glm::vec3(1.0f);
     }
-    
-    if (!material.pipeline || !material.pipelineLayout) {
-        vulkanRender.createGraphicsPipeline();
-        material.pipeline = vulkanRender.graphicsPipeline;
-        material.pipelineLayout = vulkanRender.pipelineLayout;
-    }
 
     // Update matrices
     glm::mat4 modelMatrix = transform.getMatrix();
@@ -39,7 +36,7 @@ void Entity::render(VkCommandBuffer commandBuffer, const CameraComponent &camera
     ubo.projection = camera.projection;
     
     // Update GPU data
-    vulkanRender.updateUniformBuffer(commandBuffer, material.uniformBuffer, ubo);
+    vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(commandBuffer, material.uniformBuffer, ubo);
 
     // Bind pipeline and descriptors
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);

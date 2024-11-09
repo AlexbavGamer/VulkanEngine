@@ -69,11 +69,11 @@ void createSphere(MeshComponent& mesh) {
         }
     }
 
-    renderer.createBuffer(vertices.size() * sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.vertexBuffer, mesh.vertexBufferMemory);
-    renderer.createBuffer(indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.indexBuffer, mesh.indexBufferMemory);
+    renderer.getCore()->createBuffer(vertices.size() * sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.vertexBuffer, mesh.vertexBufferMemory);
+    renderer.getCore()->createBuffer(indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.indexBuffer, mesh.indexBufferMemory);
     
-    renderer.copyDataToBuffer(vertices.data(), mesh.vertexBufferMemory, vertices.size() * sizeof(float));
-    renderer.copyDataToBuffer(indices.data(), mesh.indexBufferMemory, indices.size() * sizeof(uint32_t));
+    renderer.getCore()->copyDataToBuffer(vertices.data(), mesh.vertexBufferMemory, vertices.size() * sizeof(float));
+    renderer.getCore()->copyDataToBuffer(indices.data(), mesh.indexBufferMemory, indices.size() * sizeof(uint32_t));
 
     mesh.indexCount = indices.size();    
 }
@@ -125,11 +125,11 @@ void createCube(MeshComponent& mesh)
     };
     
     // Criar buffers de vértices e índices
-    renderer.createBuffer(sizeof(vertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.vertexBuffer, mesh.vertexBufferMemory);
-    renderer.createBuffer(sizeof(indices), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.indexBuffer, mesh.indexBufferMemory);
+    renderer.getCore()->createBuffer(sizeof(vertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.vertexBuffer, mesh.vertexBufferMemory);
+    renderer.getCore()->createBuffer(sizeof(indices), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.indexBuffer, mesh.indexBufferMemory);
     
-    renderer.copyDataToBuffer(vertices, mesh.vertexBufferMemory, sizeof(vertices));
-    renderer.copyDataToBuffer(indices, mesh.indexBufferMemory, sizeof(indices));
+    renderer.getCore()->copyDataToBuffer(vertices, mesh.vertexBufferMemory, sizeof(vertices));
+    renderer.getCore()->copyDataToBuffer(indices, mesh.indexBufferMemory, sizeof(indices));
 
     mesh.indexCount = sizeof(indices) / sizeof(indices[0]);
 }
@@ -228,7 +228,7 @@ int main() {
     VulkanRenderer& renderer = VulkanRenderer::getInstance();
     try {
         renderer.initVulkan(window);
-        glfwSetWindowUserPointer(window, renderer.scene.get());
+        glfwSetWindowUserPointer(window, renderer.getScene());
         glfwSetCursorPosCallback(window, mouseCallback);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
@@ -237,7 +237,7 @@ int main() {
         createSphere(cubeMesh);
 
         // Definir o cubo na cena (supondo que você tenha uma cena ou uma função de renderização)
-        Scene& scene = *renderer.scene;
+        Scene& scene = *renderer.getScene();
         // After creating cube mesh
         Entity cubeEntity;
         cubeEntity.mesh = cubeMesh;
@@ -245,7 +245,7 @@ int main() {
         // Create uniform buffer
         VkBuffer uniformBuffer;
         VkDeviceMemory uniformBufferMemory;
-        renderer.createBuffer(
+        renderer.getCore()->createBuffer(
             sizeof(UBO), 
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -255,9 +255,9 @@ int main() {
 
         // Initialize material with valid descriptor set
         MaterialComponent material;
-        material.pipeline = renderer.getGraphicsPipeline();
-        material.pipelineLayout = renderer.getPipelineLayout();
-        material.descriptorSet = renderer.getDescriptorSets()[renderer.getCurrentFrame()]; // Make sure this returns a valid descriptor set
+        material.pipeline = renderer.getCore()->getPipeline()->getPipeline();
+        material.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
+        material.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCurrentFrame()); // Make sure this returns a valid descriptor set
         material.uniformBuffer = uniformBuffer;
         material.uniformBufferMemory = uniformBufferMemory;
 
@@ -289,7 +289,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {    
         glfwPollEvents();
-        processInput(window, *renderer.scene);
+        processInput(window, *renderer.getScene());
 
         // ImGui input handling
         ImGuiIO& io = ImGui::GetIO();

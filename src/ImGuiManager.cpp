@@ -1,5 +1,4 @@
 #include "ImGuiManager.h"
-#include "VulkanRenderer.h"
 #include <iostream>
 
 ImGuiManager::ImGuiManager(
@@ -189,8 +188,6 @@ void ImGuiManager::drawImGui()
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    VulkanRenderer& renderer = VulkanRenderer::getInstance();
-    
     // Ensure the window is always ended, even if an exception occurs
     try {
         ImGui::Begin("Debug Window");
@@ -199,7 +196,7 @@ void ImGuiManager::drawImGui()
 
         static bool wireframeMode = false;
         if (ImGui::Checkbox("Wireframe Mode", &wireframeMode)) {
-            renderer.setWireframeMode(wireframeMode);
+            
         }
 
         ImGui::End();  // Ensure this is always called
