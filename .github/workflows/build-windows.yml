@@ -8,12 +8,12 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up MinGW
+    - name: Install MinGW
       run: |
         choco install mingw
 
@@ -32,8 +32,9 @@ jobs:
         [System.Environment]::SetEnvironmentVariable("VULKAN_SDK", $env:VULKAN_SDK, [System.EnvironmentVariableTarget]::Machine)
         [System.Environment]::SetEnvironmentVariable("PATH", "$env:PATH;$env:VULKAN_SDK\Bin;$env:VULKAN_SDK\Lib", [System.EnvironmentVariableTarget]::Machine)
 
-    - name: Set up CMake
-      uses: actions/setup-cmake@v2
+    - name: Install CMake via Chocolatey
+      run: |
+        choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
 
     - name: Configure CMake project with MinGW
       run: |
