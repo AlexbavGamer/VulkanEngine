@@ -1,5 +1,14 @@
 #include "VulkanImGui.h"
 #include <stdexcept>
+#include "VulkanCore.h"
+#include "VulkanSwapChain.h"
+#include "VulkanPipeline.h"
+#include "VulkanDescriptor.h"
+#include "VulkanImGui.h"
+
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_glfw.h"
 
 VulkanImGui::VulkanImGui(VulkanCore* core) : core(core), imguiPool(VK_NULL_HANDLE) {}
 

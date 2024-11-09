@@ -1,8 +1,8 @@
+#ifndef VULKANIMGUI_H
+#define VULKANIMGUI_H
+
 #pragma once
 #include "VulkanCore.h"
-#include "imgui.h"
-#include "imgui_impl_vulkan.h"
-#include "imgui_impl_glfw.h"
 
 class VulkanImGui {
 public:
@@ -20,3 +20,5 @@ private:
     VulkanCore* core;
     VkDescriptorPool imguiPool;
 };
+
+#endif

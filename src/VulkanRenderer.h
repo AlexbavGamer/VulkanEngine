@@ -3,14 +3,14 @@
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
-#include "core/VulkanCore.h"
-#include "core/VulkanSwapChain.h"
-#include "core/VulkanPipeline.h"
-#include "core/VulkanDescriptor.h"
-#include "core/VulkanImGui.h"
 #include "Singleton.h"
 #include "Scene.h"
+#include "core/VulkanCore.h"
 
+#include "core/VulkanPipeline.h"
+#include "core/VulkanDescriptor.h"
+#include "core/VulkanSwapChain.h"
+#include "core/VulkanImGui.h"
 class VulkanRenderer : public Singleton<VulkanRenderer> {
     friend class Singleton<VulkanRenderer>;
 
@@ -23,11 +23,9 @@ public:
     void cleanup();
     void checkWireframeModeChange();
 
-    // Core getters
     VulkanCore* getCore() { return core.get(); }
     Scene* getScene() { return scene.get(); }
-
-    uint32_t  getCurrentFrame() { return currentFrame; }
+    uint32_t getCurrentFrame() { return currentFrame; }
 private:
     // Core components
     std::unique_ptr<VulkanCore> core;

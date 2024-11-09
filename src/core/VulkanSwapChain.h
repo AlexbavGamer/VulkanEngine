@@ -1,3 +1,6 @@
+#ifndef VULKANSWAPCHAIN_H
+#define VULKANSWAPCHAIN_H
+
 #pragma once
 #include "VulkanTypes.h"
 
@@ -32,3 +35,5 @@ private:
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
 };
+
+#endif

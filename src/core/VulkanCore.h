@@ -1,14 +1,19 @@
+#ifndef VULKANCORE_H
+#define VULKANCORE_H
+
 #pragma once
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <optional>
 #include <memory>
-#include "VulkanSwapChain.h"
-#include "VulkanPipeline.h"
-#include "VulkanDescriptor.h"
-#include "VulkanImGui.h"
+
 #include "VulkanTypes.h"
+
+class VulkanSwapChain;
+class VulkanPipeline;
+class VulkanDescriptor;
+class VulkanImGui;
 
 class VulkanCore {
 public:
@@ -94,3 +99,5 @@ private:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);    
 };
+
+#endif

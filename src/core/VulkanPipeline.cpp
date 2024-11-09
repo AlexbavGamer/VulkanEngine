@@ -2,6 +2,10 @@
 #include <fstream>
 #include <Components.h>
 
+#include "VulkanSwapChain.h"
+#include "VulkanDescriptor.h"
+#include "VulkanImGui.h"
+
 VulkanPipeline::VulkanPipeline(VulkanCore* core) : core(core), 
     graphicsPipeline(VK_NULL_HANDLE),
     pipelineLayout(VK_NULL_HANDLE),

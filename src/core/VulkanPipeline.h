@@ -1,3 +1,6 @@
+#ifndef VULKANPIPELINE_H
+#define VULKANPIPELINE_H
+
 #pragma once
 #include "VulkanCore.h"
 #include "VulkanTypes.h"
@@ -28,3 +31,5 @@ private:
     VkPipelineLayout pipelineLayout;
     bool wireframeMode;
 };
+
+#endif

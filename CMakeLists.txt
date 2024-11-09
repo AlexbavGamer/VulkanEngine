@@ -4,6 +4,7 @@ project(VulkanEngine)
 set(CMAKE_CXX_STANDARD 17)
 
 # Configurar o Vulkan SDK no Windows
+# Configurar o Vulkan SDK no Windows
 if(WIN32)
     if(NOT DEFINED ENV{VULKAN_SDK})
         message(FATAL_ERROR "Vulkan SDK não encontrado! Certifique-se de que o Vulkan SDK está instalado e a variável de ambiente VULKAN_SDK está configurada corretamente.")
@@ -16,12 +17,19 @@ if(WIN32)
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
     set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")  # Caminho para vulkan-1.lib
     set(GLSLC "${VULKAN_SDK}/Bin/glslc.exe")          # Caminho para o compilador de shaders
+
+    # Alteração: Use -mconsole ao invés de -mwindows
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole")
 elseif(UNIX)
-    set(VULKAN_SDK_URL "https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.gz")
-    set(VULKAN_LIB_DIR "${vulkan_sdk_SOURCE_DIR}/lib")
-    set(VULKAN_LIB libvulkan.so)
-    set(VULKAN_INCLUDE_DIR "${vulkan_sdk_SOURCE_DIR}/include")
+    # Para Linux, obtenha o Vulkan SDK se não for encontrado
+    find_package(Vulkan REQUIRED)
+
+    # Diretório do Vulkan SDK e compilador de shaders
+    set(VULKAN_LIB_DIR "${Vulkan_LIBRARY_DIRS}")
+    set(VULKAN_INCLUDE_DIR "${Vulkan_INCLUDE_DIRS}")
+    set(VULKAN_LIB "vulkan")  # Linux usa o libvulkan.so padrão
     set(GLSLC "glslc")  # Caminho para o compilador de shaders em sistemas Unix
+    set(CMAKE_WIN32_EXECUTABLE FALSE)
 endif()
 
 # Include GLFW (para a janela e controle de inputs)
@@ -49,6 +57,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
+# Include ImGui com docking
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -68,12 +77,8 @@ set(IMGUI_SOURCES
 )
 
 # Arquivos fonte e headers
-file(GLOB SOURCES 
-    "src/*.cpp" 
-    "src/*.h"
-    "src/imgui/*.cpp"
-    "src/imgui/*.h"
-)
+# Busca recursiva de arquivos dentro de src
+file(GLOB_RECURSE SOURCES "src/**/*.cpp" "src/**/*.h")
 
 # Cria o executável
 add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES})

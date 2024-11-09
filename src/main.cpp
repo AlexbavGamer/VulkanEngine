@@ -1,12 +1,17 @@
 #include "VulkanRenderer.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <windows.h>  // Necessário para MessageBox
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <memory>
+
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_glfw.h"
 
 uint32_t WIDTH = 800;
 uint32_t HEIGHT = 600;
-
 
 float lastX = 0.0f;
 float lastY = 0.0f;
@@ -19,7 +24,11 @@ bool cursorEnabled = true;
 float moveSpeed = 0.1f;
 
 void showError(const std::string& message) {
+#ifdef _WIN32
     MessageBoxA(NULL, message.c_str(), "Error", MB_ICONERROR | MB_OK);
+#else
+    std::cerr << "Error: " << message << std::endl;
+#endif
 }
 
 void createSphere(MeshComponent& mesh) {
@@ -81,8 +90,6 @@ void createSphere(MeshComponent& mesh) {
 void createCube(MeshComponent& mesh) 
 {
     VulkanRenderer& renderer = VulkanRenderer::getInstance();
-    // Vértices para um cubo simples (6 faces)
-
     float vertices[] = {
         // Front face (Red)
         -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,
@@ -124,7 +131,6 @@ void createCube(MeshComponent& mesh)
         20, 21, 22, 22, 23, 20  // Left (Cyan)
     };
     
-    // Criar buffers de vértices e índices
     renderer.getCore()->createBuffer(sizeof(vertices), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.vertexBuffer, mesh.vertexBufferMemory);
     renderer.getCore()->createBuffer(sizeof(indices), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.indexBuffer, mesh.indexBufferMemory);
     
@@ -180,7 +186,6 @@ void processInput(GLFWwindow* window, Scene& scene) {
     }
 }
 
-
 void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     if (cursorEnabled) return;
     
@@ -202,7 +207,7 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     pitch = glm::clamp(pitch + yoffset, -89.0f, 89.0f);
 }
 
-int main() {
+int main_impl() {
     if (!glfwInit()) {
         showError("GLFW failed to initialize");
         return 1;
@@ -214,8 +219,6 @@ int main() {
     HEIGHT = mode->height;
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-
 
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan Engine", nullptr, nullptr);
 
@@ -232,19 +235,16 @@ int main() {
         glfwSetCursorPosCallback(window, mouseCallback);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-        // Criar o cubo e adicioná-lo à cena
         MeshComponent cubeMesh;
         createSphere(cubeMesh);
 
-        // Definir o cubo na cena (supondo que você tenha uma cena ou uma função de renderização)
         Scene& scene = *renderer.getScene();
-        // After creating cube mesh
         Entity cubeEntity;
         cubeEntity.mesh = cubeMesh;
 
-        // Create uniform buffer
         VkBuffer uniformBuffer;
         VkDeviceMemory uniformBufferMemory;
+
         renderer.getCore()->createBuffer(
             sizeof(UBO), 
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -253,16 +253,15 @@ int main() {
             uniformBufferMemory
         );
 
-        // Initialize material with valid descriptor set
         MaterialComponent material;
         material.pipeline = renderer.getCore()->getPipeline()->getPipeline();
         material.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
-        material.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCurrentFrame()); // Make sure this returns a valid descriptor set
+        material.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCurrentFrame());
         material.uniformBuffer = uniformBuffer;
         material.uniformBufferMemory = uniformBufferMemory;
 
         TransformComponent transform;
-        transform.position = glm::vec3(0.0f, 0.0f, -5.0f); // Move back from camera
+        transform.position = glm::vec3(0.0f, 0.0f, -5.0f);
         transform.rotation = glm::vec3(0.0f);
         transform.scale = glm::vec3(1.0f);
 
@@ -270,12 +269,12 @@ int main() {
         cubeEntity.material = material;
         scene.addEntity(cubeEntity);
 
-       CameraComponent camera;
+        CameraComponent camera;
         camera.projection = glm::perspective(glm::radians(45.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 100.0f);
         camera.view = glm::lookAt(
-            glm::vec3(0.0f, 0.0f, 3.0f),  // Camera position
-            glm::vec3(0.0f, 0.0f, 0.0f),  // Look at point
-            glm::vec3(0.0f, 1.0f, 0.0f)   // Up vector
+            glm::vec3(0.0f, 0.0f, 3.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f)
         );
         LightComponent light;
         scene.camera = camera;
@@ -287,7 +286,7 @@ int main() {
         return 1;
     }
 
-    while (!glfwWindowShouldClose(window)) {    
+while (!glfwWindowShouldClose(window)) {    
         glfwPollEvents();
         processInput(window, *renderer.getScene());
 
@@ -326,7 +325,6 @@ int main() {
             io.AddInputCharacter(c);
         });
 
-
         renderer.renderFrame();
     }
 
@@ -336,3 +334,18 @@ int main() {
 
     return 0;
 }
+
+// Platform-specific entry points
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    return main_impl();
+}
+
+int main() {
+    return main_impl();
+}
+#else
+int main() {
+    return main_impl();
+}
+#endif

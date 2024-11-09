@@ -1,3 +1,6 @@
+#ifndef VULKANDESCRIPTOR_H
+#define VULKANDESCRIPTOR_H
+
 #pragma once
 #include "VulkanCore.h"
 #include "VulkanTypes.h"
@@ -15,7 +18,6 @@ public:
     void createSetLayout();
     void createSets();
     void createUniformBuffer();
-    void updateUniformBuffer(const UBO& ubo, uint32_t currentFrame);
     void updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo);
 
     VkDescriptorSetLayout getSetLayout() const { return descriptorSetLayout; }
@@ -31,3 +33,6 @@ private:
     VkDeviceMemory uniformBufferMemory;
     void* uniformBufferMapped;
 };
+
+
+#endif

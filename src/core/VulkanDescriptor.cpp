@@ -1,4 +1,7 @@
 #include "VulkanDescriptor.h"
+#include "VulkanPipeline.h"
+#include "VulkanSwapChain.h"
+#include "VulkanImGui.h"
 #include <stdexcept>
 
 VulkanDescriptor::VulkanDescriptor(VulkanCore *core) : core(core), descriptorPool(VK_NULL_HANDLE), descriptorSetLayout(VK_NULL_HANDLE) 
@@ -140,11 +143,6 @@ void VulkanDescriptor::createUniformBuffer()
 
     vkBindBufferMemory(core->getDevice(), uniformBuffer, uniformBufferMemory, 0);
     vkMapMemory(core->getDevice(), uniformBufferMemory, 0, bufferSize, 0, &uniformBufferMapped);
-}
-
-void VulkanDescriptor::updateUniformBuffer(const UBO &ubo, uint32_t currentFrame)
-{
-   memcpy(uniformBufferMapped, &ubo, sizeof(ubo));
 }
 
 void VulkanDescriptor::updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo)

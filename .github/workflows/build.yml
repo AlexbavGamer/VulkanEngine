@@ -51,7 +51,7 @@ jobs:
       - name: Set up Vulkan SDK (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          choco install vulkan-sdk --version=${{ env.VULKAN_SDK_VERSION }}
+          choco install vulkan-sdk --version=${{ env.VULKAN_SDK_VERSION }} --yes
           echo "VULKAN_SDK=${VULKAN_SDK}" >> $GITHUB_ENV
 
       - name: Configure CMake project

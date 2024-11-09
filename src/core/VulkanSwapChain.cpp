@@ -1,4 +1,8 @@
 #include "VulkanSwapChain.h"
+
+#include "VulkanPipeline.h"
+#include "VulkanDescriptor.h"
+#include "VulkanImGui.h"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
