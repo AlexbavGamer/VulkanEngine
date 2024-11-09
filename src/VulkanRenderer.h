@@ -4,10 +4,6 @@
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "TextureManager.h"
-#include "ShaderManager.h"
-#include "RenderPass.h"
-#include "DescriptorCache.h"
 #include "ImGuiManager.h"
 
 #include <atomic>
