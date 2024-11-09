@@ -17,9 +17,13 @@ jobs:
       run: |
         choco install mingw
 
+    - name: Download Vulkan SDK Installer
+      run: |
+        Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/1.3.296.0/windows/VulkanSDK-1.3.296.0-Installer.exe" -OutFile "VulkanSDK-Installer.exe"
+
     - name: Install Vulkan SDK
       run: |
-        choco install vulkan-sdk
+        Start-Process -FilePath "VulkanSDK-Installer.exe" -ArgumentList "/S" -Wait
 
     - name: Install CMake via Chocolatey
       run: |
@@ -27,7 +31,7 @@ jobs:
 
     - name: Set Vulkan environment variables
       run: |
-        $VulkanSdkPath = "${env:ProgramFiles}\Vulkan\SDK\1.3.239.0"  # Ajuste para a versão instalada
+        $VulkanSdkPath = "${env:ProgramFiles}\Vulkan\SDK\1.3.296.0"  # Ajuste para a versão instalada
         [System.Environment]::SetEnvironmentVariable("VULKAN_SDK", $VulkanSdkPath, [System.EnvironmentVariableTarget]::Machine)
         [System.Environment]::SetEnvironmentVariable("PATH", "$env:PATH;$VulkanSdkPath\Bin;$VulkanSdkPath\Lib", [System.EnvironmentVariableTarget]::Machine)
 
