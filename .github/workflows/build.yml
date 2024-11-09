@@ -48,11 +48,19 @@ jobs:
           echo "export PATH=$HOME/vulkan-sdk/x86_64/bin:$PATH" >> $GITHUB_ENV
           echo "export LD_LIBRARY_PATH=$HOME/vulkan-sdk/x86_64/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
-      - name: Set up Vulkan SDK (Windows)
+      - name: Download and set up Vulkan SDK (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          choco install vulkan-sdk --version=${{ env.VULKAN_SDK_VERSION }} --yes
-          echo "VULKAN_SDK=${VULKAN_SDK}" >> $GITHUB_ENV
+          # Instala Vulkan SDK usando o método manual, caso o Chocolatey tenha problemas
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/${{ env.VULKAN_SDK_VERSION }}/windows/vulkan-sdk.zip?Human=true" -OutFile vulkan-sdk.zip
+          Expand-Archive -Path vulkan-sdk.zip -DestinationPath $env:USERPROFILE\vulkan-sdk -Force
+          echo "VULKAN_SDK=$env:USERPROFILE\vulkan-sdk" >> $GITHUB_ENV
+
+      - name: Debug temporary files (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Para depuração, listando os arquivos temporários
+          dir D:\a\_temp\
 
       - name: Configure CMake project
         run: cmake -S . -B build -DVULKAN_INCLUDE_DIR=$VULKAN_SDK/include -DVULKAN_LIB_DIR=$VULKAN_SDK/lib
