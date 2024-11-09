@@ -1,8 +1,13 @@
 #include "Scene.h"
 #include "Components.h"  // Necessário para incluir a definição de Entity
-#include "VulkanRenderer.h"
+#include "core/VulkanCore.h"
+#include "core/VulkanDescriptor.h"
+#include "core/VulkanPipeline.h"
+#include "core/VulkanSwapChain.h"
 
-Scene::Scene(VulkanRenderer& renderer) : renderer(&renderer) {
+Scene::Scene(VulkanCore* core) : core(core)
+{
+
 }
 
 void Scene::updateCamera() {

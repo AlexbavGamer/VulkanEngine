@@ -37,7 +37,7 @@ void Entity::render(VkCommandBuffer commandBuffer, const CameraComponent &camera
     
     // Update GPU data
     vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(commandBuffer, material.uniformBuffer, ubo);
-
+    
     // Bind pipeline and descriptors
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout, 0, 1, &material.descriptorSet, 0, nullptr);

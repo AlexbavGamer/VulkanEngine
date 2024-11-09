@@ -1,6 +1,3 @@
-#ifndef VULKANTYPES_H
-#define VULKANTYPES_H
-
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -20,5 +17,3 @@ struct SwapChainSupportDetails {
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
 };
-
-#endif

@@ -4,11 +4,11 @@
 #include <vulkan/vulkan.h>
 #include "Components.h"
 
-
+class VulkanCore;
 class Scene {
 public:
     ~Scene();
-    Scene(VulkanRenderer &renderer);
+    Scene(VulkanCore* core);
 
     std::vector<Entity> entities;  // Lista de entidades
     CameraComponent camera;        // Componente de câmera
@@ -25,7 +25,7 @@ public:
     void updateCamera();
 
 private:
-    VulkanRenderer* renderer;
+    VulkanCore* core;
 public:
     float cameraRadius = 5.0f;
     float cameraTheta = 0.0f;

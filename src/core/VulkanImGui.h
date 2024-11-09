@@ -6,7 +6,7 @@
 
 class VulkanImGui {
 public:
-    VulkanImGui(VulkanCore* core);
+    VulkanImGui(VulkanCore& core);
     ~VulkanImGui();
     
     void init(VkRenderPass renderPass);
@@ -17,7 +17,7 @@ public:
 private:
     void setupDescriptorPool();
     
-    VulkanCore* core;
+    VulkanCore& core;
     VkDescriptorPool imguiPool;
 };
 

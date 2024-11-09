@@ -1,6 +1,3 @@
-#ifndef VULKANDESCRIPTOR_H
-#define VULKANDESCRIPTOR_H
-
 #pragma once
 #include "VulkanCore.h"
 #include "VulkanTypes.h"
@@ -9,30 +6,29 @@
 
 class VulkanDescriptor {
 public:
-    VulkanDescriptor(VulkanCore* core);
+    VulkanDescriptor(VulkanCore& core);
     ~VulkanDescriptor();
     
     void create();
     void cleanup();
     void createPool();
     void createSetLayout();
+    void createDescriptorSetLayout();
     void createSets();
-    void createUniformBuffer();
+    void createUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
     void updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo);
 
     VkDescriptorSetLayout getSetLayout() const { return descriptorSetLayout; }
     VkDescriptorSet getSet(size_t index) const { return descriptorSets[index]; }
     
 private:
-    VulkanCore* core;
+    VulkanCore& core;
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     std::vector<VkDescriptorSet> descriptorSets;
     
+public:
     VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
     void* uniformBufferMapped;
 };
-
-
-#endif

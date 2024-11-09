@@ -207,7 +207,7 @@ void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
     pitch = glm::clamp(pitch + yoffset, -89.0f, 89.0f);
 }
 
-int main_impl() {
+int main() {
     if (!glfwInit()) {
         showError("GLFW failed to initialize");
         return 1;
@@ -231,14 +231,15 @@ int main_impl() {
     VulkanRenderer& renderer = VulkanRenderer::getInstance();
     try {
         renderer.initVulkan(window);
-        glfwSetWindowUserPointer(window, renderer.getScene());
+        
+        glfwSetWindowUserPointer(window, renderer.getCore()->getScene());
         glfwSetCursorPosCallback(window, mouseCallback);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
         MeshComponent cubeMesh;
         createSphere(cubeMesh);
 
-        Scene& scene = *renderer.getScene();
+        Scene& scene = *renderer.getCore()->getScene();
         Entity cubeEntity;
         cubeEntity.mesh = cubeMesh;
 
@@ -256,7 +257,7 @@ int main_impl() {
         MaterialComponent material;
         material.pipeline = renderer.getCore()->getPipeline()->getPipeline();
         material.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
-        material.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCurrentFrame());
+        material.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCore()->getCurrentFrame());
         material.uniformBuffer = uniformBuffer;
         material.uniformBufferMemory = uniformBufferMemory;
 
@@ -288,7 +289,7 @@ int main_impl() {
 
 while (!glfwWindowShouldClose(window)) {    
         glfwPollEvents();
-        processInput(window, *renderer.getScene());
+        processInput(window, *renderer.getCore()->getScene());
 
         // ImGui input handling
         ImGuiIO& io = ImGui::GetIO();
@@ -325,27 +326,12 @@ while (!glfwWindowShouldClose(window)) {
             io.AddInputCharacter(c);
         });
 
-        renderer.renderFrame();
+        renderer.getCore()->renderFrame();
     }
 
-    renderer.cleanup();
+    renderer.getCore()->cleanup();
     glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;
 }
-
-// Platform-specific entry points
-#ifdef _WIN32
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    return main_impl();
-}
-
-int main() {
-    return main_impl();
-}
-#else
-int main() {
-    return main_impl();
-}
-#endif

@@ -10,7 +10,7 @@
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
 
-VulkanImGui::VulkanImGui(VulkanCore* core) : core(core), imguiPool(VK_NULL_HANDLE) {}
+VulkanImGui::VulkanImGui(VulkanCore& core) : core(core), imguiPool(VK_NULL_HANDLE) {}
 
 VulkanImGui::~VulkanImGui() {
     cleanup();
@@ -25,14 +25,14 @@ void VulkanImGui::init(VkRenderPass renderPass) {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    ImGui_ImplGlfw_InitForVulkan(core->getWindow(), true);
+    ImGui_ImplGlfw_InitForVulkan(core.getWindow(), true);
     
     ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = core->getInstance();
-    init_info.PhysicalDevice = core->getPhysicalDevice();
-    init_info.Device = core->getDevice();
-    init_info.QueueFamily = core->getQueueFamilyIndex();
-    init_info.Queue = core->getGraphicsQueue();
+    init_info.Instance = core.getInstance();
+    init_info.PhysicalDevice = core.getPhysicalDevice();
+    init_info.Device = core.getDevice();
+    init_info.QueueFamily = core.getQueueFamilyIndex();
+    init_info.Queue = core.getGraphicsQueue();
     init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPool = imguiPool;
     init_info.MinImageCount = 2;
@@ -52,7 +52,7 @@ void VulkanImGui::cleanup() {
     ImGui::DestroyContext();
     
     if (imguiPool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(core->getDevice(), imguiPool, nullptr);
+        vkDestroyDescriptorPool(core.getDevice(), imguiPool, nullptr);
         imguiPool = VK_NULL_HANDLE;
     }
 }
@@ -64,11 +64,13 @@ void VulkanImGui::newFrame() {
 }
 
 void VulkanImGui::render(VkCommandBuffer commandBuffer) {
+    newFrame();
     ImGui::Render();
     ImDrawData* drawData = ImGui::GetDrawData();
     if (drawData && drawData->CmdListsCount > 0) {
         ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer);
     }
+    ImGui::EndFrame();
 }
 
 void VulkanImGui::setupDescriptorPool() {
@@ -93,7 +95,7 @@ void VulkanImGui::setupDescriptorPool() {
     pool_info.poolSizeCount = std::size(pool_sizes);
     pool_info.pPoolSizes = pool_sizes;
 
-    if (vkCreateDescriptorPool(core->getDevice(), &pool_info, nullptr, &imguiPool) != VK_SUCCESS) {
+    if (vkCreateDescriptorPool(core.getDevice(), &pool_info, nullptr, &imguiPool) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create ImGui descriptor pool!");
     }
 }

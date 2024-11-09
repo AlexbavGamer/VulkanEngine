@@ -11,12 +11,7 @@
 #include "VulkanPipeline.h"
 #include "VulkanDescriptor.h"
 #include "VulkanImGui.h"
-
-VulkanCore::VulkanCore() {}
-
-VulkanCore::~VulkanCore() {
-    
-}
+#include "../Scene.h"
 
 bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device)
 {
@@ -26,7 +21,7 @@ bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device)
 
     bool swapChainAdequate = false;
     if (extensionsSupported) {
-        SwapChainSupportDetails swapChainSupport = swapChain->querySwapChainSupport(device);
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
@@ -38,6 +33,49 @@ bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device)
            extensionsSupported && 
            swapChainAdequate &&
            supportedFeatures.fillModeNonSolid;
+}
+
+SwapChainSupportDetails VulkanCore::querySwapChainSupport(VkPhysicalDevice device) {
+    SwapChainSupportDetails details;
+
+    assert(device != VK_NULL_HANDLE && "Device is NULL");
+    assert(surface != VK_NULL_HANDLE && "Surface is NULL");
+
+    // Verifica se há erro em vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+    VkResult result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get physical device surface capabilities: " + std::to_string(result));
+    }
+
+    uint32_t formatCount;
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get physical device surface formats count: " + std::to_string(result));
+    }
+
+    if (formatCount != 0) {
+        details.formats.resize(formatCount);
+        result = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("Failed to get physical device surface formats: " + std::to_string(result));
+        }
+    }
+
+    uint32_t presentModeCount;
+    result = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to get physical device surface present modes count: " + std::to_string(result));
+    }
+
+    if (presentModeCount != 0) {
+        details.presentModes.resize(presentModeCount);
+        result = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("Failed to get physical device surface present modes: " + std::to_string(result));
+        }
+    }
+
+    return details;
 }
 
 bool VulkanCore::checkDeviceExtensionSupport(VkPhysicalDevice device) {
@@ -70,15 +108,27 @@ void VulkanCore::init(GLFWwindow *window)
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
-    
-    swapChain = std::make_unique<VulkanSwapChain>(this);
+    swapChain = std::make_unique<VulkanSwapChain>(*this);
+    pipeline = std::make_unique<VulkanPipeline>(*this);
+    descriptor = std::make_unique<VulkanDescriptor>(*this);
     swapChain->create();
-
-    imgui = std::make_unique<VulkanImGui>(this);
-    imgui->init(renderPass);
-
+    descriptor->createDescriptorSetLayout();
     createRenderPass();
+    pipeline->create(renderPass, swapChain->getExtent());
     createFramebuffers();
+    createCommandPool();
+    createCommandBuffers();
+    createSyncObjects();
+    imgui = std::make_unique<VulkanImGui>(*this);
+    imgui->init(renderPass);
+    scene = std::make_unique<Scene>(this);
+
+    descriptor->createUniformBuffer(device, physicalDevice, sizeof(UBO),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        descriptor->uniformBuffer, descriptor->uniformBufferMemory);
+    
+    descriptor->create();
 }
 
 uint32_t VulkanCore::getQueueFamilyIndex()
@@ -422,4 +472,158 @@ void VulkanCore::copyDataToBuffer(const void* data, VkDeviceMemory bufferMemory,
     vkMapMemory(device, bufferMemory, 0, size, 0, &mappedData);
     memcpy(mappedData, data, size);
     vkUnmapMemory(device, bufferMemory);
+}
+
+void VulkanCore::cleanup() {
+    vkDeviceWaitIdle(getDevice());
+
+    // Cleanup synchronization objects
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(getDevice(), imageAvailableSemaphores[i], nullptr);
+        vkDestroySemaphore(getDevice(), renderFinishedSemaphores[i], nullptr);
+        vkDestroyFence(getDevice(), inFlightFences[i], nullptr);
+    }
+
+    // Cleanup command resources
+    vkDestroyCommandPool(getDevice(), commandPool, nullptr);
+}
+
+void VulkanCore::renderFrame() {
+    vkWaitForFences(getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    
+    uint32_t imageIndex;
+    VkResult result = vkAcquireNextImageKHR(getDevice(), 
+        getSwapChain()->getSwapChain(), 
+        UINT64_MAX, 
+        imageAvailableSemaphores[currentFrame], 
+        VK_NULL_HANDLE, 
+        &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        getSwapChain()->recreate();
+        return;
+    }
+
+    vkResetFences(getDevice(), 1, &inFlightFences[currentFrame]);
+    vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+    recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+
+    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to submit draw command buffer!");
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = {getSwapChain()->getSwapChain()};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    result = vkQueuePresentKHR(getPresentQueue(), &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        getSwapChain()->recreate();
+    }
+
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
+void VulkanCore::createCommandPool() {
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(getPhysicalDevice());
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+    if (vkCreateCommandPool(getDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create command pool!");
+    }
+}
+
+void VulkanCore::createCommandBuffers() {
+    commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
+
+    if (vkAllocateCommandBuffers(getDevice(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate command buffers!");
+    }
+}
+
+void VulkanCore::createSyncObjects() {
+    imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create synchronization objects!");
+        }
+    }
+}
+
+void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to begin recording command buffer!");
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = getRenderPass();
+    renderPassInfo.framebuffer = getFramebuffers()[imageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = getSwapChain()->getExtent();
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.2f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    scene->render(commandBuffer);
+    getImGui()->render(commandBuffer);
+
+    vkCmdEndRenderPass(commandBuffer);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to record command buffer!");
+    }
+}
+
+void VulkanCore::checkWireframeModeChange() {
+    getPipeline()->checkWireframeModeChange();
 }

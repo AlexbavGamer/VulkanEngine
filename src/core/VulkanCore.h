@@ -1,11 +1,9 @@
-#ifndef VULKANCORE_H
-#define VULKANCORE_H
-
 #pragma once
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <optional>
+#include <string>
 #include <memory>
 
 #include "VulkanTypes.h"
@@ -14,15 +12,16 @@ class VulkanSwapChain;
 class VulkanPipeline;
 class VulkanDescriptor;
 class VulkanImGui;
+class Scene;
 
 class VulkanCore {
 public:
-    VulkanCore();
-    ~VulkanCore();
-    
     void init(GLFWwindow* window);
     void cleanup();
-    
+
+    void renderFrame();
+
+
     VkInstance getInstance() const { return instance; }
     VkDevice getDevice() const { return device; }
     VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
@@ -31,7 +30,8 @@ public:
     VkSurfaceKHR getSurface() const { return surface; }
     GLFWwindow* getWindow() const { return window; }
     uint32_t getQueueFamilyIndex();
-    uint32_t getMaxFramesInFlight() const { return MAX_FRAMES_IN_FLIGHT; }    const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+    uint32_t getMaxFramesInFlight() const { return MAX_FRAMES_IN_FLIGHT; }    
+    const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     std::vector<char> readFile(const std::string &filename);
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
@@ -45,19 +45,25 @@ public:
     VulkanPipeline* getPipeline() const { return pipeline.get(); }
     VulkanDescriptor* getDescriptor() const { return descriptor.get(); }
     VulkanImGui* getImGui() const { return imgui.get(); }
+    Scene* getScene() const { return scene.get(); }
+
+    uint32_t getCurrentFrame() const { return currentFrame; }
 
     void setPipeline(std::unique_ptr<VulkanPipeline> newPipeline) { pipeline = std::move(newPipeline); }
     void setDescriptor(std::unique_ptr<VulkanDescriptor> newDescriptor) { descriptor = std::move(newDescriptor); }
     void setSwapChain(std::unique_ptr<VulkanSwapChain> newSwapChain) { swapChain = std::move(newSwapChain); }
     
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 private:
     const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
-    const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    const std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    };
 
     #ifdef NDEBUG
         const bool enableValidationLayers = false;
     #else
-        const bool enableValidationLayers = true;
+        const bool enableValidationLayers = false;
     #endif
 
     void createInstance();
@@ -66,14 +72,19 @@ private:
     void pickPhysicalDevice();
     void createLogicalDevice();
     void createRenderPass();
-    void createFramebuffers();    
-    
+    void createFramebuffers();
+    void createCommandPool();
+    void createCommandBuffers();
+    void createSyncObjects();
+    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+
     bool checkValidationLayerSupport();
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     std::vector<const char*> getRequiredExtensions();
 
     bool isDeviceSuitable(VkPhysicalDevice device);
-
+    void checkWireframeModeChange();
 
     VkInstance instance;
     VkDevice device;
@@ -82,6 +93,14 @@ private:
     VkQueue presentQueue;
     VkSurfaceKHR surface;
     VkDebugUtilsMessengerEXT debugMessenger;
+    VkCommandPool commandPool;
+    std::vector<VkCommandBuffer> commandBuffers;
+
+    std::vector<VkSemaphore> imageAvailableSemaphores;
+    std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkFence> inFlightFences;
+    uint32_t currentFrame = 0;
+
     GLFWwindow* window;
 
     VkRenderPass renderPass;
@@ -91,6 +110,7 @@ private:
     std::unique_ptr<VulkanPipeline> pipeline;
     std::unique_ptr<VulkanDescriptor> descriptor;
     std::unique_ptr<VulkanImGui> imgui;
+    std::unique_ptr<Scene> scene;
 
     
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -99,5 +119,3 @@ private:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);    
 };
-
-#endif

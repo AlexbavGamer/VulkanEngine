@@ -9,7 +9,7 @@
 
 class VulkanPipeline {
 public:
-    VulkanPipeline(VulkanCore* core);
+    VulkanPipeline(VulkanCore& core);
     ~VulkanPipeline();
     
     void create(VkRenderPass renderPass, VkExtent2D extent);
@@ -23,10 +23,9 @@ public:
     VkPipelineLayout getLayout() const { return pipelineLayout; }
     
 private:
-    void createPipelineLayout();
     VkShaderModule createShaderModule(const std::vector<char>& code);
     
-    VulkanCore* core;
+    VulkanCore& core;
     VkPipeline graphicsPipeline;
     VkPipelineLayout pipelineLayout;
     bool wireframeMode;
