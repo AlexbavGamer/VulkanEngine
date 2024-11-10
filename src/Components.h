@@ -7,10 +7,11 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
 #include <stdexcept>
+#include "ecs/Component.h"
 
 class VulkanRenderer;
 
-struct TransformComponent {
+struct TransformComponent : Component {
     glm::vec3 position;
     glm::vec3 rotation;
     glm::vec3 scale;
@@ -21,8 +22,7 @@ struct TransformComponent {
                glm::scale(glm::mat4(1.0f), scale);
     }
 };
-
-struct MeshComponent {
+struct MeshComponent : Component {
     VkBuffer vertexBuffer;
     VkBuffer indexBuffer;
     VkDeviceMemory vertexBufferMemory;
@@ -30,7 +30,7 @@ struct MeshComponent {
     uint32_t indexCount;
 };
 
-struct MaterialComponent {
+struct MaterialComponent : Component {
     VkPipeline pipeline;
     VkPipelineLayout pipelineLayout;
     VkDescriptorSetLayout descriptorSetLayout;
@@ -40,7 +40,7 @@ struct MaterialComponent {
     VkBuffer uniformBuffer;             // Buffer de uniformes
 };
 
-struct LightComponent {
+struct LightComponent : Component {
     glm::vec3 position;
     glm::vec3 color;
     float intensity;
@@ -63,14 +63,9 @@ struct UBO {
     glm::mat4 projection;
 };
 
-// A estrutura Entity agora possui a função render corretamente declarada
-struct Entity {
-    TransformComponent transform;
+struct RenderComponent : Component {
     MeshComponent mesh;
     MaterialComponent material;
-
-    // Função para renderizar a entidade
-    void render(VkCommandBuffer commandBuffer, const CameraComponent& camera);
 };
 
 struct Vertex {

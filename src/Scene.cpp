@@ -1,13 +1,19 @@
 #include "Scene.h"
-#include "Components.h"  // Necessário para incluir a definição de Entity
+#include "Components.h"
 #include "core/VulkanCore.h"
 #include "core/VulkanDescriptor.h"
 #include "core/VulkanPipeline.h"
 #include "core/VulkanSwapChain.h"
 
-Scene::Scene(VulkanCore* core) : core(core)
-{
+Scene::Scene(VulkanCore* core) : core(core) {
+    registry = std::make_unique<Registry>();
+    renderSystem = std::make_unique<RenderSystem>();
+}
 
+Scene::~Scene() {}
+
+Entity Scene::createEntity() {
+    return registry->createEntity();
 }
 
 void Scene::updateCamera() {
@@ -22,29 +28,20 @@ void Scene::updateCamera() {
     camera::updateCamera(camera, cameraPos, target, up);
 }
 
-void Scene::updateCameraAspect(float aspectRatio)
-{
+void Scene::updateCameraAspect(float aspectRatio) {
     camera.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
     camera.projection[1][1] *= -1;
 }
 
-Scene::~Scene() {}
-
-void Scene::addEntity(const Entity& entity) {
-    entities.push_back(entity);
-}
-
 void Scene::render(VkCommandBuffer commandBuffer) {
-    // Lógica para renderizar as entidades
-    for (auto& entity : entities) {
-        entity.render(commandBuffer, camera);
-    }
+    renderSystem->render(
+        *registry,
+        commandBuffer,
+        core->getPipeline()->getLayout(),
+        core->getDescriptor()->getSet(core->getCurrentFrame())
+    );
 }
 
-void Scene::updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout)
-{
-    for (auto& entity : entities) {
-        entity.material.pipeline = newPipeline;
-        entity.material.pipelineLayout = newLayout;
-    }
+void Scene::updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout) {
+    // Update pipeline references if needed
 }

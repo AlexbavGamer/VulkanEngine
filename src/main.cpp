@@ -228,7 +228,7 @@ int main() {
         return 1;
     }
 
-    VulkanRenderer& renderer = VulkanRenderer::getInstance();
+        VulkanRenderer& renderer = VulkanRenderer::getInstance();
     try {
         renderer.initVulkan(window);
         
@@ -236,16 +236,20 @@ int main() {
         glfwSetCursorPosCallback(window, mouseCallback);
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
-        MeshComponent cubeMesh;
-        createSphere(cubeMesh);
-
         Scene& scene = *renderer.getCore()->getScene();
-        Entity cubeEntity;
-        cubeEntity.mesh = cubeMesh;
+        
+        // Create entity using ECS
+        Entity entity = scene.registry->createEntity();
 
+        // Add mesh component
+        MeshComponent& meshComponent = entity.addComponent<MeshComponent>();
+        createSphere(meshComponent);
+
+        // Create and add material component
+        MaterialComponent& materialComponent = entity.addComponent<MaterialComponent>();
+        
         VkBuffer uniformBuffer;
         VkDeviceMemory uniformBufferMemory;
-
         renderer.getCore()->createBuffer(
             sizeof(UBO), 
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -254,22 +258,19 @@ int main() {
             uniformBufferMemory
         );
 
-        MaterialComponent material;
-        material.pipeline = renderer.getCore()->getPipeline()->getPipeline();
-        material.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
-        material.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCore()->getCurrentFrame());
-        material.uniformBuffer = uniformBuffer;
-        material.uniformBufferMemory = uniformBufferMemory;
+        materialComponent.pipeline = renderer.getCore()->getPipeline()->getPipeline();
+        materialComponent.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
+        materialComponent.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCore()->getCurrentFrame());
+        materialComponent.uniformBuffer = uniformBuffer;
+        materialComponent.uniformBufferMemory = uniformBufferMemory;
 
-        TransformComponent transform;
-        transform.position = glm::vec3(0.0f, 0.0f, -5.0f);
-        transform.rotation = glm::vec3(0.0f);
-        transform.scale = glm::vec3(1.0f);
+        // Add transform component
+        TransformComponent& transformComponent = entity.addComponent<TransformComponent>();
+        transformComponent.position = glm::vec3(0.0f, 0.0f, -5.0f);
+        transformComponent.rotation = glm::vec3(0.0f);
+        transformComponent.scale = glm::vec3(1.0f);
 
-        cubeEntity.transform = transform;
-        cubeEntity.material = material;
-        scene.addEntity(cubeEntity);
-
+        // Setup camera
         CameraComponent camera;
         camera.projection = glm::perspective(glm::radians(45.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 100.0f);
         camera.view = glm::lookAt(
@@ -277,9 +278,11 @@ int main() {
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 1.0f, 0.0f)
         );
+        
         LightComponent light;
         scene.camera = camera;
         scene.lights.push_back(light);
+
     } catch (const std::exception& e) {
         showError("Initialization failed: " + std::string(e.what()));
         glfwDestroyWindow(window);
@@ -287,7 +290,7 @@ int main() {
         return 1;
     }
 
-while (!glfwWindowShouldClose(window)) {    
+    while (!glfwWindowShouldClose(window)) {    
         glfwPollEvents();
         processInput(window, *renderer.getCore()->getScene());
 

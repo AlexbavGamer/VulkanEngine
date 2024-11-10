@@ -1,8 +1,10 @@
 #pragma once
 
-#include <vector>
+#include <memory>
 #include <vulkan/vulkan.h>
 #include "Components.h"
+#include "ecs/Registry.h"
+#include "ecs/RenderSystem.h"
 
 class VulkanCore;
 class Scene {
@@ -10,18 +12,14 @@ public:
     ~Scene();
     Scene(VulkanCore* core);
 
-    std::vector<Entity> entities;  // Lista de entidades
-    CameraComponent camera;        // Componente de câmera
-    std::vector<LightComponent> lights;  // Lista de luzes
+    std::unique_ptr<Registry> registry;
+    std::unique_ptr<RenderSystem> renderSystem;
+    CameraComponent camera;
+    std::vector<LightComponent> lights;
 
-    // Função para adicionar uma entidade à cena
-    void addEntity(const Entity& entity);
-
-    // Função para renderizar a cena
+    Entity createEntity();
     void render(VkCommandBuffer commandBuffer);
-
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
-    
     void updateCamera();
     void updateCameraAspect(float aspectRatio);
     
