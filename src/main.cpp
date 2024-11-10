@@ -13,16 +13,6 @@
 uint32_t WIDTH = 800;
 uint32_t HEIGHT = 600;
 
-float lastX = 0.0f;
-float lastY = 0.0f;
-float yaw = -90.0f;
-float pitch = 0.0f;
-bool firstMouse = true;
-float mouseSensitivity = 0.1f;
-bool cursorEnabled = true;
-
-float moveSpeed = 0.1f;
-
 void showError(const std::string& message) {
 #ifdef _WIN32
     MessageBoxA(NULL, message.c_str(), "Error", MB_ICONERROR | MB_OK);
@@ -140,73 +130,6 @@ void createCube(MeshComponent& mesh)
     mesh.indexCount = sizeof(indices) / sizeof(indices[0]);
 }
 
-void processInput(GLFWwindow* window, Scene& scene) {
-    static bool escPressed = false;
-    
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        if (!escPressed) {
-            cursorEnabled = !cursorEnabled;
-            glfwSetInputMode(window, GLFW_CURSOR, cursorEnabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
-            if (cursorEnabled) {
-                firstMouse = true;
-            }
-        }
-        escPressed = true;
-    } else {
-        escPressed = false;
-    }
-
-    if (!cursorEnabled) {
-        // Calculate new direction vectors based on yaw and pitch
-        glm::vec3 direction;
-        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        direction.y = sin(glm::radians(pitch));
-        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        
-        glm::vec3 forward = glm::normalize(direction);
-        glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
-        
-        // Extract current position from view matrix
-        glm::mat4 view = scene.camera.view;
-        glm::vec4 pos = glm::inverse(view)[3];
-        glm::vec3 position = glm::vec3(pos.x, pos.y, pos.z);
-
-        // Movement
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            position += forward * moveSpeed;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            position -= forward * moveSpeed;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            position -= right * moveSpeed;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            position += right * moveSpeed;
-
-        glm::vec3 target = position + forward;
-        camera::updateCamera(scene.camera, position, target, glm::vec3(0.0f, 1.0f, 0.0f));
-    }
-}
-
-void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
-    if (cursorEnabled) return;
-    
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;
-    lastX = xpos;
-    lastY = ypos;
-
-    xoffset *= mouseSensitivity;
-    yoffset *= mouseSensitivity;
-
-    yaw += xoffset;
-    pitch = glm::clamp(pitch + yoffset, -89.0f, 89.0f);
-}
-
 int main() {
     if (!glfwInit()) {
         showError("GLFW failed to initialize");
@@ -233,7 +156,11 @@ int main() {
         renderer.initVulkan(window);
         
         glfwSetWindowUserPointer(window, renderer.getCore()->getScene());
-        glfwSetCursorPosCallback(window, mouseCallback);
+        glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos)
+        {
+            Scene* scene = static_cast<Scene*>(glfwGetWindowUserPointer(window));
+            scene->handleMouseInput(window, xpos, ypos);
+        });
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
         Scene& scene = *renderer.getCore()->getScene();
@@ -297,7 +224,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {    
         glfwPollEvents();
-        processInput(window, *renderer.getCore()->getScene());
+        renderer.getCore()->getScene()->handleKeyboardInput(window);
 
         // ImGui input handling
         ImGuiIO& io = ImGui::GetIO();
@@ -337,7 +264,6 @@ int main() {
         renderer.getCore()->renderFrame();
     }
 
-    renderer.getCore()->cleanup();
     glfwDestroyWindow(window);
     glfwTerminate();
 

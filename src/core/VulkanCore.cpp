@@ -485,19 +485,22 @@ void VulkanCore::copyDataToBuffer(const void* data, VkDeviceMemory bufferMemory,
 }
 
 void VulkanCore::cleanup() {
-    vkDeviceWaitIdle(getDevice());
-
-    // Cleanup synchronization objects
+    vkDeviceWaitIdle(device);
+    
+    imgui->cleanup();
+    pipeline->cleanup();
+    
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroySemaphore(getDevice(), imageAvailableSemaphores[i], nullptr);
-        vkDestroySemaphore(getDevice(), renderFinishedSemaphores[i], nullptr);
-        vkDestroyFence(getDevice(), inFlightFences[i], nullptr);
+        if (renderFinishedSemaphores[i] != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+        if (imageAvailableSemaphores[i] != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+        if (inFlightFences[i] != VK_NULL_HANDLE)
+            vkDestroyFence(device, inFlightFences[i], nullptr);
     }
-
-    // Cleanup command resources
-    vkDestroyCommandPool(getDevice(), commandPool, nullptr);
-
-    handleResize();
+    
+    if (commandPool != VK_NULL_HANDLE)
+        vkDestroyCommandPool(device, commandPool, nullptr);
 }
 
 void VulkanCore::renderFrame() {
@@ -615,7 +618,6 @@ void VulkanCore::createSyncObjects() {
 void VulkanCore::createSceneResources() {
     VkExtent2D extent = swapChain->getExtent();
     
-    // Create scene image
     VkImageCreateInfo imageInfo2{};
     imageInfo2.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo2.imageType = VK_IMAGE_TYPE_2D;
@@ -840,6 +842,12 @@ void VulkanCore::handleResize()
         return;  // Skip resize if minimized
     }
 
+    // Store mouse position and input states
+    double mouseX, mouseY;
+    glfwGetCursorPos(window, &mouseX, &mouseY);
+    bool leftMousePressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    bool rightMousePressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+
     // Wait for all operations to complete
     vkDeviceWaitIdle(device);
     
@@ -863,7 +871,24 @@ void VulkanCore::handleResize()
     pipeline->recreate(renderPass, swapChain->getExtent());
     imgui->init(renderPass);
 
+    // Update camera aspect and restore input state
     scene->updateCameraAspect(static_cast<float>(width) / static_cast<float>(height));
+    
+    // Preserve the scene pointer for mouse input
+    glfwSetWindowUserPointer(window, scene.get());
+    glfwSetCursorPosCallback(window, [](GLFWwindow* window, double xpos, double ypos)
+    {
+        Scene* scene = static_cast<Scene*>(glfwGetWindowUserPointer(window));
+        if (scene) {
+            scene->handleMouseInput(window, xpos, ypos);
+        }
+    });
+
+    // // Restore mouse position and input states
+    // glfwSetCursorPos(window, mouseX, mouseY);
+    // if (leftMousePressed || rightMousePressed) {
+    //     scene->updateMousePosition(mouseX, mouseY);
+    // }
 }
 
 void VulkanCore::checkWireframeModeChange() {
