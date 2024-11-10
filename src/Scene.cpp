@@ -12,7 +12,7 @@ Scene::Scene(VulkanCore* core) : core(core) {
 
 Scene::~Scene() {}
 
-Entity Scene::createEntity() {
+std::shared_ptr<Entity> Scene::createEntity() {
     return registry->createEntity();
 }
 

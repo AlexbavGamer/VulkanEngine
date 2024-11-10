@@ -7,10 +7,12 @@
 #include "VulkanImGui.h"
 #include <imgui_internal.h>
 
+#include "../Scene.h"
 #include <iostream>
 
-VulkanImGui::VulkanImGui(VulkanCore& core) : core(core), imguiPool(VK_NULL_HANDLE) {
-IMGUI_CHECKVERSION();
+VulkanImGui::VulkanImGui(VulkanCore& core) : core(core), imguiPool(VK_NULL_HANDLE)
+{
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -243,7 +245,26 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, -1.0f), ImVec2(350.0f, -1.0f));
     ImGui::Begin("Hierarchy", &showHierarchy);
-    ImGui::Text("Scene Objects");
+
+    core.getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent& render) 
+    {
+        if (ImGui::Selectable(render.name.c_str())) 
+        {
+            if(!selectedEntity)
+            {
+                selectedEntity = entity;            
+            }
+            else if(selectedEntity && selectedEntity->getId() == entity->getId())
+            {
+                selectedEntity = nullptr;
+            }       
+        }
+
+        if (selectedEntity && selectedEntity->getId() == entity->getId()) {
+            ImGui::SetItemDefaultFocus();
+        } 
+    });
+    
     ImGui::End();
 
     // Render additional windows based on menu selections

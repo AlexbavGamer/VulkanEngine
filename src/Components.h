@@ -63,7 +63,9 @@ struct UBO {
     glm::mat4 projection;
 };
 
-struct RenderComponent : Component {
+struct RenderComponent : Component
+{
+    std::string name;
     MeshComponent mesh;
     MaterialComponent material;
 };

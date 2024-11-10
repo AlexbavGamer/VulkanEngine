@@ -8,7 +8,8 @@ void RenderSystem::render(Registry& registry, VkCommandBuffer commandBuffer, VkP
 {
     VulkanRenderer& vulkanRender = VulkanRenderer::getInstance();
 
-    registry.view<MeshComponent, MaterialComponent, TransformComponent>([&](const Entity& entity, const MeshComponent& mesh, const MaterialComponent& material, TransformComponent& transform) {
+    registry.view<MeshComponent, MaterialComponent, TransformComponent>([&](std::shared_ptr<Entity> entity, const MeshComponent& mesh, const MaterialComponent& material, TransformComponent& transform) 
+    {
         if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0) {
             return;
         }

@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
+#include "../ecs/Entity.h"
 
 class VulkanImGui {
 public:
@@ -22,6 +23,7 @@ private:
     
     VulkanCore& core;
     VkDescriptorPool imguiPool;
+    std::shared_ptr<Entity> selectedEntity;
 };
 
 #endif

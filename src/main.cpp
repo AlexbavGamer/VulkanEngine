@@ -239,14 +239,14 @@ int main() {
         Scene& scene = *renderer.getCore()->getScene();
         
         // Create entity using ECS
-        Entity entity = scene.registry->createEntity();
+        std::shared_ptr<Entity> entity = scene.registry->createEntity();
 
         // Add mesh component
-        MeshComponent& meshComponent = entity.addComponent<MeshComponent>();
+        MeshComponent& meshComponent = entity->addComponent<MeshComponent>();
         createSphere(meshComponent);
 
         // Create and add material component
-        MaterialComponent& materialComponent = entity.addComponent<MaterialComponent>();
+        MaterialComponent& materialComponent = entity->addComponent<MaterialComponent>();
         
         VkBuffer uniformBuffer;
         VkDeviceMemory uniformBufferMemory;
@@ -264,8 +264,13 @@ int main() {
         materialComponent.uniformBuffer = uniformBuffer;
         materialComponent.uniformBufferMemory = uniformBufferMemory;
 
+        RenderComponent& renderComponent = entity->addComponent<RenderComponent>();
+        renderComponent.material = materialComponent;
+        renderComponent.mesh = meshComponent;
+        renderComponent.name = "Sphere";
+
         // Add transform component
-        TransformComponent& transformComponent = entity.addComponent<TransformComponent>();
+        TransformComponent& transformComponent = entity->addComponent<TransformComponent>();
         transformComponent.position = glm::vec3(0.0f, 0.0f, -5.0f);
         transformComponent.rotation = glm::vec3(0.0f);
         transformComponent.scale = glm::vec3(1.0f);

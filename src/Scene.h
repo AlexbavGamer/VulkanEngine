@@ -17,7 +17,7 @@ public:
     CameraComponent camera;
     std::vector<LightComponent> lights;
 
-    Entity createEntity();
+    std::shared_ptr<Entity> createEntity();
     void render(VkCommandBuffer commandBuffer);
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
     void updateCamera();
