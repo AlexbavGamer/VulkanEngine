@@ -23,7 +23,8 @@ public:
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
     
     void updateCamera();
-
+    void updateCameraAspect(float aspectRatio);
+    
 private:
     VulkanCore* core;
 public:

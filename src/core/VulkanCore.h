@@ -37,7 +37,7 @@ public:
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
     void copyDataToBuffer(const void *data, VkDeviceMemory bufferMemory, VkDeviceSize size);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-
+    const std::vector<VkCommandBuffer>& getCommandBuffers() const { return commandBuffers; }
     VkRenderPass getRenderPass() const { return renderPass; }
     const std::vector<VkFramebuffer>& getFramebuffers() const { return framebuffers; }
 
@@ -52,6 +52,7 @@ public:
     void setPipeline(std::unique_ptr<VulkanPipeline> newPipeline) { pipeline = std::move(newPipeline); }
     void setDescriptor(std::unique_ptr<VulkanDescriptor> newDescriptor) { descriptor = std::move(newDescriptor); }
     void setSwapChain(std::unique_ptr<VulkanSwapChain> newSwapChain) { swapChain = std::move(newSwapChain); }
+    void handleResize();
     
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 private:
@@ -63,7 +64,7 @@ private:
     #ifdef NDEBUG
         const bool enableValidationLayers = false;
     #else
-        const bool enableValidationLayers = false;
+        const bool enableValidationLayers = true;
     #endif
 
     void createInstance();
@@ -76,6 +77,7 @@ private:
     void createCommandPool();
     void createCommandBuffers();
     void createSyncObjects();
+    void createSceneResources();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 
@@ -117,5 +119,14 @@ private:
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData);    
+        void* pUserData); 
+
+private:
+    VkImage sceneImage;
+    VkDeviceMemory sceneImageMemory;
+    VkImageView sceneImageView;
+    VkSampler sceneSampler;
+    VkFramebuffer sceneFramebuffer;
+    VkRenderPass sceneRenderPass;
+    VkDescriptorSet sceneDescriptorSet;  
 };

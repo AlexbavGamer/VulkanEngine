@@ -13,6 +13,7 @@
 #include "VulkanImGui.h"
 #include "../Scene.h"
 
+
 bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device)
 {
     QueueFamilyIndices indices = findQueueFamilies(device);
@@ -114,6 +115,7 @@ void VulkanCore::init(GLFWwindow *window)
     swapChain->create();
     descriptor->createDescriptorSetLayout();
     createRenderPass();
+    createSceneResources();
     pipeline->create(renderPass, swapChain->getExtent());
     createFramebuffers();
     createCommandPool();
@@ -300,16 +302,24 @@ void VulkanCore::createRenderPass() {
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
 
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = 1;
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
 
-    if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create render pass!");
-    }
+    vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 }
 
 void VulkanCore::createFramebuffers() {
@@ -486,9 +496,17 @@ void VulkanCore::cleanup() {
 
     // Cleanup command resources
     vkDestroyCommandPool(getDevice(), commandPool, nullptr);
+
+    handleResize();
 }
 
 void VulkanCore::renderFrame() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    if (width == 0 || height == 0) {
+        return;
+    }
+
     vkWaitForFences(getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
     
     uint32_t imageIndex;
@@ -500,7 +518,7 @@ void VulkanCore::renderFrame() {
         &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        getSwapChain()->recreate();
+        handleResize();
         return;
     }
 
@@ -539,11 +557,12 @@ void VulkanCore::renderFrame() {
 
     result = vkQueuePresentKHR(getPresentQueue(), &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        getSwapChain()->recreate();
+        handleResize();
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
+
 
 void VulkanCore::createCommandPool() {
     QueueFamilyIndices queueFamilyIndices = findQueueFamilies(getPhysicalDevice());
@@ -593,35 +612,258 @@ void VulkanCore::createSyncObjects() {
     }
 }
 
+void VulkanCore::createSceneResources() {
+    VkExtent2D extent = swapChain->getExtent();
+    
+    // Create scene image
+    VkImageCreateInfo imageInfo2{};
+    imageInfo2.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo2.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo2.extent.width = extent.width;
+    imageInfo2.extent.height = extent.height;
+    imageInfo2.extent.depth = 1;
+    imageInfo2.mipLevels = 1;
+    imageInfo2.arrayLayers = 1;
+    imageInfo2.format = swapChain->getImageFormat();
+    imageInfo2.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo2.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo2.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageInfo2.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo2.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    vkCreateImage(device, &imageInfo2, nullptr, &sceneImage);
+
+    // Allocate memory for scene image
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(device, sceneImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    vkAllocateMemory(device, &allocInfo, nullptr, &sceneImageMemory);
+    vkBindImageMemory(device, sceneImage, sceneImageMemory, 0);
+
+    // Create scene image view
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = sceneImage;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = swapChain->getImageFormat();
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    vkCreateImageView(device, &viewInfo, nullptr, &sceneImageView);
+
+    // Create sampler
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+    vkCreateSampler(device, &samplerInfo, nullptr, &sceneSampler);
+
+    // Create scene render pass
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = swapChain->getImageFormat();
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    // VkSubpassDependency dependency2{};
+    // dependency2.srcSubpass = 0;
+    // dependency2.dstSubpass = VK_SUBPASS_EXTERNAL;
+    // dependency2.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // dependency2.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    // dependency2.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    // dependency2.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    // dependency2.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    // std::array<VkSubpassDependency, 2> dependencies = {dependency, dependency2};
+
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
+
+    vkCreateRenderPass(device, &renderPassInfo, nullptr, &sceneRenderPass);
+
+    // Create scene framebuffer
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = sceneRenderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments = &sceneImageView;
+    framebufferInfo.width = extent.width;
+    framebufferInfo.height = extent.height;
+    framebufferInfo.layers = 1;
+
+    vkCreateFramebuffer(device, &framebufferInfo, nullptr, &sceneFramebuffer);
+
+    // Create descriptor set layout for scene texture
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 0;
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &samplerLayoutBinding;
+
+    VkDescriptorSetLayout sceneSetLayout;
+    vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &sceneSetLayout);
+
+    // Create descriptor pool
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSize.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = 1;
+
+    VkDescriptorPool sceneDescriptorPool;
+    vkCreateDescriptorPool(device, &poolInfo, nullptr, &sceneDescriptorPool);
+
+    // Allocate descriptor set
+    VkDescriptorSetAllocateInfo descAllocInfo{};
+    descAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descAllocInfo.descriptorPool = sceneDescriptorPool;
+    descAllocInfo.descriptorSetCount = 1;
+    descAllocInfo.pSetLayouts = &sceneSetLayout;
+
+    vkAllocateDescriptorSets(device, &descAllocInfo, &sceneDescriptorSet);
+
+    // Update descriptor set
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = sceneImageView;
+    imageInfo.sampler = sceneSampler;
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = sceneDescriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+}
+
+
 void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to begin recording command buffer!");
-    }
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = getRenderPass();
-    renderPassInfo.framebuffer = getFramebuffers()[imageIndex];
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = getSwapChain()->getExtent();
+    // First render scene to scene framebuffer
+    VkRenderPassBeginInfo sceneRenderPassInfo{};
+    sceneRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    sceneRenderPassInfo.renderPass = sceneRenderPass;
+    sceneRenderPassInfo.framebuffer = sceneFramebuffer;
+    sceneRenderPassInfo.renderArea.offset = {0, 0};
+    sceneRenderPassInfo.renderArea.extent = swapChain->getExtent();
 
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.2f, 1.0f}}};
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
+    sceneRenderPassInfo.clearValueCount = 1;
+    sceneRenderPassInfo.pClearValues = &clearColor;
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
+    vkCmdBeginRenderPass(commandBuffer, &sceneRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     scene->render(commandBuffer);
-    getImGui()->render(commandBuffer);
-
     vkCmdEndRenderPass(commandBuffer);
 
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to record command buffer!");
+    // Then render ImGui with scene texture
+    VkRenderPassBeginInfo imguiRenderPassInfo{};
+    imguiRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    imguiRenderPassInfo.renderPass = renderPass;
+    imguiRenderPassInfo.framebuffer = framebuffers[imageIndex];
+    imguiRenderPassInfo.renderArea.offset = {0, 0};
+    imguiRenderPassInfo.renderArea.extent = swapChain->getExtent();
+    imguiRenderPassInfo.clearValueCount = 1;
+    imguiRenderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(commandBuffer, &imguiRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    imgui->render(commandBuffer, sceneDescriptorSet);
+    vkCmdEndRenderPass(commandBuffer);
+
+    vkEndCommandBuffer(commandBuffer);
+}
+
+
+void VulkanCore::handleResize() 
+{
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    if (width == 0 || height == 0) {
+        return;  // Skip resize if minimized
     }
+
+    // Wait for all operations to complete
+    vkDeviceWaitIdle(device);
+    
+    // Clean up ImGui first
+    imgui->cleanup();
+    
+    // Clean up framebuffers
+    for (auto framebuffer : framebuffers) {
+        vkDestroyFramebuffer(device, framebuffer, nullptr);
+    }
+    framebuffers.clear();
+    
+    // Reset command buffers before recreating resources
+    for (auto& commandBuffer : commandBuffers) {
+        vkResetCommandBuffer(commandBuffer, 0);
+    }
+    
+    // Recreate in correct order
+    swapChain->recreate();
+    createFramebuffers();
+    pipeline->recreate(renderPass, swapChain->getExtent());
+    imgui->init(renderPass);
+
+    scene->updateCameraAspect(static_cast<float>(width) / static_cast<float>(height));
 }
 
 void VulkanCore::checkWireframeModeChange() {

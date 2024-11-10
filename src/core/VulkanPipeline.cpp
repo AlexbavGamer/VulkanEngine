@@ -21,14 +21,21 @@ VulkanPipeline::~VulkanPipeline()
 
 void VulkanPipeline::cleanup()
 {
-    auto device = core.getDevice();
-    if (graphicsPipeline != VK_NULL_HANDLE) {
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-    }
+    if (!core.getDevice()) return;
+    
+    vkDeviceWaitIdle(core.getDevice());
+
     if (pipelineLayout != VK_NULL_HANDLE) {
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        vkDestroyPipelineLayout(core.getDevice(), pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+    }
+
+    if (graphicsPipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(core.getDevice(), graphicsPipeline, nullptr);
+        graphicsPipeline = VK_NULL_HANDLE;
     }
 }
+
 
 void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D extent)
 {
@@ -37,13 +44,15 @@ void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D extent)
 
 void VulkanPipeline::recreate(VkRenderPass renderPass, VkExtent2D extent)
 {
+    vkDeviceWaitIdle(core.getDevice());
     cleanup();
     create(renderPass, extent);
 }
 
 void VulkanPipeline::setWireframeMode(bool enabled) 
 {
-
+    core.handleResize();
+    wireframeMode = enabled;
 }
 
 void VulkanPipeline::checkWireframeModeChange()

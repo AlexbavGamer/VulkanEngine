@@ -18,6 +18,7 @@ public:
     void createUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
     void updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo);
 
+    VkDescriptorPool getPool() const { return descriptorPool; }
     VkDescriptorSetLayout getSetLayout() const { return descriptorSetLayout; }
     VkDescriptorSet getSet(size_t index) const { return descriptorSets[index]; }
     

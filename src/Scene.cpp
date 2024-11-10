@@ -22,6 +22,12 @@ void Scene::updateCamera() {
     camera::updateCamera(camera, cameraPos, target, up);
 }
 
+void Scene::updateCameraAspect(float aspectRatio)
+{
+    camera.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    camera.projection[1][1] *= -1;
+}
+
 Scene::~Scene() {}
 
 void Scene::addEntity(const Entity& entity) {

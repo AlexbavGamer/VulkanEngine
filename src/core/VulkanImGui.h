@@ -4,6 +4,10 @@
 #pragma once
 #include "VulkanCore.h"
 
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_glfw.h"
+
 class VulkanImGui {
 public:
     VulkanImGui(VulkanCore& core);
@@ -11,8 +15,7 @@ public:
     
     void init(VkRenderPass renderPass);
     void cleanup();
-    void render(VkCommandBuffer commandBuffer);
-    void newFrame();
+    void render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDescriptorSet);
     
 private:
     void setupDescriptorPool();

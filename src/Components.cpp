@@ -15,38 +15,40 @@ void camera::updateCamera(CameraComponent &camera, const glm::vec3 &position, co
 
 void Entity::render(VkCommandBuffer commandBuffer, const CameraComponent &camera)
 {
-      // Validation check
-    if (!material.pipeline || !material.pipelineLayout || !material.descriptorSet || 
-        !mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0) {
+    // Initial validation
+    if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0) {
         return;
     }
 
-    // Set initial transform if not set
+    // Handle default scale
     if (transform.scale == glm::vec3(0.0f)) {
         transform.scale = glm::vec3(1.0f);
     }
 
-    // Update matrices
+    // Update uniform buffer with current transform and camera data
     glm::mat4 modelMatrix = transform.getMatrix();
-    
-    // Create and update UBO
     UBO ubo{};
     ubo.model = modelMatrix;
     ubo.view = camera.view;
     ubo.projection = camera.projection;
     
-    // Update GPU data
     vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(commandBuffer, material.uniformBuffer, ubo);
-    
-    // Bind pipeline and descriptors
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout, 0, 1, &material.descriptorSet, 0, nullptr);
 
-    // Bind vertex and index buffers
+    // Get pipeline and layout
+    VkPipeline pipeline = vulkanRender.getCore()->getPipeline()->getPipeline();
+    VkPipelineLayout layout = vulkanRender.getCore()->getPipeline()->getLayout();
+    
+    if (!pipeline || !layout || pipeline == VK_NULL_HANDLE || layout == VK_NULL_HANDLE) {
+        return;
+    }
+
+    // Record commands within the active render pass
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &material.descriptorSet, 0, nullptr);
+
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer, offsets);
     vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-    // Draw
     vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
 }
