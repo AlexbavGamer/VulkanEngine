@@ -21,96 +21,113 @@ void showError(const std::string& message) {
 #endif
 }
 
-void createSphere(MeshComponent& mesh) {
+void createSphere(MeshComponent& mesh, float radius, int stacks, int sectors) 
+{
     VulkanRenderer& renderer = VulkanRenderer::getInstance();
-
-    const int sectors = 36;
-    const int stacks = 18;
-    const float radius = 0.5f;
+    
     std::vector<float> vertices;
     std::vector<uint32_t> indices;
 
-    // Generate vertices
+    // Gerar vértices e normais
     for (int i = 0; i <= stacks; ++i) {
-        float phi = M_PI * float(i) / float(stacks);
+        float stackAngle = M_PI / 2 - i * M_PI / stacks;  // de +PI/2 a -PI/2
+        float xy = radius * cosf(stackAngle);             // raio no plano XZ
+        float z = radius * sinf(stackAngle);              // altura do vértice
+
         for (int j = 0; j <= sectors; ++j) {
-            float theta = 2.0f * M_PI * float(j) / float(sectors);
+            float sectorAngle = j * 2 * M_PI / sectors;   // de 0 a 2PI
 
-            float x = radius * sin(phi) * cos(theta);
-            float y = radius * cos(phi);
-            float z = radius * sin(phi) * sin(theta);
+            // Posição do vértice
+            float x = xy * cosf(sectorAngle);
+            float y = xy * sinf(sectorAngle);
 
-            // Position
+            // Normal (normalizada para uma esfera)
+            float nx = x / radius;
+            float ny = y / radius;
+            float nz = z / radius;
+
+            // Cor (vamos usar um degradê baseado na posição Y)
+            float r = (y + radius) / (2 * radius);
+            float g = (z + radius) / (2 * radius);
+            float b = (x + radius) / (2 * radius);
+
+            // Adicionar posição, cor e normal ao vetor de vértices
             vertices.push_back(x);
             vertices.push_back(y);
             vertices.push_back(z);
-
-            // Color (gradient based on position)
-            vertices.push_back(std::abs(x/radius));
-            vertices.push_back(std::abs(y/radius));
-            vertices.push_back(std::abs(z/radius));
+            vertices.push_back(r);  // Cor R
+            vertices.push_back(g);  // Cor G
+            vertices.push_back(b);  // Cor B
+            vertices.push_back(nx); // Normal X
+            vertices.push_back(ny); // Normal Y
+            vertices.push_back(nz); // Normal Z
         }
     }
 
-    // Generate indices
+    // Gerar índices para triângulos
     for (int i = 0; i < stacks; ++i) {
         for (int j = 0; j < sectors; ++j) {
-            int first = i * (sectors + 1) + j;
-            int second = first + sectors + 1;
+            int current = i * (sectors + 1) + j;
+            int next = current + sectors + 1;
 
-            indices.push_back(first);
-            indices.push_back(second);
-            indices.push_back(first + 1);
+            // Primeiro triângulo
+            indices.push_back(current);
+            indices.push_back(next);
+            indices.push_back(current + 1);
 
-            indices.push_back(second);
-            indices.push_back(second + 1);
-            indices.push_back(first + 1);
+            // Segundo triângulo
+            indices.push_back(current + 1);
+            indices.push_back(next);
+            indices.push_back(next + 1);
         }
     }
 
+    // Criar buffers e enviar dados para a GPU
     renderer.getCore()->createBuffer(vertices.size() * sizeof(float), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.vertexBuffer, mesh.vertexBufferMemory);
     renderer.getCore()->createBuffer(indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mesh.indexBuffer, mesh.indexBufferMemory);
-    
+
     renderer.getCore()->copyDataToBuffer(vertices.data(), mesh.vertexBufferMemory, vertices.size() * sizeof(float));
     renderer.getCore()->copyDataToBuffer(indices.data(), mesh.indexBufferMemory, indices.size() * sizeof(uint32_t));
 
-    mesh.indexCount = indices.size();    
+    mesh.indexCount = static_cast<uint32_t>(indices.size());
 }
+
 
 void createCube(MeshComponent& mesh) 
 {
     VulkanRenderer& renderer = VulkanRenderer::getInstance();
     float vertices[] = {
+        // Position           // Color            // Normal
         // Front face (Red)
-        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,
-        0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,
-        0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  0.0f, 0.0f,  1.0f,
         // Back face (Green)
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-        0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-        0.5f,  0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f, 0.0f, 1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
         // Top face (Blue)
-        -0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-        0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-        0.5f,  0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f, 0.0f, 0.0f, 1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, 0.0f, 0.0f, 1.0f,  0.0f,  1.0f, 0.0f,
         // Bottom face (Yellow)
-        -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,
-        0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,
-        0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,  0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,  0.0f, -1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  0.0f, -1.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  0.0f, -1.0f, 0.0f,
         // Right face (Magenta)
-        0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
-        0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
-        0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
-        0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 1.0f,  1.0f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,  1.0f,  0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  1.0f,  0.0f, 0.0f,
         // Left face (Cyan)
-        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f, 0.0f, 1.0f, 1.0f
+        -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 1.0f, -1.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f, 0.0f, 1.0f, 1.0f, -1.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, 0.0f, 1.0f, 1.0f, -1.0f,  0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f, 0.0f, 1.0f, 1.0f, -1.0f,  0.0f, 0.0f
     };
     uint32_t indices[] = {
         0, 2, 1,  2, 0, 3,    // Front (Red)
@@ -170,7 +187,7 @@ int main() {
 
         // Add mesh component
         MeshComponent& meshComponent = entity->addComponent<MeshComponent>();
-        createSphere(meshComponent);
+        createSphere(meshComponent, 1.0, 20, 40);
 
         // Create and add material component
         MaterialComponent& materialComponent = entity->addComponent<MaterialComponent>();
@@ -187,7 +204,7 @@ int main() {
 
         materialComponent.pipeline = renderer.getCore()->getPipeline()->getPipeline();
         materialComponent.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
-        materialComponent.descriptorSet = renderer.getCore()->getDescriptor()->getSet(renderer.getCore()->getCurrentFrame());
+        materialComponent.descriptorSet = renderer.getCore()->getDescriptor()->getDescriptorSet(renderer.getCore()->getCurrentFrame());
         materialComponent.uniformBuffer = uniformBuffer;
         materialComponent.uniformBufferMemory = uniformBufferMemory;
 
@@ -198,13 +215,13 @@ int main() {
 
         // Add transform component
         TransformComponent& transformComponent = entity->addComponent<TransformComponent>();
-        transformComponent.position = glm::vec3(0.0f, 0.0f, -5.0f);
+        transformComponent.position = glm::vec3(0.0f, 0.0f, 0.0f); // Center at origin
         transformComponent.rotation = glm::vec3(0.0f);
         transformComponent.scale = glm::vec3(1.0f);
 
         // Setup camera
         CameraComponent camera;
-        camera.projection = glm::perspective(glm::radians(45.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 100.0f);
+        camera.projection = glm::perspective(glm::radians(90.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 100.0f);
         camera.view = glm::lookAt(
             glm::vec3(0.0f, 0.0f, 3.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
@@ -212,6 +229,9 @@ int main() {
         );
         
         LightComponent light;
+        light.position = glm::vec3(15.0f, 10.0f, 0.0f);  // Initial sun position
+        light.color = glm::vec3(1.0f, 0.95f, 0.8f);      // Warm sunlight color
+        light.intensity = 1.5f;                           // Bright sunlight
         scene.camera = camera;
         scene.lights.push_back(light);
 

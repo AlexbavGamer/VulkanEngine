@@ -45,6 +45,7 @@ struct LightComponent : Component {
     glm::vec3 position;
     glm::vec3 color;
     float intensity;
+    glm::vec3 direction;
 };
 
 // Definição do CameraComponent que estava ausente no seu arquivo
@@ -91,7 +92,12 @@ struct UBO {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;
+    glm::vec3 lightPosition;
+    glm::vec3 lightColor;
+    glm::vec3 viewPos;
+    glm::mat3 normalMatrix;  // Add this
 };
+
 
 struct RenderComponent : Component
 {
@@ -103,9 +109,10 @@ struct RenderComponent : Component
 struct Vertex {
     glm::vec3 position {};
     glm::vec3 color {};
+    glm::vec3 normal {};
 
     bool operator==(const Vertex &other) const {
-      return position == other.position && color == other.color;
+      return position == other.position && color == other.color && normal == other.normal;
     }
 
     static std::vector<VkVertexInputBindingDescription> getBindingDescription() 
@@ -124,13 +131,11 @@ struct Vertex {
 
         attributeDescriptions.push_back({0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
         attributeDescriptions.push_back({1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
-        // attributeDescriptions.push_back({2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
-        // attributeDescriptions.push_back({3, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, uv)});
+        attributeDescriptions.push_back({2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
 
         return attributeDescriptions;
     }
 };
-
 namespace camera {
     void updateCamera(CameraComponent& camera, const glm::vec3& position, const glm::vec3& target, const glm::vec3& up);
 }

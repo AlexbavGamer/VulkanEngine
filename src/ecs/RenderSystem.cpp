@@ -14,16 +14,36 @@ void RenderSystem::render(Registry& registry, VkCommandBuffer commandBuffer, VkP
             return;
         }
 
-        if (transform.scale == glm::vec3(0.0f)) {
-            transform.scale = glm::vec3(1.0f);           
-        }
+        // World space transform calculation
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, transform.position);
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(transform.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(transform.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(transform.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+        modelMatrix = glm::scale(modelMatrix, transform.scale);
 
-        glm::mat4 modelMatrix = transform.getMatrix();
         UBO ubo{};
         ubo.model = modelMatrix;
         ubo.view = vulkanRender.getCore()->getScene()->camera.view;
         ubo.projection = vulkanRender.getCore()->getScene()->camera.projection;
-            
+        
+        // Correct normal matrix calculation for lighting
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(modelMatrix)));
+        ubo.normalMatrix = normalMatrix;
+        
+        // Sun position calculation
+        float time = glfwGetTime();
+        float radius = 15.0f;
+        glm::vec3 lightPos = glm::vec3(
+            cos(time * 0.1f) * radius,
+            10.0f + sin(time * 0.1f) * 5.0f,
+            sin(time * 0.1f) * radius
+        );
+
+        ubo.lightPosition = lightPos;
+        ubo.lightColor = vulkanRender.getCore()->getScene()->lights[0].color;
+        ubo.viewPos = vulkanRender.getCore()->getScene()->camera.position;
+        
         vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(commandBuffer, material.uniformBuffer, ubo);
 
         VkPipeline pipeline = vulkanRender.getCore()->getPipeline()->getPipeline();

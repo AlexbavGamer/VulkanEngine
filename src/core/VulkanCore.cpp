@@ -503,7 +503,10 @@ void VulkanCore::cleanup() {
         vkDestroyCommandPool(device, commandPool, nullptr);
 }
 
-void VulkanCore::renderFrame() {
+void VulkanCore::renderFrame() 
+{
+    getPipeline()->recreatePipelineIfNeeded();
+
     int width = 0, height = 0;
     glfwGetFramebufferSize(window, &width, &height);
     if (width == 0 || height == 0) {
@@ -889,8 +892,4 @@ void VulkanCore::handleResize()
     // if (leftMousePressed || rightMousePressed) {
     //     scene->updateMousePosition(mouseX, mouseY);
     // }
-}
-
-void VulkanCore::checkWireframeModeChange() {
-    getPipeline()->checkWireframeModeChange();
 }

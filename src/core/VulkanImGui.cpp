@@ -240,6 +240,7 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
     static bool wireframeMode = false;
     if(ImGui::Checkbox("Wireframe Mode", &wireframeMode)) {
         core.getPipeline()->setWireframeMode(wireframeMode);
+        core.getPipeline()->wireframeModeChanged = true;
     }
     ImGui::End();
 

@@ -51,13 +51,32 @@ void VulkanPipeline::recreate(VkRenderPass renderPass, VkExtent2D extent)
 
 void VulkanPipeline::setWireframeMode(bool enabled) 
 {
-    core.handleResize();
+    vkDeviceWaitIdle(core.getDevice());
     wireframeMode = enabled;
+    wireframeModeChanged = true;
 }
 
-void VulkanPipeline::checkWireframeModeChange()
+void VulkanPipeline::recreatePipelineIfNeeded()
 {
-    
+    if (wireframeModeChanged) {
+        vkDeviceWaitIdle(core.getDevice());
+        
+        // Store current pipeline
+        VkPipeline oldPipeline = graphicsPipeline;
+        
+        // Set current pipeline to null before creating new one
+        graphicsPipeline = VK_NULL_HANDLE;
+        
+        // Create new pipeline
+        create(core.getRenderPass(), core.getSwapChain()->getExtent());
+        
+        // Destroy old pipeline if it was valid
+        if (oldPipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(core.getDevice(), oldPipeline, nullptr);
+        }
+        
+        wireframeModeChanged = false;
+    }
 }
 
 void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D extent)
@@ -157,12 +176,13 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
+    VkDescriptorSetLayout  descriptorSet = core.getDescriptor()->getDescriptorSetLayout();
+    
     // Configuração de layout de pipeline
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->getSetLayout();
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSet;
 
     if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");

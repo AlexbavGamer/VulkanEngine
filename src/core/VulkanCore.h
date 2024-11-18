@@ -86,7 +86,6 @@ private:
     std::vector<const char*> getRequiredExtensions();
 
     bool isDeviceSuitable(VkPhysicalDevice device);
-    void checkWireframeModeChange();
 
     VkInstance instance;
     VkDevice device;

@@ -77,7 +77,6 @@ void Scene::handleKeyboardInput(GLFWwindow* window) {
 
 void Scene::handleMouseInput(GLFWwindow* window, double xpos, double ypos)
 {
-    std::cout << "Mouse position: " << xpos << ", " << ypos << std::endl;
     if(cursorEnabled) return;
 
     if(firstMouse)
@@ -117,7 +116,7 @@ void Scene::updateMousePosition(double mouseX, double mouseY)
 }
 
 void Scene::updateCameraAspect(float aspectRatio) {
-    camera.projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    camera.projection = glm::perspective(glm::radians(90.0f), aspectRatio, 0.1f, 100.0f);
     camera.projection[1][1] *= -1;
 }
 
@@ -126,7 +125,7 @@ void Scene::render(VkCommandBuffer commandBuffer) {
         *registry,
         commandBuffer,
         core->getPipeline()->getLayout(),
-        core->getDescriptor()->getSet(core->getCurrentFrame())
+        core->getDescriptor()->getDescriptorSet(core->getCurrentFrame())
     );
 }
 
