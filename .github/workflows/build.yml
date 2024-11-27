@@ -56,12 +56,6 @@ jobs:
           version: latest
           cache: true
 
-      - name: Install MinGW (Windows)
-        if: matrix.os == 'windows-latest'
-        uses: egor-tensin/setup-mingw@v2.2.0
-        with:
-          platform: x64
-
       - name: Install MinGW and Build Dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
