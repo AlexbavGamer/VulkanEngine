@@ -7,8 +7,10 @@
 #include "VulkanImGui.h"
 #include <imgui_internal.h>
 
+#include <typeinfo.h>
 #include "../Scene.h"
 #include <iostream>
+#include <variant>
 
 VulkanImGui::VulkanImGui(VulkanCore& core) : core(core), imguiPool(VK_NULL_HANDLE)
 {
@@ -237,10 +239,17 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, -1.0f), ImVec2(350.0f, -1.0f));
     ImGui::Begin("Inspector", &showInspector);
-    static bool wireframeMode = false;
-    if(ImGui::Checkbox("Wireframe Mode", &wireframeMode)) {
-        core.getPipeline()->setWireframeMode(wireframeMode);
-        core.getPipeline()->wireframeModeChanged = true;
+    if(selectedEntity) 
+    {
+        for (const auto& [type_index, component] : selectedEntity->getComponents()) 
+        {
+            if (component) { // Check if component is valid
+                component->renderComponent();
+                if (component != std::prev(selectedEntity->getComponents().end())->second) {
+                    ImGui::Separator();
+                }
+            }
+        }
     }
     ImGui::End();
 

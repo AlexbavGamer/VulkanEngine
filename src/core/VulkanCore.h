@@ -54,7 +54,12 @@ public:
     void setSwapChain(std::unique_ptr<VulkanSwapChain> newSwapChain) { swapChain = std::move(newSwapChain); }
     void handleResize();
     
+    VkCommandBuffer beginSingleTimeCommands();
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+
+    void createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
+    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 private:
     const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
     const std::vector<const char*> deviceExtensions = {
@@ -113,12 +118,19 @@ private:
     std::unique_ptr<VulkanImGui> imgui;
     std::unique_ptr<Scene> scene;
 
-    
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData); 
+
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, 
+        VkImageUsageFlags usage, VkMemoryPropertyFlags properties, 
+        VkImage& image, VkDeviceMemory& imageMemory);
+    void transitionImageLayout(VkImage image, VkFormat format, 
+        VkImageLayout oldLayout, VkImageLayout newLayout);
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
 
 private:
     VkImage sceneImage;

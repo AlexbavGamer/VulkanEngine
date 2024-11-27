@@ -114,8 +114,10 @@ void VulkanDescriptor::createDescriptorSets()
     allocInfo.pSetLayouts = layouts.data();
     
     descriptorSets.resize(core.getMaxFramesInFlight());
-    if (vkAllocateDescriptorSets(core.getDevice(), &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
+    
+    VkResult result = vkAllocateDescriptorSets(core.getDevice(), &allocInfo, descriptorSets.data());
+    if (result != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate descriptor sets!");
     }
     
     for (size_t i = 0; i < core.getMaxFramesInFlight(); i++) {
@@ -124,19 +126,16 @@ void VulkanDescriptor::createDescriptorSets()
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UBO);
 
-        std::array<VkWriteDescriptorSet, 1> descriptorWrites{};
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = descriptorSets[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(core.getDevice(), 
-                              descriptorWrites.size(), 
-                              descriptorWrites.data(), 
-                              0, nullptr);
+        vkUpdateDescriptorSets(core.getDevice(), 1, &descriptorWrite, 0, nullptr);
     }
 }
 

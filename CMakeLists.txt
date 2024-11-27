@@ -50,6 +50,29 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(stb)
 
+# Add Assimp
+FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+)
+
+# Configure Assimp build options
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ZLIB ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "Disable building of Assimp samples")
+set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "Disable building of Assimp docs")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "" FORCE)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(assimp)
+
 # Incluir ImGui (para GUI)
 FetchContent_Declare(
     imgui
@@ -95,12 +118,14 @@ target_include_directories(VulkanEngine PRIVATE
     ${imgui_SOURCE_DIR}/backends
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/imgui
+    ${assimp_BINARY_DIR}/include
 )
 
 # Ligar ao Vulkan, GLFW e GLM
 target_link_libraries(VulkanEngine
     "${VULKAN_LIB}"
     glfw
+    assimp
 )
 
 # Configuração dos shaders
@@ -138,5 +163,5 @@ endif()
 
 # Caso precise de configurações específicas para o MinGW (como compilar estático)
 if(WIN32 AND MINGW)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -static")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -static -Wno-error=dangling-reference")
 endif()

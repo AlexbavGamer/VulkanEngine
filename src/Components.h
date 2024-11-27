@@ -10,6 +10,8 @@
 #include "ecs/Component.h"
 #include <memory>
 
+#include "imgui.h"
+
 class VulkanRenderer;
 
 struct TransformComponent : Component {
@@ -22,7 +24,40 @@ struct TransformComponent : Component {
                glm::yawPitchRoll(rotation.x, rotation.y, rotation.z) *
                glm::scale(glm::mat4(1.0f), scale);
     }
+
+    void renderComponent() override 
+    {
+        ImGui::Text("Transform Component");
+
+        if (ImGui::CollapsingHeader("Position", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::BeginChild("PositionChild", ImVec2(0, 100), true)) {
+                ImGui::DragFloat("Position X", &position.x, 0.1f);
+                ImGui::DragFloat("Position Y", &position.y, 0.1f);
+                ImGui::DragFloat("Position Z", &position.z, 0.1f);
+            }
+            ImGui::EndChild();
+        }
+
+        if (ImGui::CollapsingHeader("Rotation", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::BeginChild("RotationChild", ImVec2(0, 100), true)) {
+                ImGui::DragFloat("Rotation X", &rotation.x, 0.1f);
+                ImGui::DragFloat("Rotation Y", &rotation.y, 0.1f);
+                ImGui::DragFloat("Rotation Z", &rotation.z, 0.1f);
+            }
+            ImGui::EndChild();
+        }
+
+        if (ImGui::CollapsingHeader("Scale", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::BeginChild("ScaleChild", ImVec2(0, 100), true)) {
+                ImGui::DragFloat("Scale X", &scale.x, 0.1f);
+                ImGui::DragFloat("Scale Y", &scale.y, 0.1f);
+                ImGui::DragFloat("Scale Z", &scale.z, 0.1f);
+            }
+            ImGui::EndChild();
+        }
+    }
 };
+
 struct MeshComponent : Component {
     VkBuffer vertexBuffer;
     VkBuffer indexBuffer;
@@ -39,6 +74,26 @@ struct MaterialComponent : Component {
     VkDeviceMemory uniformBufferMemory;  // Memória do buffer de uniformes
     VkDescriptorPool descriptorPool;
     VkBuffer uniformBuffer;             // Buffer de uniformes
+
+    // Add these new texture-related fields
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+
+    glm::vec3 ambient{0.1f, 0.1f, 0.1f};
+    glm::vec3 diffuse{0.7f, 0.7f, 0.7f};
+    glm::vec3 specular{1.0f, 1.0f, 1.0f};
+    float shininess{32.0f};
+    
+    // Add new texture path fields
+    std::string diffuseTexturePath;
+    std::string specularTexturePath;
+    std::string normalTexturePath;
+    
+    // Optional: Add texture state tracking
+    bool hasDiffuseMap{false};
+    bool hasSpecularMap{false};
+    bool hasNormalMap{false};
 };
 
 struct LightComponent : Component {
@@ -53,10 +108,14 @@ struct CameraComponent {
     glm::mat4 projection;
     glm::mat4 view;
 
+    float width;
+    float height;
+
     float yaw = -90.0f;   // Initial yaw angle
     float pitch = 0.0f;   // Initial pitch angle
     float sensitivity = 0.1f;  // Mouse sensitivity
-    
+    float fov = 90.0f;
+
     glm::vec3 position = glm::vec3(0.0f, 0.0f, 3.0f);
     glm::vec3 front = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -104,15 +163,25 @@ struct RenderComponent : Component
     std::string name;
     MeshComponent mesh;
     MaterialComponent material;
+
+    void renderComponent() override 
+    {
+        ImGui::Text("Render Component");
+        ImGui::InputText("Name", &name[0], name.size() + 1);
+    }
 };
 
 struct Vertex {
     glm::vec3 position {};
     glm::vec3 color {};
     glm::vec3 normal {};
+    glm::vec2 texCoord {};
 
     bool operator==(const Vertex &other) const {
-      return position == other.position && color == other.color && normal == other.normal;
+      return position == other.position &&
+            color == other.color &&
+            normal == other.normal &&
+            texCoord == other.texCoord;
     }
 
     static std::vector<VkVertexInputBindingDescription> getBindingDescription() 
@@ -132,10 +201,12 @@ struct Vertex {
         attributeDescriptions.push_back({0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
         attributeDescriptions.push_back({1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
         attributeDescriptions.push_back({2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
+        attributeDescriptions.push_back({3, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)});
 
         return attributeDescriptions;
     }
 };
+
 namespace camera {
     void updateCamera(CameraComponent& camera, const glm::vec3& position, const glm::vec3& target, const glm::vec3& up);
 }

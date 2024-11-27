@@ -26,12 +26,14 @@ public:
     void handleKeyboardInput(GLFWwindow *window);
     void updateCameraAspect(float aspectRatio);
     void updateMousePosition(double mouseX, double mouseY);
+    float getCameraFov() { return cameraFov; }
 private:
     VulkanCore* core;
 public:
     float cameraRadius = 5.0f;
     float cameraTheta = 0.0f;
     float cameraPhi = 0.0f;
+    float cameraFov = 90.0f;
 
     float yaw = -90.0f;
     float pitch = 0.0f;

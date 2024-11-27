@@ -9,6 +9,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
+#include "engine/loaders/ModelLoader.h"
 
 uint32_t WIDTH = 800;
 uint32_t HEIGHT = 600;
@@ -181,52 +182,35 @@ int main() {
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
         Scene& scene = *renderer.getCore()->getScene();
-        
+
+        EngineModelLoader modelLoader(renderer);
+
         // Create entity using ECS
         std::shared_ptr<Entity> entity = scene.registry->createEntity();
 
-        // Add mesh component
-        MeshComponent& meshComponent = entity->addComponent<MeshComponent>();
-        createSphere(meshComponent, 1.0, 20, 40);
+        if(modelLoader.LoadModel("assets/models/cube.fbx", *entity)) {
+            TransformComponent& transform = entity->addComponent<TransformComponent>();
+            transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+            transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+            transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
 
-        // Create and add material component
-        MaterialComponent& materialComponent = entity->addComponent<MaterialComponent>();
-        
-        VkBuffer uniformBuffer;
-        VkDeviceMemory uniformBufferMemory;
-        renderer.getCore()->createBuffer(
-            sizeof(UBO), 
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            uniformBuffer,
-            uniformBufferMemory
-        );
+            MaterialComponent& material = entity->getComponent<MaterialComponent>();
+            material.ambient = glm::vec3(0.1f);
+            material.diffuse = glm::vec3(0.7f);
+            material.specular = glm::vec3(1.0f);
+            material.shininess = 32.0f;
 
-        materialComponent.pipeline = renderer.getCore()->getPipeline()->getPipeline();
-        materialComponent.pipelineLayout = renderer.getCore()->getPipeline()->getLayout();
-        materialComponent.descriptorSet = renderer.getCore()->getDescriptor()->getDescriptorSet(renderer.getCore()->getCurrentFrame());
-        materialComponent.uniformBuffer = uniformBuffer;
-        materialComponent.uniformBufferMemory = uniformBufferMemory;
-
-        RenderComponent& renderComponent = entity->addComponent<RenderComponent>();
-        renderComponent.material = materialComponent;
-        renderComponent.mesh = meshComponent;
-        renderComponent.name = "Sphere";
-
-        // Add transform component
-        TransformComponent& transformComponent = entity->addComponent<TransformComponent>();
-        transformComponent.position = glm::vec3(0.0f, 0.0f, 0.0f); // Center at origin
-        transformComponent.rotation = glm::vec3(0.0f);
-        transformComponent.scale = glm::vec3(1.0f);
+            RenderComponent& renderComponent = entity->addComponent<RenderComponent>();
+            renderComponent.material = material;
+            renderComponent.mesh = entity->getComponent<MeshComponent>();
+            renderComponent.name = "Cubo";
+        }
 
         // Setup camera
         CameraComponent camera;
-        camera.projection = glm::perspective(glm::radians(90.0f), static_cast<float>(WIDTH)/static_cast<float>(HEIGHT), 0.1f, 100.0f);
-        camera.view = glm::lookAt(
-            glm::vec3(0.0f, 0.0f, 3.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f)
-        );
+        camera.width = WIDTH;
+        camera.height = HEIGHT;
+        camera::updateCamera(camera, glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         
         LightComponent light;
         light.position = glm::vec3(15.0f, 10.0f, 0.0f);  // Initial sun position
