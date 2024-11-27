@@ -42,14 +42,9 @@ jobs:
             ${{ runner.os }}-cmake-
 
       - name: Install Doxygen
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update
-            sudo apt-get install -y doxygen graphviz
-          else
-            choco install doxygen.install graphviz
-          fi
-        shell: bash
+        uses: ssciwr/doxygen-install@v1.2.0
+        with:
+          version: "1.9.8"
 
       - name: Generate Documentation
         run: |
