@@ -44,7 +44,7 @@ jobs:
       - name: Install Doxygen
         uses: ssciwr/doxygen-install@v1.2.0
         with:
-          version: "1.9.8"
+          version: "1.12.0"
           
       - name: Install Vulkan SDK
         uses: humbletim/install-vulkan-sdk@v1.1.1
@@ -56,7 +56,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake libwayland-dev wayland-protocols libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+          sudo apt-get install -y build-essential cmake libwayland-dev wayland-protocols libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxkbcommon-dev
 
       - name: Configure and Build (Windows)
         if: matrix.os == 'windows-latest'
