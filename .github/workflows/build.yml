@@ -6,68 +6,95 @@ on:
       - main
 
 jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          keep_minimum_runs: 3
+
   build:
+    needs: clean
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
+        
     runs-on: ${{ matrix.os }}
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Install Vulkan SDK
-      uses: humbletim/install-vulkan-sdk@v1.1.1
-      with:
-        version: latest
-        cache: true
+      - name: Cache CMake files
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cmake
+            build/
+          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-
 
-    - name: Setup Windows Dependencies
-      if: matrix.os == 'windows-latest'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        install: >-
-          mingw-w64-x86_64-toolchain
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-ninja
+      - name: Cache MinGW (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v3
+        with:
+          path: C:\ProgramData\chocolatey\lib\mingw
+          key: ${{ runner.os }}-mingw-${{ hashFiles('**/*.cpp', '**/*.h') }}
+          restore-keys: |
+            ${{ runner.os }}-mingw-
 
-    - name: Setup Linux Dependencies
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake ninja-build
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.1.1
+        with:
+          version: latest
+          cache: true
 
-    - name: Configure and Build (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-        cmake --build build
+      - name: Install MinGW (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
 
-    - name: Configure and Build (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-        cmake --build build
+      - name: Install MinGW and Build Dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake mingw-w64
 
-    - name: Package Release Artifacts (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        mkdir release
-        xcopy /E /I build\* release\
-        7z a VulkanEngine-windows.zip ./release/*
+      - name: Configure and Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles"
+          cmake --build build --config Release
 
-    - name: Package Release Artifacts (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        mkdir release
-        cp -r build/* release/
-        zip -r VulkanEngine-linux.zip release/
+      - name: Configure and Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles"
+          cmake --build build --config Release
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          VulkanEngine-*.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package Release Artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir release
+          xcopy /E /I build\* release\
+          7z a VulkanEngine-windows.zip ./release/*
+
+      - name: Package Release Artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir release
+          cp -r build/* release/
+          zip -r VulkanEngine-linux.zip release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            VulkanEngine-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
