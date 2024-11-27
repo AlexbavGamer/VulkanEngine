@@ -24,9 +24,14 @@ jobs:
       run: |
         choco install mingw
 
-    - name: Install CMake via Chocolatey (with specific version)
+    - name: Install CMake manually
       run: |
-        choco install cmake --version 3.21.1 --installargs 'ADD_CMAKE_TO_PATH=System'
+        # Baixa o instalador do CMake
+        Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-win64-x64.msi -OutFile cmake.msi
+        # Instala o CMake silenciosamente
+        Start-Process msiexec.exe -ArgumentList '/i', 'cmake.msi', '/quiet', '/norestart' -NoNewWindow -Wait
+        # Remove o instalador após a instalação
+        Remove-Item -Force cmake.msi
 
     - name: Configure CMake project with MinGW
       run: |
