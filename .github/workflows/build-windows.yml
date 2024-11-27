@@ -29,9 +29,9 @@ jobs:
         # Baixa o instalador do CMake
         Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi
         # Instala o CMake silenciosamente
-        Start-Process msiexec.exe -ArgumentList '/i', 'cmake.msi', '/quiet', '/norestart' -NoNewWindow -Wait
+        Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
         # Remove o instalador após a instalação
-        Remove-Item -Force cmake.msi
+        Remove-Item -Force cmake-3.31.1-windows-x86_64.msi
 
     - name: Configure CMake project with MinGW
       run: |
