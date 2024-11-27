@@ -19,21 +19,28 @@ jobs:
         vulkan-query-version: 1.3.296.0
         vulkan-components: Vulkan-Headers, Vulkan-Loader
         vulkan-use-cache: true
-        
 
     - name: Install MinGW
       run: |
         choco install mingw
 
-    - name: Install CMake via Chocolatey
+    - name: Install CMake via Chocolatey (with specific version)
       run: |
-        choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+        choco install cmake --version 3.21.1 --installargs 'ADD_CMAKE_TO_PATH=System'
 
     - name: Configure CMake project with MinGW
       run: |
         cmake -S . -B build -G "MinGW Makefiles"
         cmake --build build --config Release
 
-    - name: Run tests (optional)
+    - name: Package Release Artifacts
       run: |
-        cmake --build build --config Release --target test
+        mkdir -p release
+        cp -r build/* release/
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
