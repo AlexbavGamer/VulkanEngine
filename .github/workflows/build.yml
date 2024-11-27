@@ -1,0 +1,68 @@
+name: Build Project
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.1.1
+        with:
+          version: latest
+          cache: true
+
+      - name: Install MinGW (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install mingw
+
+      - name: Install Build Dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Configure and Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles"
+          cmake --build build --config Release
+
+      - name: Configure and Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cmake -S . -B build
+          cmake --build build --config Release
+
+      - name: Package Release Artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir release
+          xcopy /E /I build\* release\
+          7z a VulkanEngine-windows.zip ./release/*
+
+      - name: Package Release Artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir release
+          cp -r build/* release/
+          zip -r VulkanEngine-linux.zip release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            VulkanEngine-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
