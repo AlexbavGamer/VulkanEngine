@@ -13,15 +13,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Cache Vulkan SDK
+      - name: Cache Vulkan SDK
+        uses: actions/cache@v3
+        with:
+          path: C:/VulkanSDK
+          key: vulkan-sdk-${{ runner.os }}-${{ hashFiles('**/VulkanSDK-1.3.296.0-Installer.exe') }}
+          restore-keys: |
+            vulkan-sdk-${{ runner.os }}-
+
+      # Cache CMake installer
+      - name: Cache CMake Installer
+        uses: actions/cache@v3
+        with:
+          path: C:/Program Files/CMake
+          key: cmake-${{ runner.os }}-${{ hashFiles('**/cmake-3.31.1-windows-x86_64.msi') }}
+          restore-keys: |
+            cmake-${{ runner.os }}-
+
       - name: Install Vulkan SDK on C Drive
         run: |
-          # Baixar e instalar o Vulkan SDK diretamente no disco C
-          $vulkanUrl = "https://sdk.lunarg.com/sdk/download/1.3.296.0/windows/VulkanSDK-1.3.296.0-Installer.exe"
-          $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
-          Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
+          if (-Not (Test-Path "C:/VulkanSDK")) {
+            # Baixar e instalar o Vulkan SDK diretamente no disco C
+            $vulkanUrl = "https://sdk.lunarg.com/sdk/download/1.3.296.0/windows/VulkanSDK-1.3.296.0-Installer.exe"
+            $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
+            Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
 
-          # Executa a instalação
-          Start-Process $vulkanInstallerPath -ArgumentList "/quiet /install C:\VulkanSDK" -NoNewWindow -Wait
+            # Executa a instalação
+            Start-Process $vulkanInstallerPath -ArgumentList "/quiet /install C:\VulkanSDK" -NoNewWindow -Wait
+          }
 
       - name: Install MinGW
         run: |
@@ -29,14 +49,16 @@ jobs:
 
       - name: Install CMake manually
         run: |
-          # Baixa o instalador do CMake
-          Invoke-WebRequest -Uri "https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi" -OutFile "cmake-3.31.1-windows-x86_64.msi"
+          if (-Not (Test-Path "C:/Program Files/CMake")) {
+            # Baixa o instalador do CMake
+            Invoke-WebRequest -Uri "https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi" -OutFile "cmake-3.31.1-windows-x86_64.msi"
 
-          # Instala o CMake silenciosamente
-          Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
+            # Instala o CMake silenciosamente
+            Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
 
-          # Remove o instalador após a instalação
-          Remove-Item -Force "cmake-3.31.1-windows-x86_64.msi"
+            # Remove o instalador após a instalação
+            Remove-Item -Force "cmake-3.31.1-windows-x86_64.msi"
+          }
 
       - name: Configure CMake project with MinGW
         run: |
