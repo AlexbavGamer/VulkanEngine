@@ -13,12 +13,23 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Prepare Vulkan SDK
-      uses: humbletim/setup-vulkan-sdk@v1.2.0
-      with:
-        vulkan-query-version: 1.3.296.0
-        vulkan-components: Vulkan-Headers, Vulkan-Loader
-        vulkan-use-cache: true
+    - name: Install Vulkan SDK on C: drive
+      run: |
+        # Baixar e instalar o Vulkan SDK diretamente no disco C
+        $vulkanUrl = "https://vulkan.lunarg.com/sdk/home"
+        $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
+        Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
+
+        # Executa a instalação
+        Start-Process $vulkanInstallerPath -ArgumentList "/quiet /install C:\VulkanSDK" -NoNewWindow -Wait
+
+        # Verifica se a instalação foi bem-sucedida
+        if (Test-Path "C:/VulkanSDK") {
+            Write-Host "Vulkan SDK instalado com sucesso no C:/VulkanSDK"
+        } else {
+            Write-Host "Falha na instalação do Vulkan SDK"
+            exit 1
+        }
 
     - name: Install MinGW
       run: |
@@ -44,6 +55,20 @@ jobs:
       run: |
         cmake -S . -B build -G "MinGW Makefiles"
         cmake --build build --config Release
+
+    - name: Compile Shaders with Vulkan SDK
+      run: |
+        # Caminho para o compilador de shaders (glslc.exe)
+        $glslcPath = "C:/VulkanSDK/1.3.296.0/Bin/glslc.exe"
+
+        # Verifica se o glslc.exe está disponível
+        if (Test-Path $glslcPath) {
+            # Compila o shader
+            & $glslcPath "D:/a/VulkanEngine/VulkanEngine/shaders/fragment.frag" -o "D:/a/VulkanEngine/VulkanEngine/build/shaders/fragment.spv"
+        } else {
+            Write-Host "glslc.exe não encontrado. Verifique a instalação do Vulkan SDK."
+            exit 1
+        }
 
     - name: Package Release Artifacts
       run: |
