@@ -25,10 +25,10 @@ jobs:
 
         # Verifica se a instalação foi bem-sucedida
         if (Test-Path "C:/VulkanSDK") {
-            Write-Host "Vulkan SDK instalado com sucesso no C:/VulkanSDK"
+          Write-Host "Vulkan SDK instalado com sucesso no C:/VulkanSDK"
         } else {
-            Write-Host "Falha na instalação do Vulkan SDK"
-            exit 1
+          Write-Host "Falha na instalação do Vulkan SDK"
+          exit 1
         }
 
     - name: Install MinGW
@@ -42,13 +42,13 @@ jobs:
 
         # Verifica se o arquivo foi baixado corretamente
         if (Test-Path cmake-3.31.1-windows-x86_64.msi) {
-            # Instala o CMake silenciosamente
-            Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
-            # Remove o instalador após a instalação
-            Remove-Item -Force cmake-3.31.1-windows-x86_64.msi
+          # Instala o CMake silenciosamente
+          Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
+          # Remove o instalador após a instalação
+          Remove-Item -Force cmake-3.31.1-windows-x86_64.msi
         } else {
-            Write-Host "Falha ao baixar o instalador do CMake."
-            exit 1
+          Write-Host "Falha ao baixar o instalador do CMake."
+          exit 1
         }
 
     - name: Configure CMake project with MinGW
@@ -63,11 +63,11 @@ jobs:
 
         # Verifica se o glslc.exe está disponível
         if (Test-Path $glslcPath) {
-            # Compila o shader
-            & $glslcPath "D:/a/VulkanEngine/VulkanEngine/shaders/fragment.frag" -o "D:/a/VulkanEngine/VulkanEngine/build/shaders/fragment.spv"
+          # Compila o shader
+          & $glslcPath "D:/a/VulkanEngine/VulkanEngine/shaders/fragment.frag" -o "D:/a/VulkanEngine/VulkanEngine/build/shaders/fragment.spv"
         } else {
-            Write-Host "glslc.exe não encontrado. Verifique a instalação do Vulkan SDK."
-            exit 1
+          Write-Host "glslc.exe não encontrado. Verifique a instalação do Vulkan SDK."
+          exit 1
         }
 
     - name: Package Release Artifacts
