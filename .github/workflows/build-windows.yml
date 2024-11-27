@@ -10,47 +10,47 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Install Vulkan SDK on C: drive
-      run: |
-        # Baixar e instalar o Vulkan SDK diretamente no disco C
-        $vulkanUrl = "https://vulkan.lunarg.com/sdk/home"
-        $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
-        Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
+      - name: Install Vulkan SDK on C: drive
+        run: |
+          # Baixar e instalar o Vulkan SDK diretamente no disco C
+          $vulkanUrl = "https://vulkan.lunarg.com/sdk/home"
+          $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
+          Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
 
-        # Executa a instalação
-        Start-Process $vulkanInstallerPath -ArgumentList "/quiet /install C:\VulkanSDK" -NoNewWindow -Wait
+          # Executa a instalação
+          Start-Process $vulkanInstallerPath -ArgumentList "/quiet /install C:\VulkanSDK" -NoNewWindow -Wait
 
-    - name: Install MinGW
-      run: |
-        choco install mingw
+      - name: Install MinGW
+        run: |
+          choco install mingw
 
-    - name: Install CMake manually
-      run: |
-        # Baixa o instalador do CMake
-        Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi -OutFile cmake-3.31.1-windows-x86_64.msi
+      - name: Install CMake manually
+        run: |
+          # Baixa o instalador do CMake
+          Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi -OutFile cmake-3.31.1-windows-x86_64.msi
 
-        # Instala o CMake silenciosamente
-        Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
+          # Instala o CMake silenciosamente
+          Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
 
-        # Remove o instalador após a instalação
-        Remove-Item -Force cmake-3.31.1-windows-x86_64.msi
+          # Remove o instalador após a instalação
+          Remove-Item -Force cmake-3.31.1-windows-x86_64.msi
 
-    - name: Configure CMake project with MinGW
-      run: |
-        cmake -S . -B build -G "MinGW Makefiles"
-        cmake --build build --config Release
+      - name: Configure CMake project with MinGW
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles"
+          cmake --build build --config Release
 
-    - name: Package Release Artifacts
-      run: |
-        mkdir -p release
-        cp -r build/* release/
+      - name: Package Release Artifacts
+        run: |
+          mkdir -p release
+          cp -r build/* release/
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: release/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
