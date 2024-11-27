@@ -39,7 +39,7 @@ jobs:
             $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
             Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
 
-            # Executa a instalação
+            # Executa a instalação silenciosa sem as bibliotecas de depuração
             Start-Process $vulkanInstallerPath -ArgumentList "/quiet /install C:\VulkanSDK" -NoNewWindow -Wait
           }
 
