@@ -45,15 +45,6 @@ jobs:
         uses: ssciwr/doxygen-install@v1
         with:
           version: "1.12.0"
-          
-      - name: Cache MinGW (Windows)
-        if: matrix.os == 'windows-latest'
-        uses: actions/cache@v3
-        with:
-          path: C:\ProgramData\chocolatey\lib\mingw
-          key: ${{ runner.os }}-mingw-${{ hashFiles('**/*.cpp', '**/*.h') }}
-          restore-keys: |
-            ${{ runner.os }}-mingw-
 
       - name: Install Vulkan SDK
         uses: humbletim/install-vulkan-sdk@v1.1.1
@@ -77,7 +68,7 @@ jobs:
       - name: Configure and Build (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          cmake -S . -B build -G "MinGW Makefiles"
+          cmake -S . -B build
           cmake --build build --config Release
 
       - name: Package Release Artifacts (Windows)
