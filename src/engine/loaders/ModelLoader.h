@@ -13,12 +13,12 @@ class EngineModelLoader {
 private:
     VulkanRenderer& vulkanRenderer;
     std::string directory;
+    Assimp::Importer importer;  // Add this line
     
-    void ProcessNode(aiNode* node, const aiScene* scene, MeshComponent& meshComponent, MaterialComponent& materialComponent);
-    void ProcessMesh(aiMesh* mesh, const aiScene* scene, MeshComponent& meshComponent, MaterialComponent& materialComponent);
-    void LoadMaterialTextures(aiMaterial* mat, MaterialComponent& materialComponent);
-
-public:
+    void ProcessNode(aiNode* node, const aiScene* scene, Entity& entity);
+    void ProcessMesh(aiMesh* mesh, const aiScene* scene, Entity& entity);
+    void LoadMaterialTextures(aiMaterial* mat, Entity& entity);
+    public:
     explicit EngineModelLoader(VulkanRenderer& renderer) : vulkanRenderer(renderer) {}
     ~EngineModelLoader() = default;
 

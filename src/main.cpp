@@ -188,22 +188,11 @@ int main() {
         // Create entity using ECS
         std::shared_ptr<Entity> entity = scene.registry->createEntity();
 
-        if(modelLoader.LoadModel("assets/models/cube.fbx", *entity)) {
+        if(modelLoader.LoadModel("assets/models/monkey_head.fbx", *entity)) {
             TransformComponent& transform = entity->addComponent<TransformComponent>();
             transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
             transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
             transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
-
-            MaterialComponent& material = entity->getComponent<MaterialComponent>();
-            material.ambient = glm::vec3(0.1f);
-            material.diffuse = glm::vec3(0.7f);
-            material.specular = glm::vec3(1.0f);
-            material.shininess = 32.0f;
-
-            RenderComponent& renderComponent = entity->addComponent<RenderComponent>();
-            renderComponent.material = material;
-            renderComponent.mesh = entity->getComponent<MeshComponent>();
-            renderComponent.name = "Cubo";
         }
 
         // Setup camera

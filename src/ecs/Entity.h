@@ -36,6 +36,16 @@ public:
         return *component;
     }
 
+    template<typename T, typename... Args>
+    T& AddOrGetComponent(Args&&... args) {
+        static_assert(std::is_base_of<Component, T>::value, "T must inherit from Component");
+
+        auto it = components.find(std::type_index(typeid(T)));
+        if (it != components.end()) {
+            return *std::dynamic_pointer_cast<T>(it->second);
+        }
+        return addComponent<T>(std::forward<Args>(args)...);
+    }
 
     template<typename T>
     T& getComponent() {

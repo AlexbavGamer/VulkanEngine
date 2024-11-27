@@ -53,11 +53,15 @@ public:
     void setDescriptor(std::unique_ptr<VulkanDescriptor> newDescriptor) { descriptor = std::move(newDescriptor); }
     void setSwapChain(std::unique_ptr<VulkanSwapChain> newSwapChain) { swapChain = std::move(newSwapChain); }
     void handleResize();
+
+    VkSampler getTextureSampler() const { return textureSampler; }
+    void createTextureSampler();
     
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
+    void createTextureImage(unsigned char* pixels, VkDeviceSize imageSize, uint32_t width, uint32_t height, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
     void createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 private:
@@ -111,7 +115,8 @@ private:
 
     VkRenderPass renderPass;
     std::vector<VkFramebuffer> framebuffers;
-
+    VkSampler textureSampler;
+    
     std::unique_ptr<VulkanSwapChain> swapChain;
     std::unique_ptr<VulkanPipeline> pipeline;
     std::unique_ptr<VulkanDescriptor> descriptor;

@@ -66,34 +66,33 @@ struct MeshComponent : Component {
     uint32_t indexCount;
 };
 
-struct MaterialComponent : Component {
+struct MaterialComponent : public Component {
     VkPipeline pipeline;
     VkPipelineLayout pipelineLayout;
-    VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet descriptorSet;
-    VkDeviceMemory uniformBufferMemory;  // Memória do buffer de uniformes
-    VkDescriptorPool descriptorPool;
-    VkBuffer uniformBuffer;             // Buffer de uniformes
+    VkBuffer uniformBuffer;
+    VkDeviceMemory uniformBufferMemory;
 
-    // Add these new texture-related fields
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
+    // Diffuse textures
+    VkImage diffuseImage;
+    VkDeviceMemory diffuseImageMemory;
+    VkImageView diffuseImageView;
 
-    glm::vec3 ambient{0.1f, 0.1f, 0.1f};
-    glm::vec3 diffuse{0.7f, 0.7f, 0.7f};
-    glm::vec3 specular{1.0f, 1.0f, 1.0f};
-    float shininess{32.0f};
-    
-    // Add new texture path fields
-    std::string diffuseTexturePath;
-    std::string specularTexturePath;
-    std::string normalTexturePath;
-    
-    // Optional: Add texture state tracking
-    bool hasDiffuseMap{false};
-    bool hasSpecularMap{false};
-    bool hasNormalMap{false};
+    // Specular textures
+    VkImage specularImage;
+    VkDeviceMemory specularImageMemory;
+    VkImageView specularImageView;
+
+    // Normal textures
+    VkImage normalImage;
+    VkDeviceMemory normalImageMemory;
+    VkImageView normalImageView;
+
+    // Material properties
+    glm::vec3 diffuse = glm::vec3(0.8f);
+    glm::vec3 specular = glm::vec3(0.5f);
+    float shininess = 32.0f;
+    bool hasTexture = false;
 };
 
 struct LightComponent : Component {
@@ -151,12 +150,14 @@ struct UBO {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;
+    glm::mat3 normalMatrix;
     glm::vec3 lightPosition;
     glm::vec3 lightColor;
     glm::vec3 viewPos;
-    glm::mat3 normalMatrix;  // Add this
+    glm::vec3 materialDiffuse;
+    glm::vec3 materialSpecular;
+    float materialShininess;
 };
-
 
 struct RenderComponent : Component
 {

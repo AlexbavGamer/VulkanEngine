@@ -245,9 +245,6 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
         {
             if (component) { // Check if component is valid
                 component->renderComponent();
-                if (component != std::prev(selectedEntity->getComponents().end())->second) {
-                    ImGui::Separator();
-                }
             }
         }
     }

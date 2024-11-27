@@ -1,33 +1,36 @@
 #include "ModelLoader.h"
+#include <magic_enum.hpp>
 
-void EngineModelLoader::ProcessNode(aiNode *node, const aiScene *scene, MeshComponent &meshComponent, MaterialComponent& materialComponent)
+void EngineModelLoader::ProcessNode(aiNode *node, const aiScene *scene, Entity &entity)
 {
     for(unsigned int i = 0; i < node->mNumMeshes; i++) {
         aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessMesh(mesh, scene, meshComponent, materialComponent);
+        ProcessMesh(mesh, scene, entity);
     }
     
     for(unsigned int i = 0; i < node->mNumChildren; i++) {
-        ProcessNode(node->mChildren[i], scene, meshComponent, materialComponent);
+        ProcessNode(node->mChildren[i], scene, entity);
     }
 }
 
-void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, MeshComponent &meshComponent, MaterialComponent& materialComponent)
+void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, Entity &entity)
 {
+    MeshComponent& meshComponent = entity.AddOrGetComponent<MeshComponent>();
+    MaterialComponent& materialComponent = entity.AddOrGetComponent<MaterialComponent>();
+    RenderComponent& renderComponent = entity.AddOrGetComponent<RenderComponent>();
+
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
 
     for(unsigned int i = 0; i < mesh->mNumVertices; i++) {
         Vertex vertex{};
-
         vertex.position = {
             mesh->mVertices[i].x,
             mesh->mVertices[i].y,
             mesh->mVertices[i].z
         };
 
-        if(mesh->HasNormals())
-        {
+        if(mesh->HasNormals()) {
             vertex.normal = {
                 mesh->mNormals[i].x,
                 mesh->mNormals[i].y,
@@ -35,8 +38,7 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, MeshComp
             };
         }
 
-        if(mesh->mTextureCoords[0])
-        {
+        if(mesh->mTextureCoords[0]) {
             vertex.texCoord = {
                 mesh->mTextureCoords[0][i].x,
                 mesh->mTextureCoords[0][i].y
@@ -46,11 +48,9 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, MeshComp
         vertices.push_back(vertex);
     }
 
-    for(unsigned int i = 0; i < mesh->mNumFaces; i++)
-    {
+    for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
-        for(unsigned int j = 0; j < face.mNumIndices; j++)
-        {
+        for(unsigned int j = 0; j < face.mNumIndices; j++) {
             indices.push_back(face.mIndices[j]);
         }
     }
@@ -75,81 +75,121 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, MeshComp
     vulkanRenderer.getCore()->copyDataToBuffer(indices.data(), meshComponent.indexBufferMemory, sizeof(indices[0]) * indices.size());
 
     meshComponent.indexCount = static_cast<uint32_t>(indices.size());
+
+    renderComponent.material = materialComponent;
+    renderComponent.mesh = meshComponent;
+    renderComponent.name = mesh->mName.C_Str();
 }
 
-void EngineModelLoader::LoadMaterialTextures(aiMaterial *mat, MaterialComponent &materialComponent)
+void EngineModelLoader::LoadMaterialTextures(aiMaterial *mat, Entity& entity)
 {
+    MaterialComponent& materialComponent = entity.AddOrGetComponent<MaterialComponent>();
     aiString texturePath;
     aiColor3D color;
 
-    // Load diffuse properties
-    if(mat->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
-    {
-        std::string fullPath = directory + '/' + texturePath.C_Str();
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        
-        // Create texture image
-        VkImage textureImage;
-        VkDeviceMemory textureImageMemory;
-        vulkanRenderer.getCore()->createTextureImage(
-            fullPath.c_str(),
-            textureImage,
-            textureImageMemory
-        );
+    // Array of texture types to process
+    std::vector<aiTextureType> textureTypes = {
+        aiTextureType_DIFFUSE,
+        aiTextureType_SPECULAR,
+        aiTextureType_AMBIENT,
+        aiTextureType_EMISSIVE,
+        aiTextureType_HEIGHT,
+        aiTextureType_NORMALS,
+        aiTextureType_SHININESS,
+        aiTextureType_OPACITY,
+        aiTextureType_DISPLACEMENT,
+        aiTextureType_LIGHTMAP,
+        aiTextureType_REFLECTION,
+        aiTextureType_BASE_COLOR,
+        aiTextureType_NORMAL_CAMERA,
+        aiTextureType_EMISSION_COLOR,
+        aiTextureType_METALNESS,
+        aiTextureType_DIFFUSE_ROUGHNESS,
+        aiTextureType_AMBIENT_OCCLUSION
+    };
 
-        // Create texture image view
-        VkImageView textureImageView = vulkanRenderer.getCore()->createImageView(
-            textureImage,
-            VK_FORMAT_R8G8B8A8_SRGB,
-            VK_IMAGE_ASPECT_COLOR_BIT
-        );
+    for(const auto& type : textureTypes) {
+        if(mat->GetTexture(type, 0, &texturePath) == AI_SUCCESS) {
+            std::cout << "Found: " << magic_enum::enum_name(type) << std::endl;
+            const aiScene* scene = importer.GetScene();
+            const aiTexture* texture = scene->GetEmbeddedTexture(texturePath.C_Str());
 
+            VkImage textureImage;
+            VkDeviceMemory textureImageMemory;
 
-        VkBuffer uniformBuffer;
-        VkDeviceMemory uniformBufferMemory;
-        vulkanRenderer.getCore()->createBuffer(
-            sizeof(UBO),
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            uniformBuffer,
-            uniformBufferMemory
-        );
-        
-        materialComponent.pipeline = vulkanRenderer.getCore()->getPipeline()->getPipeline();
-        materialComponent.pipelineLayout = vulkanRenderer.getCore()->getPipeline()->getLayout();
-        materialComponent.descriptorSet = vulkanRenderer.getCore()->getDescriptor()->getDescriptorSet(vulkanRenderer.getCore()->getCurrentFrame());
-        materialComponent.uniformBuffer = uniformBuffer;
-        materialComponent.uniformBufferMemory = uniformBufferMemory;
+            if (texture) {
+                if (texture->mHeight == 0) {
+                    vulkanRenderer.getCore()->createTextureImage(
+                        reinterpret_cast<const char*>(texture->pcData),
+                        textureImage,
+                        textureImageMemory
+                    );
+                    // Log texture creation from embedded texture
+                    std::cout << "Created texture from embedded texture." << std::endl;
+                }
+            } else {
+                std::string fullPath = directory + '/' + texturePath.C_Str();
+                std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
+                vulkanRenderer.getCore()->createTextureImage(
+                    fullPath.c_str(),
+                    textureImage,
+                    textureImageMemory
+                );
+                // Log texture creation from file
+                std::cout << "Created texture from file: " << fullPath << std::endl;
+            }
 
-        // Store in material component
-        materialComponent.textureImage = textureImage;
-        materialComponent.textureImageMemory = textureImageMemory;
-        materialComponent.textureImageView = textureImageView;
+            VkImageView textureImageView = vulkanRenderer.getCore()->createImageView(
+                textureImage,
+                VK_FORMAT_R8G8B8A8_SRGB,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+
+            // Store texture information based on type
+            switch(type) {
+                case aiTextureType_DIFFUSE:
+                    materialComponent.diffuseImage = textureImage;
+                    materialComponent.diffuseImageMemory = textureImageMemory;
+                    materialComponent.diffuseImageView = textureImageView;
+                    // Log diffuse texture assignment
+                    std::cout << "Assigned diffuse texture." << std::endl;
+                    break;
+                case aiTextureType_SPECULAR:
+                    materialComponent.specularImage = textureImage;
+                    materialComponent.specularImageMemory = textureImageMemory;
+                    materialComponent.specularImageView = textureImageView;
+                    // Log specular texture assignment
+                    std::cout << "Assigned specular texture." << std::endl;
+                    break;
+                case aiTextureType_NORMALS:
+                    materialComponent.normalImage = textureImage;
+                    materialComponent.normalImageMemory = textureImageMemory;
+                    materialComponent.normalImageView = textureImageView;
+                    // Log normal texture assignment
+                    std::cout << "Assigned normal texture." << std::endl;
+                    break;
+                // Add other texture types as needed
+            }
+        }
     }
 
-    if(mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS)
-    {
+    // Set material colors and properties
+    if(mat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
         materialComponent.diffuse = glm::vec3(color.r, color.g, color.b);
     }
 
-    // Load specular properties
-    if(mat->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS)
-    {
+    if(mat->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
         materialComponent.specular = glm::vec3(color.r, color.g, color.b);
     }
 
-    // Load shininess
-    float shininess;
-    if(mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS)
-    {
-        materialComponent.shininess = shininess;
+    if(mat->Get(AI_MATKEY_SHININESS, materialComponent.shininess) == AI_SUCCESS) {
+        materialComponent.shininess = std::max(materialComponent.shininess, 1.0f);
     }
 }
 
 bool EngineModelLoader::LoadModel(const std::string &path, Entity &entity)
 {
-    Assimp::Importer importer;
+    importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
     const aiScene *scene = importer.ReadFile(path, 
         aiProcess_Triangulate | 
         aiProcess_GenNormals | 
@@ -157,23 +197,16 @@ bool EngineModelLoader::LoadModel(const std::string &path, Entity &entity)
         aiProcess_FlipUVs
     );
 
-    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-    {
+    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
         return false;
     }
 
     directory = path.substr(0, path.find_last_of('/'));
+    ProcessNode(scene->mRootNode, scene, entity);
 
-    auto& meshComponent = entity.addComponent<MeshComponent>();
-    auto& materialComponent = entity.addComponent<MaterialComponent>();
-    auto& renderComponent = entity.addComponent<RenderComponent>();
-    renderComponent.material = materialComponent;
-    renderComponent.mesh = meshComponent;
-    
-    ProcessNode(scene->mRootNode, scene, meshComponent, materialComponent);
-
-    if(scene->HasMaterials())
-        LoadMaterialTextures(scene->mMaterials[0], materialComponent);
+    if(scene->HasMaterials()) {
+        LoadMaterialTextures(scene->mMaterials[0], entity);
+    }
 
     return true;
 }

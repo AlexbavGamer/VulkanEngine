@@ -73,6 +73,13 @@ set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(assimp)
 
+FetchContent_Declare(
+    magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+    GIT_TAG v0.9.3
+)
+FetchContent_MakeAvailable(magic_enum)
+
 # Incluir ImGui (para GUI)
 FetchContent_Declare(
     imgui
@@ -119,6 +126,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/imgui
     ${assimp_BINARY_DIR}/include
+    ${magic_enum_SOURCE_DIR}/include
 )
 
 # Ligar ao Vulkan, GLFW e GLM

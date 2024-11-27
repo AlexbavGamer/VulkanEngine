@@ -21,7 +21,11 @@ public:
     VkDescriptorPool getDescriptorPool() const { return descriptorPool; }
     VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
     VkDescriptorSet getDescriptorSet(size_t index) const { return descriptorSets[index]; }
-    
+
+    VkDescriptorSet createDescriptorSet();
+    void updateDescriptorSet(VkDescriptorSet descriptorSet, 
+        const VkDescriptorBufferInfo& bufferInfo,
+        const VkDescriptorImageInfo& imageInfo);    
 private:
     VulkanCore& core;
     VkDescriptorPool descriptorPool;
