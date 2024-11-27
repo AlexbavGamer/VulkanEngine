@@ -27,7 +27,7 @@ jobs:
     - name: Install CMake manually
       run: |
         # Baixa o instalador do CMake
-        Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-win64-x64.msi -OutFile cmake.msi
+        Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi
         # Instala o CMake silenciosamente
         Start-Process msiexec.exe -ArgumentList '/i', 'cmake.msi', '/quiet', '/norestart' -NoNewWindow -Wait
         # Remove o instalador após a instalação
