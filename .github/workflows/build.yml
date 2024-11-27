@@ -45,10 +45,6 @@ jobs:
         uses: ssciwr/doxygen-install@v1
         with:
           version: "1.12.0"
-
-      - name: Generate Documentation
-        run: |
-          doxygen Doxyfile
           
       - name: Cache MinGW (Windows)
         if: matrix.os == 'windows-latest'
