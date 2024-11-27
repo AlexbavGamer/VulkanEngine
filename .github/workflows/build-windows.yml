@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Vulkan SDK on C: drive
+      - name: Install Vulkan SDK on C Drive
         run: |
           # Baixar e instalar o Vulkan SDK diretamente no disco C
           $vulkanUrl = "https://sdk.lunarg.com/sdk/download/latest/windows"
@@ -30,13 +30,13 @@ jobs:
       - name: Install CMake manually
         run: |
           # Baixa o instalador do CMake
-          Invoke-WebRequest -Uri https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi -OutFile cmake-3.31.1-windows-x86_64.msi
+          Invoke-WebRequest -Uri "https://github.com/Kitware/CMake/releases/download/v3.31.1/cmake-3.31.1-windows-x86_64.msi" -OutFile "cmake-3.31.1-windows-x86_64.msi"
 
           # Instala o CMake silenciosamente
           Start-Process msiexec.exe -ArgumentList '/i', 'cmake-3.31.1-windows-x86_64.msi', '/quiet', '/norestart' -NoNewWindow -Wait
 
           # Remove o instalador após a instalação
-          Remove-Item -Force cmake-3.31.1-windows-x86_64.msi
+          Remove-Item -Force "cmake-3.31.1-windows-x86_64.msi"
 
       - name: Configure CMake project with MinGW
         run: |
