@@ -16,7 +16,7 @@ jobs:
       - name: Install Vulkan SDK on C: drive
         run: |
           # Baixar e instalar o Vulkan SDK diretamente no disco C
-          $vulkanUrl = "https://vulkan.lunarg.com/sdk/home"
+          $vulkanUrl = "https://sdk.lunarg.com/sdk/download/latest/windows"
           $vulkanInstallerPath = "C:/vulkan-sdk-installer.exe"
           Invoke-WebRequest -Uri $vulkanUrl -OutFile $vulkanInstallerPath
 
@@ -45,8 +45,8 @@ jobs:
 
       - name: Package Release Artifacts
         run: |
-          mkdir -p release
-          cp -r build/* release/
+          mkdir release
+          xcopy /E /I build\* release\
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
