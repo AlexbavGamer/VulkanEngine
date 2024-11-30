@@ -192,3 +192,7 @@ if(UNIX)
     # Flags adicionais para Linux
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
+
+if(WIN32 AND MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -static")
+endif()
