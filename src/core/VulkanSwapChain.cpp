@@ -20,6 +20,27 @@ void VulkanSwapChain::create()
 {
     createSwapChain();
     createImageViews();
+    core.createRenderPass();
+    createFramebuffers();
+}
+
+void VulkanSwapChain::createFramebuffers()
+{
+    framebuffers.resize(swapChainImageViews.size());
+    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = core.getRenderPass(); // Assuming you have a render pass
+        framebufferInfo.attachmentCount = 1; // Number of attachments (color)
+        framebufferInfo.pAttachments = &swapChainImageViews[i]; // Color attachment
+        framebufferInfo.width = core.getSwapChain()->getExtent().width;
+        framebufferInfo.height = core.getSwapChain()->getExtent().height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(core.getDevice(), &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create framebuffer!");
+        }
+    }
 }
 
 void VulkanSwapChain::cleanup() {

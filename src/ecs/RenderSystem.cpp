@@ -8,8 +8,8 @@ void RenderSystem::render(Registry& registry, VkCommandBuffer commandBuffer) {
     VulkanRenderer& vulkanRender = VulkanRenderer::getInstance();
 
     registry.view<MeshComponent, MaterialComponent, TransformComponent>([&](std::shared_ptr<Entity> entity, const MeshComponent& mesh, const MaterialComponent& material, TransformComponent& transform) {
-        if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0) {
-            return;
+        if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0 || material.pipeline == VK_NULL_HANDLE || material.descriptorSet == VK_NULL_HANDLE) {
+           return; // Early exit if any required resource is invalid
         }
 
         // Update UBO
@@ -33,6 +33,9 @@ void RenderSystem::render(Registry& registry, VkCommandBuffer commandBuffer) {
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer, offsets);
         vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
+
+        std::cout << "Rendering entity: " << entity->getId() << std::endl;
+        std::cout << "Vertex Buffer: " << mesh.vertexBuffer << ", Index Buffer: " << mesh.indexBuffer << ", Index Count: " << mesh.indexCount << std::endl;
     });
 }
 

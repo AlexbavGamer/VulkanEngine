@@ -19,6 +19,7 @@ public:
     void init(GLFWwindow* window);
     void cleanup();
 
+
     void renderFrame();
 
 
@@ -49,6 +50,12 @@ public:
 
     uint32_t getCurrentFrame() const { return currentFrame; }
 
+    void submitCommandBuffer(VkCommandBuffer commandBuffer);
+    void presentFrame(uint32_t imageIndex);
+    void beginCommandBuffer(VkCommandBuffer commandBuffer);
+    void endCommandBuffer(VkCommandBuffer commandBuffer);
+    void beginRenderPass(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    void endRenderPass(VkCommandBuffer commandBuffer);
     void setPipeline(std::unique_ptr<VulkanPipeline> newPipeline) { pipeline = std::move(newPipeline); }
     void setDescriptor(std::unique_ptr<VulkanDescriptor> newDescriptor) { descriptor = std::move(newDescriptor); }
     void setSwapChain(std::unique_ptr<VulkanSwapChain> newSwapChain) { swapChain = std::move(newSwapChain); }
@@ -62,6 +69,7 @@ public:
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
     VkImageView getDefaultTextureView() const { return defaultTextureView; }
+    void createRenderPass();
     void createTextureImage(const void* pixels, VkDeviceSize imageSize,uint32_t width,uint32_t height,VkImage& textureImage,VkDeviceMemory& textureImageMemory);
     void createTextureImage(unsigned char* pixels, VkDeviceSize imageSize, uint32_t width, uint32_t height, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
     bool createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
@@ -83,7 +91,6 @@ private:
     void createSurface();
     void pickPhysicalDevice();
     void createLogicalDevice();
-    void createRenderPass();
     void createFramebuffers();
     void createCommandPool();
     void createCommandBuffers();

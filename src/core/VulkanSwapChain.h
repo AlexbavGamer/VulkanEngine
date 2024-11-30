@@ -19,10 +19,11 @@ public:
     VkExtent2D getExtent() const { return swapChainExtent; }
     VkFormat getImageFormat() const { return swapChainImageFormat; }
     const std::vector<VkImageView>& getImageViews() const { return swapChainImageViews; }
-    
+    std::vector<VkFramebuffer> getFramebuffers() const { return framebuffers; }
 private:
     void createSwapChain();
     void createImageViews();
+    void createFramebuffers();
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
@@ -33,6 +34,7 @@ private:
     std::vector<VkImageView> swapChainImageViews;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
+    std::vector<VkFramebuffer> framebuffers;
 };
 
 #endif
