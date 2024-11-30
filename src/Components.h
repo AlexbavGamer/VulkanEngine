@@ -1,14 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <vulkan/vulkan.h>
+#include "core/VulkanTypes.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
-#include <stdexcept>
-#include "ecs/Component.h"
 #include <memory>
+#include <stdexcept>
+#include <vector>
+#include <vulkan/vulkan.h>
+#include "ecs/Component.h"
 
 #include "imgui.h"
 
@@ -67,33 +68,44 @@ struct MeshComponent : Component {
 };
 
 struct MaterialComponent : public Component {
+    MaterialComponent()
+    {
+        pipeline = VK_NULL_HANDLE;
+        pipelineLayout = VK_NULL_HANDLE;
+        descriptorSet = VK_NULL_HANDLE;
+        uniformBuffer = VK_NULL_HANDLE;
+        uniformBufferMemory = VK_NULL_HANDLE;
+        textureImage = VK_NULL_HANDLE;
+        textureImageMemory = VK_NULL_HANDLE;
+        textureImageView = VK_NULL_HANDLE;
+        textureSampler = VK_NULL_HANDLE;
+        descriptorSetLayout = VK_NULL_HANDLE;
+        hasTexture = false;
+    }
+    
     VkPipeline pipeline;
     VkPipelineLayout pipelineLayout;
     VkDescriptorSet descriptorSet;
     VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
 
-    // Diffuse textures
-    VkImage diffuseImage;
-    VkDeviceMemory diffuseImageMemory;
-    VkImageView diffuseImageView;
-
-    // Specular textures
-    VkImage specularImage;
-    VkDeviceMemory specularImageMemory;
-    VkImageView specularImageView;
-
-    // Normal textures
-    VkImage normalImage;
-    VkDeviceMemory normalImageMemory;
-    VkImageView normalImageView;
-
     // Material properties
-    glm::vec3 diffuse = glm::vec3(0.8f);
-    glm::vec3 specular = glm::vec3(0.5f);
-    float shininess = 32.0f;
+    glm::vec4 color = glm::vec4(1.0f);
+    float metallic = 0.0f;
+    float roughness = 0.5f;
+    float ambientOcclusion = 1.0f;
+    
+    // Texture properties
+    VkImage textureImage;
+    VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
     bool hasTexture = false;
+
+    // Sampler and descriptor set
+    VkSampler textureSampler;
+    VkDescriptorSetLayout descriptorSetLayout;
 };
+
 
 struct LightComponent : Component {
     glm::vec3 position;
@@ -145,19 +157,13 @@ struct CameraComponent {
     }
 };
 
-// A estrutura UBO que é utilizada para transferir dados da câmera e entidade
 struct UBO {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 projection;
-    glm::mat3 normalMatrix;
-    glm::vec3 lightPosition;
-    glm::vec3 lightColor;
-    glm::vec3 viewPos;
-    glm::vec3 materialDiffuse;
-    glm::vec3 materialSpecular;
-    float materialShininess;
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
+    alignas(16) Material material;
 };
+
 
 struct RenderComponent : Component
 {
@@ -173,14 +179,12 @@ struct RenderComponent : Component
 };
 
 struct Vertex {
-    glm::vec3 position {};
-    glm::vec3 color {};
-    glm::vec3 normal {};
-    glm::vec2 texCoord {};
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texCoord;
 
     bool operator==(const Vertex &other) const {
       return position == other.position &&
-            color == other.color &&
             normal == other.normal &&
             texCoord == other.texCoord;
     }
@@ -200,9 +204,8 @@ struct Vertex {
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions{};
 
         attributeDescriptions.push_back({0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, position)});
-        attributeDescriptions.push_back({1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, color)});
-        attributeDescriptions.push_back({2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
-        attributeDescriptions.push_back({3, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)});
+        attributeDescriptions.push_back({1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal)});
+        attributeDescriptions.push_back({2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, texCoord)});
 
         return attributeDescriptions;
     }

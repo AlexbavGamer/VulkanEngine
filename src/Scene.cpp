@@ -135,15 +135,6 @@ void Scene::updateCameraAspect(float aspectRatio) {
     camera.projection[1][1] *= -1;
 }
 
-void Scene::render(VkCommandBuffer commandBuffer) {
-    renderSystem->render(
-        *registry,
-        commandBuffer,
-        core->getPipeline()->getLayout(),
-        core->getDescriptor()->getDescriptorSet(core->getCurrentFrame())
-    );
-}
-
 void Scene::updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout) {
     // Update pipeline references if needed
 }

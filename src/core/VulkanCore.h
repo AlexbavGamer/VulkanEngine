@@ -61,11 +61,13 @@ public:
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
+    VkImageView getDefaultTextureView() const { return defaultTextureView; }
+    void createTextureImage(const void* pixels, VkDeviceSize imageSize,uint32_t width,uint32_t height,VkImage& textureImage,VkDeviceMemory& textureImageMemory);
     void createTextureImage(unsigned char* pixels, VkDeviceSize imageSize, uint32_t width, uint32_t height, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
-    void createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
+    bool createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory);
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 private:
-    const uint32_t MAX_FRAMES_IN_FLIGHT = 1;
+    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
     const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
@@ -87,8 +89,8 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void createSceneResources();
+    void updateTextureDescriptorSet();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-
 
     bool checkValidationLayerSupport();
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
@@ -122,6 +124,11 @@ private:
     std::unique_ptr<VulkanDescriptor> descriptor;
     std::unique_ptr<VulkanImGui> imgui;
     std::unique_ptr<Scene> scene;
+
+    VkImage defaultTexture;
+    VkDeviceMemory defaultTextureMemory;
+    VkImageView defaultTextureView;
+    void createDefaultTexture();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

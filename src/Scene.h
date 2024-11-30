@@ -19,7 +19,6 @@ public:
     std::vector<LightComponent> lights;
 
     std::shared_ptr<Entity> createEntity();
-    void render(VkCommandBuffer commandBuffer);
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
     void updateCamera();
     void handleMouseInput(GLFWwindow* window, double xpos, double ypos);

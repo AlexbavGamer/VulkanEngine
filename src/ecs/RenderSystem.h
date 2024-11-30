@@ -11,5 +11,5 @@ public:
     RenderSystem() = default;
     ~RenderSystem() = default;
     
-    void render(Registry& registry, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet);
+    void render(Registry& registry, VkCommandBuffer commandBuffer);
 };

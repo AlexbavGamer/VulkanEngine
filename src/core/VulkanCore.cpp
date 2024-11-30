@@ -97,6 +97,27 @@ bool VulkanCore::checkDeviceExtensionSupport(VkPhysicalDevice device) {
     return requiredExtensions.empty();
 }
 
+void VulkanCore::createDefaultTexture()
+{
+    // Create a 1x1 white texture
+    uint32_t white = 0xFF0000FF;
+    
+    createTextureImage(
+        &white,
+        sizeof(white),
+        1,
+        1,
+        defaultTexture,
+        defaultTextureMemory
+    );
+    
+    defaultTextureView = createImageView(
+        defaultTexture,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_IMAGE_ASPECT_COLOR_BIT
+    );
+}
+
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanCore::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
 {
     std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
@@ -131,7 +152,51 @@ void VulkanCore::createTextureSampler() {
     }
 }
 
-void VulkanCore::createTextureImage(unsigned char* pixels, VkDeviceSize imageSize, uint32_t width, uint32_t height, VkImage& textureImage, VkDeviceMemory& textureImageMemory) {
+void VulkanCore::createTextureImage(
+    const void* pixels,
+    VkDeviceSize imageSize,
+    uint32_t width,
+    uint32_t height,
+    VkImage& textureImage,
+    VkDeviceMemory& textureImageMemory
+) {
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(
+        imageSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        stagingBuffer,
+        stagingBufferMemory
+    );
+
+    void* data;
+    vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(device, stagingBufferMemory);
+
+    createImage(
+        width,
+        height,
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        textureImage,
+        textureImageMemory
+    );
+
+    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(stagingBuffer, textureImage, width, height);
+    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
+}
+
+void VulkanCore::createTextureImage(unsigned char *pixels, VkDeviceSize imageSize, uint32_t width, uint32_t height, VkImage &textureImage, VkDeviceMemory &textureImageMemory)
+{
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     
@@ -167,7 +232,7 @@ void VulkanCore::createTextureImage(unsigned char* pixels, VkDeviceSize imageSiz
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void VulkanCore::createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory) {
+bool VulkanCore::createTextureImage(const char* imagePath, VkImage& textureImage, VkDeviceMemory& textureImageMemory) {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(imagePath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
@@ -175,6 +240,7 @@ void VulkanCore::createTextureImage(const char* imagePath, VkImage& textureImage
     if (!pixels) {
         std::cout << "Failed to load texture: " << imagePath << std::endl;
         throw std::runtime_error("Failed to load texture image!");
+        return false;
     }
 
     VkBuffer stagingBuffer;
@@ -212,6 +278,8 @@ void VulkanCore::createTextureImage(const char* imagePath, VkImage& textureImage
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+    return true;
 }
 
 VkImageView VulkanCore::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
@@ -407,6 +475,7 @@ void VulkanCore::init(GLFWwindow *window)
         descriptor->uniformBuffer, descriptor->uniformBufferMemory);
     
     descriptor->create();
+    createDefaultTexture();
 }
 
 uint32_t VulkanCore::getQueueFamilyIndex()
@@ -781,6 +850,14 @@ void VulkanCore::cleanup() {
     
     if (commandPool != VK_NULL_HANDLE)
         vkDestroyCommandPool(device, commandPool, nullptr);
+
+    if(defaultTextureView != VK_NULL_HANDLE)
+        vkDestroyImageView(device, defaultTextureView, nullptr);
+    if(defaultTexture != VK_NULL_HANDLE)
+        vkDestroyImage(device, defaultTexture, nullptr);
+    if(defaultTextureMemory != VK_NULL_HANDLE)
+        vkFreeMemory(device, defaultTextureMemory, nullptr);
+
 }
 
 void VulkanCore::renderFrame() 
@@ -1075,7 +1152,6 @@ void VulkanCore::createSceneResources() {
     vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 }
 
-
 void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1083,7 +1159,33 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-    // First render scene to scene framebuffer
+    // Transition scene image layout
+    VkImageMemoryBarrier imageBarrier{};
+    imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageBarrier.image = sceneImage;
+    imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageBarrier.subresourceRange.baseMipLevel = 0;
+    imageBarrier.subresourceRange.levelCount = 1;
+    imageBarrier.subresourceRange.baseArrayLayer = 0;
+    imageBarrier.subresourceRange.layerCount = 1;
+    imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &imageBarrier
+    );
+
+    // First render pass: Scene rendering
     VkRenderPassBeginInfo sceneRenderPassInfo{};
     sceneRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     sceneRenderPassInfo.renderPass = sceneRenderPass;
@@ -1096,22 +1198,10 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     sceneRenderPassInfo.pClearValues = &clearColor;
 
     vkCmdBeginRenderPass(commandBuffer, &sceneRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    auto descriptorSet = descriptor->getDescriptorSet(currentFrame);
-    vkCmdBindDescriptorSets(
-        commandBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipeline->getLayout(),
-        0,
-        1,
-        &descriptorSet,
-        0,
-        nullptr
-    );
-    scene->render(commandBuffer);
+    scene->renderSystem->render(*scene->registry, commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
 
-    // Then render ImGui with scene texture
+    // Second render pass: ImGui
     VkRenderPassBeginInfo imguiRenderPassInfo{};
     imguiRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     imguiRenderPassInfo.renderPass = renderPass;
@@ -1127,7 +1217,6 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
 
     vkEndCommandBuffer(commandBuffer);
 }
-
 
 void VulkanCore::handleResize() 
 {

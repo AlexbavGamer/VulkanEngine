@@ -24,9 +24,6 @@ public:
 private:
     // Core components
     std::unique_ptr<VulkanCore> core;
-   
-    // Constants
-    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 };
 
 #endif // VULKANRENDERER_H

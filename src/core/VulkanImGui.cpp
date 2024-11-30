@@ -278,9 +278,15 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
     if (showDebugWindow) {
         ImGui::Begin("Debug", &showDebugWindow);
         ImGui::Text("Debug Information");
+        
+        static bool wireframeMode = false;
+        if(ImGui::Checkbox("Wireframe Mode", &wireframeMode))
+        {
+            core.getPipeline()->setWireframeMode(wireframeMode);
+        }
+
         ImGui::End();
     }
-
     ImGui::End(); // DockSpace
 
     ImGui::Render();
