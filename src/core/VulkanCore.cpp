@@ -883,5 +883,5 @@ void VulkanCore::createSyncObjects() {
 }
 
 void VulkanCore::createSceneResources() {
-
+    //todo: create scene resources here
 }
