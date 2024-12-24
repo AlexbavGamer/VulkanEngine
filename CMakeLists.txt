@@ -186,6 +186,15 @@ add_custom_target(ShadersBuild ALL DEPENDS ${SPIRV_SHADERS})
 # Dependência de shaders
 add_dependencies(VulkanEngine ShadersBuild)
 
+# Copiar pasta assets para o diretório de build
+add_custom_command(
+    TARGET VulkanEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    ${CMAKE_BINARY_DIR}/assets
+    COMMENT "Copiando pasta assets para o diretório de build"
+)
+
 # Configurações adicionais para Linux
 if(UNIX)
     # Links adicionais para Linux
