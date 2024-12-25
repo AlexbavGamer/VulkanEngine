@@ -10,10 +10,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include "ecs/Component.h"
-
+#include "rendering/Texture.h"
 #include "imgui.h"
-
-class VulkanRenderer;
 
 struct TransformComponent : Component {
     glm::vec3 position;
@@ -68,42 +66,24 @@ struct MeshComponent : Component {
 };
 
 struct MaterialComponent : public Component {
-    MaterialComponent()
-    {
-        pipeline = VK_NULL_HANDLE;
-        pipelineLayout = VK_NULL_HANDLE;
-        descriptorSet = VK_NULL_HANDLE;
-        uniformBuffer = VK_NULL_HANDLE;
-        uniformBufferMemory = VK_NULL_HANDLE;
-        textureImage = VK_NULL_HANDLE;
-        textureImageMemory = VK_NULL_HANDLE;
-        textureImageView = VK_NULL_HANDLE;
-        textureSampler = VK_NULL_HANDLE;
-        descriptorSetLayout = VK_NULL_HANDLE;
-        hasTexture = false;
-    }
+    std::shared_ptr<Texture> albedoMap;
+    std::shared_ptr<Texture> normalMap;
+    std::shared_ptr<Texture> metallicRoughnessMap;
+    std::shared_ptr<Texture> aoMap;
+    std::shared_ptr<Texture> emissiveMap;
     
-    VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout;
     VkDescriptorSet descriptorSet;
     VkBuffer uniformBuffer;
+    VkPipelineLayout pipelineLayout;
+    VkPipeline pipeline;
+
     VkDeviceMemory uniformBufferMemory;
-
-    // Material properties
-    glm::vec4 color = glm::vec4(1.0f);
-    float metallic = 0.0f;
-    float roughness = 0.5f;
-    float ambientOcclusion = 1.0f;
     
-    // Texture properties
-    VkImage textureImage;
-    VkDeviceMemory textureImageMemory;
-    VkImageView textureImageView;
-    bool hasTexture = false;
-
-    // Sampler and descriptor set
-    VkSampler textureSampler;
-    VkDescriptorSetLayout descriptorSetLayout;
+    // Propriedades do material
+    glm::vec4 baseColorFactor = glm::vec4(1.0f);
+    float metallicFactor = 1.0f;
+    float roughnessFactor = 1.0f;
+    glm::vec3 emissiveFactor = glm::vec3(0.0f);
 };
 
 
@@ -163,7 +143,6 @@ struct UBO {
     alignas(16) glm::mat4 proj;
     alignas(16) Material material;
 };
-
 
 struct RenderComponent : Component
 {

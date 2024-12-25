@@ -19,8 +19,18 @@ public:
     void recreatePipelineIfNeeded();
     void createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D extent);
 
+    void createScenePipeline(VkRenderPass renderPass, VkExtent2D extent);
+    void bindScenePipeline(VkCommandBuffer commandBuffer);
+
+    VkPipeline createMaterialPipeline(
+        VkPipelineLayout layout,
+        const std::string& vertShaderPath,
+        const std::string& fragShaderPath
+    );
+
+
     VkPipeline getPipeline() const { return graphicsPipeline; }
-    VkPipelineLayout getLayout() const { return pipelineLayout; }
+    VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
     bool wireframeModeChanged = false;
     bool wireframeMode;
 private:
@@ -28,6 +38,7 @@ private:
     
     VulkanCore& core;
     VkPipeline graphicsPipeline;
+    VkPipeline sceneGraphicsPipeline;
     VkPipelineLayout pipelineLayout;
 };
 

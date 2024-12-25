@@ -24,30 +24,61 @@ void VulkanSwapChain::create()
     createFramebuffers();
 }
 
-void VulkanSwapChain::createFramebuffers()
-{
+
+void VulkanSwapChain::createFramebuffers() {
+    // Limpar framebuffers existentes
+    for (auto framebuffer : framebuffers) {
+        if (framebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(core.getDevice(), framebuffer, nullptr);
+        }
+    }
+    
     framebuffers.resize(swapChainImageViews.size());
+    
+    // Obter depth image view de forma segura
+    VkImageView depthView = core.getDepthImageView();
+    if (depthView == VK_NULL_HANDLE) {
+        throw std::runtime_error("Depth image view não foi criado!");
+    }
+    
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+        if (swapChainImageViews[i] == VK_NULL_HANDLE) {
+            throw std::runtime_error("Image view inválido no índice " + std::to_string(i));
+        }
+
+        std::array<VkImageView, 2> attachments = {
+            swapChainImageViews[i],  // Color attachment
+            depthView               // Depth attachment  
+        };
+
         VkFramebufferCreateInfo framebufferInfo{};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = core.getRenderPass(); // Assuming you have a render pass
-        framebufferInfo.attachmentCount = 1; // Number of attachments (color)
-        framebufferInfo.pAttachments = &swapChainImageViews[i]; // Color attachment
-        framebufferInfo.width = core.getSwapChain()->getExtent().width;
-        framebufferInfo.height = core.getSwapChain()->getExtent().height;
+        framebufferInfo.renderPass = core.getRenderPass();
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChainExtent.width;
+        framebufferInfo.height = swapChainExtent.height;
         framebufferInfo.layers = 1;
 
         if (vkCreateFramebuffer(core.getDevice(), &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create framebuffer!");
+            throw std::runtime_error("Falha ao criar framebuffer!");
         }
     }
 }
 
 void VulkanSwapChain::cleanup() {
     auto device = core.getDevice();
+    for (auto framebuffer : framebuffers) {
+        if (framebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+    }
+    framebuffers.clear();
+
     for (auto imageView : swapChainImageViews) {
         vkDestroyImageView(device, imageView, nullptr);
     }
+    swapChainImageViews.clear();
     
     if (swapChain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(device, swapChain, nullptr);

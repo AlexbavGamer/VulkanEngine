@@ -1,4 +1,11 @@
 #include "VulkanRenderer.h"
+#include "core/VulkanCore.h"
+#include "core/VulkanPipeline.h"
+#include "core/VulkanDescriptor.h"
+#include "core/VulkanSwapChain.h"
+#include "core/VulkanImGui.h"
+#include "rendering/TextureManager.h"
+#include "Scene.h"
 #include <stdexcept>
 
 VulkanRenderer::VulkanRenderer() {
@@ -10,7 +17,7 @@ VulkanRenderer::~VulkanRenderer() {
 }
 
 void VulkanRenderer::initVulkan(GLFWwindow* window) {
-    // Initialize core components
     core->init(window);
+    textureManager = std::make_unique<TextureManager>(core.get());
 }
 

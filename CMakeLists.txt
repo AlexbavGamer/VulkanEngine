@@ -167,21 +167,28 @@ set(COMPILED_SHADERS_DIR "${CMAKE_BINARY_DIR}/shaders")
 # Criar diretório de saída
 file(MAKE_DIRECTORY ${COMPILED_SHADERS_DIR})
 
+# Limpar listas
+set(SPIRV_BINARY_FILES "")
+set(SHADER_COMMANDS "")
+
 # Compilação de shaders
 foreach(SHADER ${SHADERS})
-    get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
+    get_filename_component(SHADER_NAME ${SHADER} NAME)
+    get_filename_component(SHADER_EXT ${SHADER} EXT)
+    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV_BINARY})
+    
     add_custom_command(
-        OUTPUT "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv"
-        COMMAND "${GLSLC}" "${SHADER}" -o "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv"
+        OUTPUT ${SPIRV_BINARY}
+        COMMAND ${GLSLC} ${SHADER} -o ${SPIRV_BINARY}
         DEPENDS ${SHADER}
-        COMMENT "Compilando shader ${SHADER_NAME} para SPIR-V"
+        COMMENT "Compilando shader ${SHADER_NAME}"
         VERBATIM
     )
-    list(APPEND SPIRV_SHADERS "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
 endforeach()
 
-# Alvo para compilação de shaders
-add_custom_target(ShadersBuild ALL DEPENDS ${SPIRV_SHADERS})
+# Target para shaders
+add_custom_target(ShadersBuild ALL DEPENDS ${SPIRV_BINARY_FILES})
 
 # Dependência de shaders
 add_dependencies(VulkanEngine ShadersBuild)

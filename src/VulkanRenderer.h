@@ -11,6 +11,8 @@
 #include "core/VulkanDescriptor.h"
 #include "core/VulkanSwapChain.h"
 #include "core/VulkanImGui.h"
+#include "rendering/TextureManager.h"
+
 class VulkanRenderer : public Singleton<VulkanRenderer> {
     friend class Singleton<VulkanRenderer>;
 
@@ -19,11 +21,12 @@ public:
     ~VulkanRenderer();
 
     void initVulkan(GLFWwindow* window);
-
     VulkanCore* getCore() { return core.get(); }
+    TextureManager* getTextureManager() { return textureManager.get(); }
+
 private:
-    // Core components
     std::unique_ptr<VulkanCore> core;
+    std::unique_ptr<TextureManager> textureManager;
 };
 
-#endif // VULKANRENDERER_H
+#endif

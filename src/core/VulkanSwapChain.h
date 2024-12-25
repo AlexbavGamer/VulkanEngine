@@ -18,6 +18,7 @@ public:
     VkSwapchainKHR getSwapChain() const { return swapChain; }
     VkExtent2D getExtent() const { return swapChainExtent; }
     VkFormat getImageFormat() const { return swapChainImageFormat; }
+    size_t getImageCount() const { return swapChainImages.size(); }
     const std::vector<VkImageView>& getImageViews() const { return swapChainImageViews; }
     std::vector<VkFramebuffer> getFramebuffers() const { return framebuffers; }
 private:

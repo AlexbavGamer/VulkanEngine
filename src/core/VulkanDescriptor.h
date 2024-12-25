@@ -12,7 +12,9 @@ public:
     void create();
     void createDescriptorPool();
     void createDescriptorSetLayout();
+    VkDescriptorSetLayout createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
     void createDescriptorSets();
+    
     void updateDescriptorSets();
     void updateDescriptorSetWithMultipleTextures(VkDescriptorSet descriptorSet, const VkDescriptorBufferInfo &bufferInfo, const std::vector<VkDescriptorImageInfo> &imageInfos);
     void updateDescriptorSet(VkDescriptorSet descriptorSet, 
@@ -20,8 +22,14 @@ public:
         const VkDescriptorImageInfo& imageInfo);    
     void cleanup();
     
+    VkDescriptorBufferInfo getBufferInfo(VkBuffer buffer, VkDeviceSize size);
     VkDescriptorSet allocateDescriptorSet();
     VkDescriptorSet createDescriptorSet();
+    VkDescriptorSet createDescriptorSet(
+        const std::vector<VkDescriptorSetLayoutBinding>& bindings,
+        const VkDescriptorBufferInfo& bufferInfo,
+        const std::vector<VkDescriptorImageInfo>& imageInfos
+    );
     VkDescriptorPool getDescriptorPool() const { return descriptorPool; }
     VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
     VkDescriptorSet getDescriptorSet(size_t index) const { return descriptorSets[index]; }
