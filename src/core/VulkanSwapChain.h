@@ -21,6 +21,7 @@ public:
     size_t getImageCount() const { return swapChainImages.size(); }
     const std::vector<VkImageView>& getImageViews() const { return swapChainImageViews; }
     std::vector<VkFramebuffer> getFramebuffers() const { return framebuffers; }
+    std::vector<VkImage> getImages() const { return swapChainImages; }
 private:
     void createSwapChain();
     void createImageViews();
