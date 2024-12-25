@@ -10,9 +10,6 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer) {
     VulkanRenderer &vulkanRender = VulkanRenderer::getInstance();
 
     const auto& camera = VulkanRenderer::getInstance().getCore()->getScene()->camera;
-    std::cout << "Camera Position: " << camera.position.x << ", " 
-              << camera.position.y << ", " 
-              << camera.position.z << std::endl;
 
     // Add debug print to track entities
     int entityCount = 0;
@@ -22,12 +19,6 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer) {
         entityCount++;
         const auto& mesh = render.mesh;
         const auto& material = render.material;
-
-        // Print debug info
-        std::cout << "\nRendering entity " << entityCount << std::endl;
-        std::cout << "Mesh index count: " << mesh.indexCount << std::endl;
-        std::cout << "Transform position: " << transform.position.x << ", " 
-                  << transform.position.y << ", " << transform.position.z << std::endl;
 
         // Validate resources
         if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0 || 
@@ -77,6 +68,4 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer) {
         // 6. Draw
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
     });
-
-    std::cout << "\nTotal entities rendered: " << entityCount << std::endl;
 }
