@@ -429,8 +429,11 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
 
                 if (ImGui::Button((std::string(ICON_FA_ARROW_LEFT) + "##back").c_str(), ImVec2(thumbnailSize, thumbnailSize)))
                 {
-                    std::filesystem::path path(currentPath);
-                    currentPath = path.parent_path().string() + "/"; // Navega para a pasta pai
+                    size_t lastSlash = currentPath.find_last_of("/", currentPath.length() - 2);
+                    if (lastSlash != std::string::npos)
+                    {
+                        currentPath = currentPath.substr(0, lastSlash + 1);
+                    }
                 }
 
                 ImGui::PopStyleColor();
