@@ -23,8 +23,6 @@ void VulkanPipeline::cleanup()
 {
     if (!core.getDevice()) return;
     
-    vkDeviceWaitIdle(core.getDevice());
-
     if (pipelineLayout != VK_NULL_HANDLE) {
         vkDestroyPipelineLayout(core.getDevice(), pipelineLayout, nullptr);
         pipelineLayout = VK_NULL_HANDLE;

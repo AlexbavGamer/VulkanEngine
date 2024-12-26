@@ -62,7 +62,7 @@ int main() {
         std::shared_ptr<Entity> entity = scene.registry->createEntity();
 
         // Ajustar posição inicial da câmera e cubo
-        if(modelLoader.LoadModel("assets/models/cubo.fbx", entity)) {
+        if(modelLoader.LoadModel("engine/models/cubo.fbx", entity)) {
             TransformComponent& transform = entity->addComponent<TransformComponent>();
             transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
             transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);

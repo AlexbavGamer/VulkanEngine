@@ -197,8 +197,8 @@ add_dependencies(VulkanEngine ShadersBuild)
 add_custom_command(
     TARGET VulkanEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/assets
-    ${CMAKE_BINARY_DIR}/assets
+    ${CMAKE_SOURCE_DIR}/engine
+    ${CMAKE_BINARY_DIR}/engine
     COMMENT "Copiando pasta assets para o diretório de build"
 )
 
