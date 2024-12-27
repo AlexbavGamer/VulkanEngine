@@ -128,7 +128,42 @@ file(GLOB_RECURSE SOURCES
 )
 
 # Criar executável
-add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES})
+add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_DIR})
+
+
+set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
+file(MAKE_DIRECTORY ${GENERATED_DIR})
+
+# Find font files
+file(GLOB FONT_FILES 
+    "${CMAKE_SOURCE_DIR}/engine/fonts/*.ttf"
+    "${CMAKE_SOURCE_DIR}/engine/fonts/*.otf"
+)
+
+foreach(FONT_FILE ${FONT_FILES})
+    get_filename_component(FONT_NAME ${FONT_FILE} NAME_WE)
+    string(MAKE_C_IDENTIFIER ${FONT_NAME} FONT_VARIABLE)
+    
+    set(OUTPUT_FILE "${GENERATED_DIR}/${FONT_NAME}.h")
+    
+    add_custom_command(
+        OUTPUT ${OUTPUT_FILE}
+        COMMAND ${CMAKE_COMMAND}
+            -DFONT_FILE=${FONT_FILE}
+            -DFONT_VARIABLE=${FONT_VARIABLE}
+            -DOUTPUT_FILE=${OUTPUT_FILE}
+            -P "${CMAKE_SOURCE_DIR}/cmake/GenerateFontHeader.cmake"
+        DEPENDS ${FONT_FILE}
+        COMMENT "Generating header for font ${FONT_NAME}"
+        VERBATIM
+    )
+    
+    list(APPEND GENERATED_HEADERS ${OUTPUT_FILE})
+endforeach()
+
+# Create custom target for font headers
+add_custom_target(FontHeaders ALL DEPENDS ${GENERATED_HEADERS})
+add_dependencies(VulkanEngine FontHeaders)
 
 # Configurar diretórios de inclusão
 set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
@@ -149,6 +184,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/src/imgui
     ${assimp_BINARY_DIR}/include
     ${magic_enum_SOURCE_DIR}/include
+    ${GENERATED_DIR}
 )
 
 # Links de biblioteca
