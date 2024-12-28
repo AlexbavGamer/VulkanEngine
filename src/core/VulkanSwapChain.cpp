@@ -169,14 +169,28 @@ void VulkanSwapChain::createImageViews() {
 }
 
 VkSurfaceFormatKHR VulkanSwapChain::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+    if (availableFormats.empty()) {
+        throw std::runtime_error("No available swap surface formats!");
+    }
+
     for (const auto& availableFormat : availableFormats) {
         if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && 
             availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return availableFormat;
         }
     }
+
+    // Fallback: Prioritize formats supporting SRGB, if any
+    for (const auto& availableFormat : availableFormats) {
+        if (availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            return availableFormat;
+        }
+    }
+
+    // Ultimate fallback: return the first format
     return availableFormats[0];
 }
+
 
 VkPresentModeKHR VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
     for (const auto& availablePresentMode : availablePresentModes) {

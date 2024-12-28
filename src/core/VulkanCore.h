@@ -47,6 +47,8 @@ public:
     VkDescriptorSet getSceneDescriptorSet() const { return sceneDescriptorSet; }
     VkBuffer getSceneUniformBuffer() const { return sceneUniformBuffer; }
     ProjectManager* getProjectManager() const;
+    VkSampler getTextureSampler() const { return textureSampler; }
+    VkImageView getDefaultTextureView() const { return defaultTextureView; }
     // Resource Creation
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);

@@ -1,10 +1,18 @@
 #version 450
 
+struct Material {
+    vec4 color;
+    float metallic;
+    float roughness;
+    float ambientOcclusion;
+    float padding;
+};
+
 layout(binding = 0) uniform UBO {
     mat4 model;
     mat4 view;
     mat4 proj;
-    vec4 material;
+    Material material;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;

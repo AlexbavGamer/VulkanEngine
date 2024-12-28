@@ -22,7 +22,7 @@ public:
     void bindScenePipeline(VkCommandBuffer commandBuffer);
 
     VkPipeline createMaterialPipeline(
-        VkPipelineLayout layout,
+        VkPipelineLayout& outPipelineLayout,
         const std::string& vertShaderPath,
         const std::string& fragShaderPath
     );

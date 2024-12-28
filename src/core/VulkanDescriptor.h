@@ -22,7 +22,6 @@ public:
     VkDescriptorSetLayout createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding> &bindings);
     void createDescriptorSets();
 
-    void updateDescriptorSets();
     void updateDescriptorSetWithMultipleTextures(VkDescriptorSet descriptorSet, const VkDescriptorBufferInfo &bufferInfo, const std::vector<VkDescriptorImageInfo> &imageInfos);
     void updateDescriptorSet(VkDescriptorSet descriptorSet,
                              const VkDescriptorBufferInfo &bufferInfo,
@@ -32,7 +31,7 @@ public:
     VkDescriptorBufferInfo getBufferInfo(VkBuffer buffer, VkDeviceSize size);
     VkDescriptorSet allocateDescriptorSet();
     VkDescriptorSet createDescriptorSet();
-    DescriptorAllocation  createDescriptorSet(
+    DescriptorAllocation createDescriptorSet(
         const std::vector<VkDescriptorSetLayoutBinding> &bindings,
         const VkDescriptorBufferInfo &bufferInfo,
         const std::vector<VkDescriptorImageInfo> &imageInfos);
@@ -41,6 +40,8 @@ public:
     void addDescriptorPool(VkDescriptorPool descriptorPool);
     VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
     VkDescriptorSet getDescriptorSet(size_t index) const { return descriptorSets[index]; }
+
+    std::vector<VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings() const;
 
     void createUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
     void updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo);

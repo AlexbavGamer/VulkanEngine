@@ -1,10 +1,18 @@
 #version 450
 
+struct Material {
+    vec4 color;
+    float metallic;
+    float roughness;
+    float ambientOcclusion;
+    float padding;
+};
+
 layout(binding = 0) uniform UBO {
     mat4 model;
     mat4 view;
     mat4 proj;
-    vec4 material;
+    Material material;
 } ubo;
 
 layout(binding = 1) uniform sampler2D albedoMap;
@@ -108,5 +116,5 @@ void main() {
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));  
     
-    outColor = vec4(fragNormal * 0.5 + 0.5, 1.0); // Exibe a normal transformada
+    outColor = vec4(color, 1.0);
 }

@@ -26,7 +26,7 @@ void VulkanCore::init(GLFWwindow *window)
     createSurface();
     pickPhysicalDevice();
     createLogicalDevice();
-    createCommandPool(); // Movido para cá
+    createCommandPool();
     createTextureSampler();
 
     swapChain = std::make_unique<VulkanSwapChain>(*this);
@@ -37,6 +37,7 @@ void VulkanCore::init(GLFWwindow *window)
     swapChain->create();
 
     descriptor->createDescriptorSetLayout();
+    descriptor->create();
     createRenderPass();
     createSceneRenderPass();
     createSceneResources();
@@ -54,7 +55,6 @@ void VulkanCore::init(GLFWwindow *window)
                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                     descriptor->uniformBuffer, descriptor->uniformBufferMemory);
-    descriptor->create();
 }
 
 void VulkanCore::createInstance()
@@ -1128,15 +1128,15 @@ void VulkanCore::createTextureSampler()
     }
 }
 
-void VulkanCore::createSceneResources() {
+void VulkanCore::createSceneResources()
+{
     VkFormat colorFormat = swapChain->getImageFormat();
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
     validateImageDimensions(width, height);
 
-    pipeline->createScenePipeline(sceneRenderPass, swapChain->getExtent());
-
+    // Criação dos recursos da cena
     createImage(width, height,
                 colorFormat,
                 VK_IMAGE_TILING_OPTIMAL,
@@ -1147,6 +1147,7 @@ void VulkanCore::createSceneResources() {
 
     sceneImageView = createImageView(sceneImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
+    // Transição de layout da imagem
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
     VkImageMemoryBarrier barrier{};
@@ -1175,13 +1176,14 @@ void VulkanCore::createSceneResources() {
 
     endSingleTimeCommands(commandBuffer);
 
+    // Criação do descriptor set layout com todos os bindings necessários
     std::vector<VkDescriptorSetLayoutBinding> bindings = {
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
+        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // albedoMap
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normalMap
+        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallicRoughnessMap
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // aoMap
+        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}  // emissiveMap
     };
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -1189,35 +1191,44 @@ void VulkanCore::createSceneResources() {
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &sceneDescriptorSetLayout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &sceneDescriptorSetLayout) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create scene descriptor set layout!");
     }
 
+    // Criação do pipeline após ter o descriptor set layout
+    pipeline->createScenePipeline(sceneRenderPass, swapChain->getExtent());
+
+    // Alocação do descriptor set
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptor->getDescriptorPool();
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &sceneDescriptorSetLayout;
 
-    if (vkAllocateDescriptorSets(device, &allocInfo, &sceneDescriptorSet) != VK_SUCCESS) {
+    if (vkAllocateDescriptorSets(device, &allocInfo, &sceneDescriptorSet) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to allocate scene descriptor set!");
     }
 
+    // Criação do uniform buffer
     VkDeviceSize bufferSize = sizeof(UBO);
     createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         sceneUniformBuffer,
-        sceneUniformBufferMemory
-    );
+        sceneUniformBufferMemory);
 
+    // Atualização dos descriptors
+    std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
+    
+    // UBO
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = sceneUniformBuffer;
     bufferInfo.offset = 0;
     bufferInfo.range = bufferSize;
 
-    std::vector<VkWriteDescriptorSet> descriptorWrites(1);
     descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrites[0].dstSet = sceneDescriptorSet;
     descriptorWrites[0].dstBinding = 0;
@@ -1225,6 +1236,23 @@ void VulkanCore::createSceneResources() {
     descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptorWrites[0].descriptorCount = 1;
     descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+    // Texturas
+    std::array<VkDescriptorImageInfo, 5> imageInfos{};
+    for (size_t i = 0; i < 5; i++)
+    {
+        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfos[i].imageView = defaultTextureView;  // Use uma textura padrão ou a textura apropriada
+        imageInfos[i].sampler = textureSampler;     // Use um sampler padrão ou o sampler apropriado
+
+        descriptorWrites[i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[i + 1].dstSet = sceneDescriptorSet;
+        descriptorWrites[i + 1].dstBinding = i + 1;
+        descriptorWrites[i + 1].dstArrayElement = 0;
+        descriptorWrites[i + 1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[i + 1].descriptorCount = 1;
+        descriptorWrites[i + 1].pImageInfo = &imageInfos[i];
+    }
 
     vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
