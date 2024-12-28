@@ -153,66 +153,25 @@ void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
     material.emissiveMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(glm::vec4(0.0f));
 }
 
-void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
-{
-    // Layout bindings para UBO e texturas
-    std::vector<VkDescriptorSetLayoutBinding> bindings = {
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // UBO
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // albedo
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // normal
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // metallic-roughness
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // ao
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}                       // emissive
-    };
-
-    // Criar layout e descriptor set
-    auto descriptorSetLayout = vulkanRenderer.getCore()->getDescriptor()->createDescriptorSetLayout(bindings);
-
-    VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(UBO);
-
-    // Criar pipeline layout
+void EngineModelLoader::SetupDescriptors(MaterialComponent &material) {
+    auto sceneDescriptorSetLayout = vulkanRenderer.getCore()->getSceneDescriptorSetLayout();
+    
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+    pipelineLayoutInfo.pSetLayouts = &sceneDescriptorSetLayout;
 
-    if (vkCreatePipelineLayout(vulkanRenderer.getCore()->getDevice(), &pipelineLayoutInfo, nullptr, &material.pipelineLayout) != VK_SUCCESS)
-    {
+    if (vkCreatePipelineLayout(vulkanRenderer.getCore()->getDevice(), &pipelineLayoutInfo, nullptr, &material.pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
-    // Criar uniform buffer para UBO
-    VkDeviceSize bufferSize = sizeof(UBO);
-    vulkanRenderer.getCore()->createBuffer(
-        bufferSize,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        material.uniformBuffer,
-        material.uniformBufferMemory);
+    material.descriptorSet = vulkanRenderer.getCore()->getSceneDescriptorSet();
 
-    auto allocation = vulkanRenderer.getCore()->getDescriptor()->createDescriptorSet(
-        bindings,
-        vulkanRenderer.getCore()->getDescriptor()->getBufferInfo(material.uniformBuffer, bufferSize),
-        {material.albedoMap->getDescriptorInfo(),
-         material.normalMap->getDescriptorInfo(),
-         material.metallicRoughnessMap->getDescriptorInfo(),
-         material.aoMap->getDescriptorInfo(),
-         material.emissiveMap->getDescriptorInfo()});
-    // Criar descriptor set
-    material.descriptorSet = allocation.set;
-
-    // Criar pipeline
     material.pipeline = vulkanRenderer.getCore()->getPipeline()->createMaterialPipeline(
         material.pipelineLayout,
         "shaders/pbr.vert.spv",
-        "shaders/pbr.frag.spv");
-
-    vulkanRenderer.getCore()->getDescriptor()->addDescriptorPool(allocation.pool);
+        "shaders/pbr.frag.spv"
+    );
 }
 
 void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialComponent &materialComponent)

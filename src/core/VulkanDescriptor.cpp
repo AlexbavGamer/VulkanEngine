@@ -47,26 +47,22 @@ void VulkanDescriptor::cleanup()
 }
 
 void VulkanDescriptor::createDescriptorPool() {
-    std::array<VkDescriptorPoolSize, 3> poolSizes{};
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
     
     // Para UBOs
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight()) * 10;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 100);
     
-    // Para texturas
+    // Para Combined Image Samplers
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight()) * 10;
-
-    // Para cena
-    poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[2].descriptorCount = 10; // Mais descriptors para a cena
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 500); // 5 texturas por material
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = static_cast<uint32_t>(core.getMaxFramesInFlight() * 10); // Aumentar número máximo de sets
+    poolInfo.maxSets = static_cast<uint32_t>(core.getMaxFramesInFlight() * 100);
 
     if (vkCreateDescriptorPool(core.getDevice(), &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
         throw std::runtime_error("failed to create descriptor pool!");

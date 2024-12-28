@@ -45,6 +45,7 @@ public:
     uint32_t getMaxFramesInFlight() const { return MAX_FRAMES_IN_FLIGHT; }
     VkDescriptorSetLayout getSceneDescriptorSetLayout() const { return sceneDescriptorSetLayout; }
     VkDescriptorSet getSceneDescriptorSet() const { return sceneDescriptorSet; }
+    VkBuffer getSceneUniformBuffer() const { return sceneUniformBuffer; }
     ProjectManager* getProjectManager() const;
     // Resource Creation
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
@@ -125,6 +126,9 @@ private:
     VkRenderPass sceneRenderPass{VK_NULL_HANDLE};
     VkFramebuffer sceneFramebuffer{VK_NULL_HANDLE};
     VkDescriptorSet sceneDescriptorSet{VK_NULL_HANDLE};
+    
+    VkBuffer sceneUniformBuffer{VK_NULL_HANDLE};
+    VkDeviceMemory sceneUniformBufferMemory{VK_NULL_HANDLE};
 
     // Depth Resources
     VkImage depthImage{VK_NULL_HANDLE};
