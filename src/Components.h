@@ -36,6 +36,9 @@ struct TransformComponent : Component {
         scale = newScale;
     }
 
+    TransformComponent(glm::vec3 position = glm::vec3(0.0f), glm::vec3 rotation = glm::vec3(0.0f), glm::vec3 scale = glm::vec3(1.0f))
+        : position(position), rotation(rotation), scale(scale) {}
+
     void renderComponent() override 
     {
         ImGui::Text("Transform Component");
@@ -100,10 +103,18 @@ struct MaterialComponent : public Component {
 
 
 struct LightComponent : Component {
+public:
     glm::vec3 position;
     glm::vec3 color;
     float intensity;
     glm::vec3 direction;
+
+    LightComponent(
+        glm::vec3 pos = glm::vec3(0.0f),
+        glm::vec3 col = glm::vec3(1.0f),
+        float intens = 1.0f,
+        glm::vec3 dir = glm::vec3(0.0f, -1.0f, 0.0f)
+    ) : position(pos), color(col), intensity(intens), direction(dir) {}
 };
 
 // Definição do CameraComponent que estava ausente no seu arquivo
@@ -159,6 +170,10 @@ struct UBO {
 struct RenderComponent : Component
 {
     std::string name;
+
+    RenderComponent(std::string name) : name(name) {}
+    RenderComponent() {}
+
     MeshComponent mesh;
     MaterialComponent material;
 

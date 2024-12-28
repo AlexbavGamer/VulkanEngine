@@ -6,12 +6,11 @@
 #include "VulkanDescriptor.h"
 #include "VulkanImGui.h"
 
-VulkanPipeline::VulkanPipeline(VulkanCore& core) : core(core), 
-    graphicsPipeline(VK_NULL_HANDLE),
-    pipelineLayout(VK_NULL_HANDLE),
-    wireframeMode(false)
+VulkanPipeline::VulkanPipeline(VulkanCore &core) : core(core),
+                                                   graphicsPipeline(VK_NULL_HANDLE),
+                                                   pipelineLayout(VK_NULL_HANDLE),
+                                                   wireframeMode(false)
 {
-
 }
 
 VulkanPipeline::~VulkanPipeline()
@@ -21,19 +20,21 @@ VulkanPipeline::~VulkanPipeline()
 
 void VulkanPipeline::cleanup()
 {
-    if (!core.getDevice()) return;
-    
-    if (pipelineLayout != VK_NULL_HANDLE) {
+    if (!core.getDevice())
+        return;
+
+    if (pipelineLayout != VK_NULL_HANDLE)
+    {
         vkDestroyPipelineLayout(core.getDevice(), pipelineLayout, nullptr);
         pipelineLayout = VK_NULL_HANDLE;
     }
 
-    if (graphicsPipeline != VK_NULL_HANDLE) {
+    if (graphicsPipeline != VK_NULL_HANDLE)
+    {
         vkDestroyPipeline(core.getDevice(), graphicsPipeline, nullptr);
         graphicsPipeline = VK_NULL_HANDLE;
     }
 }
-
 
 void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D extent)
 {
@@ -47,7 +48,7 @@ void VulkanPipeline::recreate(VkRenderPass renderPass, VkExtent2D extent)
     create(renderPass, extent);
 }
 
-void VulkanPipeline::setWireframeMode(bool enabled) 
+void VulkanPipeline::setWireframeMode(bool enabled)
 {
     vkDeviceWaitIdle(core.getDevice());
     wireframeMode = enabled;
@@ -59,14 +60,15 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     vkDeviceWaitIdle(core.getDevice());
 
     // Destruir pipeline existente se houver
-    if (graphicsPipeline != VK_NULL_HANDLE) {
+    if (graphicsPipeline != VK_NULL_HANDLE)
+    {
         vkDestroyPipeline(core.getDevice(), graphicsPipeline, nullptr);
         graphicsPipeline = VK_NULL_HANDLE;
     }
 
     // Carregar e criar módulos de shader
-    auto vertShaderCode = core.readFile("shaders/vertex.vert.spv");
-    auto fragShaderCode = core.readFile("shaders/fragment.frag.spv");
+    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv");
+    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -83,7 +85,7 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
     // Configuração de entrada de vértices
     std::vector<VkVertexInputBindingDescription> bindingDescriptions = Vertex::getBindingDescription();
@@ -151,15 +153,23 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    VkDescriptorSetLayout  descriptorSet = core.getDescriptor()->getDescriptorSetLayout();
-    
+    VkDescriptorSetLayout descriptorSet = core.getDescriptor()->getDescriptorSetLayout();
+
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(UBO);
+
     // Configuração de layout de pipeline
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSet;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -173,7 +183,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     depthStencil.stencilTestEnable = VK_FALSE;
 
     VkPipelineCreateFlags flags = 0;
-    if (wireframeMode) {
+    if (wireframeMode)
+    {
         flags |= VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     }
 
@@ -195,7 +206,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create graphics pipeline!");
     }
 
@@ -204,9 +216,10 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     vkDestroyShaderModule(core.getDevice(), vertShaderModule, nullptr);
 }
 
-void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D extent) {
-    auto vertShaderCode = core.readFile("shaders/vertex.vert.spv");
-    auto fragShaderCode = core.readFile("shaders/fragment.frag.spv");
+void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D extent)
+{
+    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv");
+    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -300,7 +313,8 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create scene pipeline layout!");
     }
 
@@ -320,7 +334,8 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sceneGraphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sceneGraphicsPipeline) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create scene graphics pipeline!");
     }
 
@@ -446,8 +461,8 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = layout;
-    pipelineInfo.renderPass = core.getRenderPass();
+    pipelineInfo.layout = layout;  // Use the provided layout
+    pipelineInfo.renderPass = core.getSceneRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -462,15 +477,17 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     return pipeline;
 }
 
+
 VkShaderModule VulkanPipeline::createShaderModule(const std::vector<char> &code)
 {
     VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+    createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
     VkShaderModule shaderModule;
-    if (vkCreateShaderModule(core.getDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+    if (vkCreateShaderModule(core.getDevice(), &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create shader module!");
     }
 

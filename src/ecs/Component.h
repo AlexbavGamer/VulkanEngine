@@ -1,6 +1,6 @@
 #pragma once
 
-class Component {
+struct Component {
 public:
     virtual ~Component() = default;
     virtual void renderComponent() { }

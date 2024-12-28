@@ -63,7 +63,7 @@ int main() {
 
         // Ajustar posição inicial da câmera e cubo
         if(modelLoader.LoadModel("engine/models/cubo.fbx", entity)) {
-            std::cout << "Model loaded successfully" << std::endl;
+            std::cout << "Model Loaded" << std::endl;
         }
 
         // Ajustar câmera para ver o cubo
@@ -76,12 +76,11 @@ int main() {
             glm::vec3(0.0f, 1.0f, 0.0f)
         );
         
-        LightComponent light;
-        light.position = glm::vec3(15.0f, 10.0f, 0.0f);  // Initial sun position
-        light.color = glm::vec3(1.0f, 0.95f, 0.8f);      // Warm sunlight color
-        light.intensity = 1.5f;                           // Bright sunlight
+        // LightComponent light;
+        // light.position = glm::vec3(15.0f, 10.0f, 0.0f);  // Initial sun position
+        // light.color = glm::vec3(1.0f, 0.95f, 0.8f);      // Warm sunlight color
+        // light.intensity = 1.5f;                           // Bright sunlight
         scene.camera = camera;
-        scene.lights.push_back(light);
 
     } catch (const std::exception& e) {
         showError("Initialization failed: " + std::string(e.what()));

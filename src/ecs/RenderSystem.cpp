@@ -44,14 +44,17 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
         ubo.material.roughness = material.roughnessFactor;
         ubo.material.ambientOcclusion = 1.0f;
 
-        // 3. Update Uniform Buffer
-        vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(
+        // 3. Push Constants
+        vkCmdPushConstants(
             commandBuffer,
-            material.uniformBuffer,
-            ubo
+            material.pipelineLayout,               // Layout do pipeline
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,             // Stágio do shader (aqui no vértice)
+            0,                                      // Offset de push constant (geralmente 0)
+            sizeof(ubo),                            // Tamanho do UBO
+            &ubo                                    // Dados para enviar
         );
 
-        // 4. Bind Descriptor Sets
+        // 4. Bind Descriptor Sets (caso você precise, como no seu código original)
         vkCmdBindDescriptorSets(
             commandBuffer,
             VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -70,5 +73,6 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
         vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // 6. Draw
-        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0); });
+        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0); 
+    });
 }

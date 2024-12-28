@@ -108,5 +108,5 @@ void main() {
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));  
     
-    outColor = vec4(color, 1.0);
+    outColor = vec4(fragNormal * 0.5 + 0.5, 1.0); // Exibe a normal transformada
 }

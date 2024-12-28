@@ -168,11 +168,18 @@ void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
     // Criar layout e descriptor set
     auto descriptorSetLayout = vulkanRenderer.getCore()->getDescriptor()->createDescriptorSetLayout(bindings);
 
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(UBO);
+
     // Criar pipeline layout
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(vulkanRenderer.getCore()->getDevice(), &pipelineLayoutInfo, nullptr, &material.pipelineLayout) != VK_SUCCESS)
     {
@@ -225,7 +232,7 @@ void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialCompo
     {
         aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
         material->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor);
-        std::cout << "No albedo texture found. Creating solid color texture with values: (" 
+        std::cout << "No albedo texture found. Creating solid color texture with values: ("
                   << baseColor.r << ", " << baseColor.g << ", " << baseColor.b << ", " << baseColor.a << ")" << std::endl;
         materialComponent.albedoMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
             glm::vec4(baseColor.r, baseColor.g, baseColor.b, baseColor.a));
@@ -259,7 +266,7 @@ void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialCompo
         float roughnessFactor = 0.5f;
         material->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor);
         material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor);
-        std::cout << "No metallic-roughness map found. Creating solid color texture with metallic: " 
+        std::cout << "No metallic-roughness map found. Creating solid color texture with metallic: "
                   << metallicFactor << ", roughness: " << roughnessFactor << std::endl;
         materialComponent.metallicRoughnessMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
             glm::vec4(0.0f, roughnessFactor, metallicFactor, 0.0f));
@@ -291,11 +298,11 @@ void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialCompo
     {
         aiColor3D emissiveColor(0.0f, 0.0f, 0.0f);
         material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor);
-        std::cout << "No emissive map found. Creating solid color texture with values: (" 
+        std::cout << "No emissive map found. Creating solid color texture with values: ("
                   << emissiveColor.r << ", " << emissiveColor.g << ", " << emissiveColor.b << ")" << std::endl;
         materialComponent.emissiveMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
             glm::vec4(emissiveColor.r, emissiveColor.g, emissiveColor.b, 1.0f));
     }
-    
+
     std::cout << "Material texture loading completed." << std::endl;
 }

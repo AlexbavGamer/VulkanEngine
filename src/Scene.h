@@ -16,7 +16,6 @@ public:
     std::unique_ptr<Registry> registry;
     std::unique_ptr<RenderSystem> renderSystem;
     CameraComponent camera;
-    std::vector<LightComponent> lights;
 
     std::shared_ptr<Entity> createEntity();
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
