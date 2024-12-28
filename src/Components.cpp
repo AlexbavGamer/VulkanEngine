@@ -11,7 +11,6 @@ void camera::updateCamera(CameraComponent &camera, const glm::vec3 &position, co
 {
     camera.projection = glm::perspective(glm::radians(camera.fov), static_cast<float>(camera.width)/static_cast<float>(camera.height), 0.1f, 100.0f);
     camera.projection[1][1] *= -1;
-
     camera.view = glm::lookAt(
         position,
         target,

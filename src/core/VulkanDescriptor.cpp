@@ -72,78 +72,26 @@ void VulkanDescriptor::createDescriptorPool()
     }
 }
 
-void VulkanDescriptor::updateDescriptorSetWithMultipleTextures(VkDescriptorSet descriptorSet,
-                                                               const VkDescriptorBufferInfo &bufferInfo,
-                                                               const std::vector<VkDescriptorImageInfo> &imageInfos)
-{
-
-    std::vector<VkWriteDescriptorSet> descriptorWrites;
-    descriptorWrites.reserve(1 + imageInfos.size());
-
-    // First write: Uniform buffer (binding 0)
-    VkWriteDescriptorSet bufferWrite{};
-    bufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    bufferWrite.dstSet = descriptorSet;
-    bufferWrite.dstBinding = 0;
-    bufferWrite.dstArrayElement = 0;
-    bufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bufferWrite.descriptorCount = 1;
-    bufferWrite.pBufferInfo = &bufferInfo;
-    descriptorWrites.push_back(bufferWrite);
-
-    // Additional writes: Textures (bindings 1+)
-    for (size_t i = 0; i < imageInfos.size(); i++)
-    {
-        VkWriteDescriptorSet imageWrite{};
-        imageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        imageWrite.dstSet = descriptorSet;
-        imageWrite.dstBinding = static_cast<uint32_t>(i + 1);
-        imageWrite.dstArrayElement = 0;
-        imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        imageWrite.descriptorCount = 1;
-        imageWrite.pImageInfo = &imageInfos[i];
-        descriptorWrites.push_back(imageWrite);
-    }
-
-    vkUpdateDescriptorSets(core.getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-}
-
 void VulkanDescriptor::createDescriptorSetLayout()
 {
     std::vector<VkDescriptorSetLayoutBinding> bindings = {
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}};
+        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // albedoMap
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normalMap
+        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallicRoughnessMap
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // aoMap
+        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}  // emissiveMap
+    };
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    VkDescriptorSetLayoutCreateInfo layoutInfo{}; 
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(core.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create descriptor set layout!");
+        throw std::runtime_error("falha ao criar layout do descriptor set!");
     }
-}
-
-VkDescriptorSetLayout VulkanDescriptor::createDescriptorSetLayout(const std::vector<VkDescriptorSetLayoutBinding> &bindings)
-{
-    VkDescriptorSetLayout descriptorSetLayout;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-    if (vkCreateDescriptorSetLayout(core.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create custom descriptor set layout!");
-    }
-
-    return descriptorSetLayout;
 }
 
 void VulkanDescriptor::createDescriptorSets()
@@ -280,94 +228,7 @@ VkDescriptorSet VulkanDescriptor::createDescriptorSet()
     return descriptorSet;
 }
 
-DescriptorAllocation VulkanDescriptor::createDescriptorSet(
-    const std::vector<VkDescriptorSetLayoutBinding> &bindings,
-    const VkDescriptorBufferInfo &bufferInfo,
-    const std::vector<VkDescriptorImageInfo> &imageInfos)
-{
-    // Criar layout
-    VkDescriptorSetLayout layout = createDescriptorSetLayout(bindings);
-
-    // Alocar descriptor set
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &layout;
-
-    VkDescriptorSet descriptorSet;
-    if (vkAllocateDescriptorSets(core.getDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate descriptor set!");
-    }
-
-    // Atualizar descriptor set
-    std::vector<VkWriteDescriptorSet> descriptorWrites;
-
-    // UBO
-    VkWriteDescriptorSet uboWrite{};
-    uboWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    uboWrite.dstSet = descriptorSet;
-    uboWrite.dstBinding = 0;
-    uboWrite.dstArrayElement = 0;
-    uboWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboWrite.descriptorCount = 1;
-    uboWrite.pBufferInfo = &bufferInfo;
-    descriptorWrites.push_back(uboWrite);
-
-    // Texturas
-    for (size_t i = 0; i < imageInfos.size(); i++)
-    {
-        VkWriteDescriptorSet textureWrite{};
-        textureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        textureWrite.dstSet = descriptorSet;
-        textureWrite.dstBinding = i + 1; // binding 0 é o UBO
-        textureWrite.dstArrayElement = 0;
-        textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        textureWrite.descriptorCount = 1;
-        textureWrite.pImageInfo = &imageInfos[i];
-        descriptorWrites.push_back(textureWrite);
-    }
-
-    vkUpdateDescriptorSets(
-        core.getDevice(),
-        static_cast<uint32_t>(descriptorWrites.size()),
-        descriptorWrites.data(),
-        0,
-        nullptr);
-
-    return {descriptorSet, descriptorPool};
-}
-
 void VulkanDescriptor::addDescriptorPool(VkDescriptorPool descriptorPool)
 {
     descriptorPools.push_back(descriptorPool);
-}
-
-void VulkanDescriptor::updateDescriptorSet(VkDescriptorSet descriptorSet,
-                                           const VkDescriptorBufferInfo &bufferInfo,
-                                           const VkDescriptorImageInfo &imageInfo)
-{
-
-    std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-    // Uniform buffer binding
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = descriptorSet;
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-    // Texture sampler binding
-    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = descriptorSet;
-    descriptorWrites[1].dstBinding = 1;
-    descriptorWrites[1].dstArrayElement = 0;
-    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrites[1].descriptorCount = 1;
-    descriptorWrites[1].pImageInfo = &imageInfo;
-
-    vkUpdateDescriptorSets(core.getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

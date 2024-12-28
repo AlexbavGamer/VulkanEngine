@@ -5,6 +5,7 @@
 #include "../project/projectManagment.h"
 #include "Scene.h"
 #include <managers/FileManager.h>
+#include <ecs/components/RenderComponent.h>
 
 UIDrawer::UIDrawer(VulkanCore &core) : core(core) {}
 

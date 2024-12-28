@@ -1,19 +1,17 @@
 #include "ModelLoader.h"
-#include "../../VulkanRenderer.h"
-#include "../../core/VulkanCore.h"
-#include "../../core/VulkanDescriptor.h"
-#include "../../rendering/TextureManager.h"
 
-bool EngineModelLoader::LoadModel(const std::string& path, std::shared_ptr<Entity> entity) {
+bool EngineModelLoader::LoadModel(const std::string &path, std::shared_ptr<Entity> entity)
+{
     Assimp::Importer importer;
-    unsigned int flags = aiProcess_Triangulate | 
-                        aiProcess_GenNormals |
-                        aiProcess_CalcTangentSpace |
-                        aiProcess_JoinIdenticalVertices |
-                        aiProcess_OptimizeMeshes;
+    unsigned int flags = aiProcess_Triangulate |
+                         aiProcess_GenNormals |
+                         aiProcess_CalcTangentSpace |
+                         aiProcess_JoinIdenticalVertices |
+                         aiProcess_OptimizeMeshes;
 
-    const aiScene* scene = importer.ReadFile(path, flags);
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+    const aiScene *scene = importer.ReadFile(path, flags);
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
         throw std::runtime_error("Falha ao carregar modelo: " + std::string(importer.GetErrorString()));
     }
 
@@ -22,91 +20,100 @@ bool EngineModelLoader::LoadModel(const std::string& path, std::shared_ptr<Entit
     return true;
 }
 
-void EngineModelLoader::ConfigureTransform(std::shared_ptr<Entity> entity) {
-    auto& transform = entity->AddOrGetComponent<TransformComponent>();
+void EngineModelLoader::ConfigureTransform(std::shared_ptr<Entity> entity)
+{
+    auto &transform = entity->AddOrGetComponent<TransformComponent>();
     transform.setPosition(glm::vec3(0.0f, 0.0f, -5.0f));
     transform.setRotation(glm::vec3(0.0f));
     transform.setScale(glm::vec3(1.0f));
 }
 
-std::vector<Vertex> EngineModelLoader::ExtractVertices(aiMesh* mesh) {
+std::vector<Vertex> EngineModelLoader::ExtractVertices(aiMesh *mesh)
+{
     std::vector<Vertex> vertices;
     vertices.reserve(mesh->mNumVertices);
 
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+    {
         Vertex vertex{};
         vertex.position = {mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z};
-        
-        if (mesh->HasNormals()) {
+
+        if (mesh->HasNormals())
+        {
             vertex.normal = {mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z};
         }
-        
-        if (mesh->mTextureCoords[0]) {
+
+        if (mesh->mTextureCoords[0])
+        {
             vertex.texCoord = {mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y};
         }
-        
+
         vertices.push_back(vertex);
     }
-    
+
     return vertices;
 }
 
-std::vector<uint32_t> EngineModelLoader::ExtractIndices(aiMesh* mesh) {
+std::vector<uint32_t> EngineModelLoader::ExtractIndices(aiMesh *mesh)
+{
     std::vector<uint32_t> indices;
     indices.reserve(mesh->mNumFaces * 3);
 
-    for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-        const aiFace& face = mesh->mFaces[i];
-        for (unsigned int j = 0; j < face.mNumIndices; j++) {
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+    {
+        const aiFace &face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; j++)
+        {
             indices.push_back(face.mIndices[j]);
         }
     }
-    
+
     return indices;
 }
 
-void EngineModelLoader::CreateVertexBuffer(MeshComponent& meshComponent, const std::vector<Vertex>& vertices) {
+void EngineModelLoader::CreateVertexBuffer(MeshComponent &meshComponent, const std::vector<Vertex> &vertices)
+{
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-    
+
     vulkanRenderer.getCore()->createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         meshComponent.vertexBuffer,
-        meshComponent.vertexBufferMemory
-    );
+        meshComponent.vertexBufferMemory);
 
-    void* data;
+    void *data;
     vkMapMemory(vulkanRenderer.getCore()->getDevice(), meshComponent.vertexBufferMemory, 0, bufferSize, 0, &data);
     memcpy(data, vertices.data(), bufferSize);
     vkUnmapMemory(vulkanRenderer.getCore()->getDevice(), meshComponent.vertexBufferMemory);
 }
 
-void EngineModelLoader::CreateIndexBuffer(MeshComponent& meshComponent, const std::vector<uint32_t>& indices) {
+void EngineModelLoader::CreateIndexBuffer(MeshComponent &meshComponent, const std::vector<uint32_t> &indices)
+{
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-    
+
     vulkanRenderer.getCore()->createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         meshComponent.indexBuffer,
-        meshComponent.indexBufferMemory
-    );
+        meshComponent.indexBufferMemory);
 
-    void* data;
+    void *data;
     vkMapMemory(vulkanRenderer.getCore()->getDevice(), meshComponent.indexBufferMemory, 0, bufferSize, 0, &data);
     memcpy(data, indices.data(), bufferSize);
     vkUnmapMemory(vulkanRenderer.getCore()->getDevice(), meshComponent.indexBufferMemory);
-    
+
     meshComponent.indexCount = static_cast<uint32_t>(indices.size());
 }
 
-void EngineModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::shared_ptr<Entity> entity) {
+void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::shared_ptr<Entity> entity)
+{
     ConfigureTransform(entity);
 
-    auto& renderComponent = entity->AddOrGetComponent<RenderComponent>();
-    auto& meshComponent = renderComponent.mesh;
-    auto& materialComponent = renderComponent.material;
+    auto &renderComponent = entity->AddOrGetComponent<RenderComponent>();
+    auto &meshComponent = renderComponent.mesh;
+    auto &materialComponent = renderComponent.material;
 
     auto vertices = ExtractVertices(mesh);
     auto indices = ExtractIndices(mesh);
@@ -114,9 +121,12 @@ void EngineModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::sha
     CreateVertexBuffer(meshComponent, vertices);
     CreateIndexBuffer(meshComponent, indices);
 
-    if (mesh->mMaterialIndex >= 0) {
+    if (mesh->mMaterialIndex >= 0)
+    {
         LoadMaterialTextures(scene->mMaterials[mesh->mMaterialIndex], materialComponent);
-    } else {
+    }
+    else
+    {
         CreateDefaultMaterial(materialComponent);
     }
 
@@ -124,19 +134,21 @@ void EngineModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::sha
     renderComponent.name = mesh->mName.length > 0 ? mesh->mName.C_Str() : "Unnamed Mesh";
 }
 
-void EngineModelLoader::CreateUniformBuffer(MaterialComponent& material) {
+void EngineModelLoader::CreateUniformBuffer(MaterialComponent &material)
+{
     VkDeviceSize bufferSize = sizeof(UBO);
     vulkanRenderer.getCore()->createBuffer(
         bufferSize,
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         material.uniformBuffer,
-        material.uniformBufferMemory
-    );
+        material.uniformBufferMemory);
 }
 
-void EngineModelLoader::UpdateDescriptorSets(MaterialComponent& material, const std::array<VkDescriptorImageInfo, 5>& imageInfos) {
+void EngineModelLoader::UpdateDescriptorSets(MaterialComponent &material, const std::array<VkDescriptorImageInfo, 5> &imageInfos)
+{
     std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
+
     VkDescriptorBufferInfo bufferInfo{material.uniformBuffer, 0, sizeof(UBO)};
 
     descriptorWrites[0] = {
@@ -145,18 +157,17 @@ void EngineModelLoader::UpdateDescriptorSets(MaterialComponent& material, const 
         .dstBinding = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &bufferInfo
-    };
+        .pBufferInfo = &bufferInfo};
 
-    for (size_t i = 0; i < 5; i++) {
+    for (size_t i = 0; i < 5; i++)
+    {
         descriptorWrites[i + 1] = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = material.descriptorSet,
             .dstBinding = static_cast<uint32_t>(i + 1),
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &imageInfos[i]
-        };
+            .pImageInfo = &imageInfos[i]};
     }
 
     vkUpdateDescriptorSets(
@@ -164,8 +175,7 @@ void EngineModelLoader::UpdateDescriptorSets(MaterialComponent& material, const 
         static_cast<uint32_t>(descriptorWrites.size()),
         descriptorWrites.data(),
         0,
-        nullptr
-    );
+        nullptr);
 }
 
 void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
@@ -267,4 +277,76 @@ void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialCompo
     }
 
     std::cout << "Material texture loading completed." << std::endl;
+}
+
+void EngineModelLoader::ProcessNode(aiNode *node, const aiScene *scene, std::shared_ptr<Entity> entity)
+{
+    // Processa todos os meshes do nó atual
+    for (unsigned int i = 0; i < node->mNumMeshes; i++)
+    {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        ProcessMesh(mesh, scene, entity);
+    }
+
+    // Processa recursivamente os nós filhos
+    for (unsigned int i = 0; i < node->mNumChildren; i++)
+    {
+        ProcessNode(node->mChildren[i], scene, entity);
+    }
+}
+
+void EngineModelLoader::ProcessMaterial(aiMesh *mesh, const aiScene *scene, MaterialComponent &materialComponent)
+{
+    if (mesh->mMaterialIndex >= 0)
+    {
+        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+        LoadMaterialTextures(material, materialComponent);
+    }
+    else
+    {
+        CreateDefaultMaterial(materialComponent);
+    }
+}
+
+void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
+{
+    CreateUniformBuffer(material);
+    CreateMaterialPipeline(material);
+    // AllocateDescriptorSet(material, vulkanRenderer.getCore()->getDescriptor()->getDescriptorSetLayout());
+    AllocateDescriptorSet(material, vulkanRenderer.getCore()->getSceneDescriptorSetLayout());
+    auto imageInfos = SetupImageInfos(material);
+    UpdateDescriptorSets(material, imageInfos);
+}
+
+void EngineModelLoader::CreateMaterialPipeline(MaterialComponent &material)
+{
+    material.pipeline = vulkanRenderer.getCore()->getPipeline()->getPipeline();
+    material.pipelineLayout = vulkanRenderer.getCore()->getPipeline()->getPipelineLayout();
+}
+
+void EngineModelLoader::AllocateDescriptorSet(MaterialComponent &material, VkDescriptorSetLayout layout)
+{
+    VkDescriptorSetAllocateInfo allocInfo{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = vulkanRenderer.getCore()->getDescriptor()->getDescriptorPool(),
+        .descriptorSetCount = 1,
+        .pSetLayouts = &layout};
+
+    if (vkAllocateDescriptorSets(vulkanRenderer.getCore()->getDevice(), &allocInfo, &material.descriptorSet) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Falha ao alocar descriptor sets!");
+    }
+}
+
+std::array<VkDescriptorImageInfo, 5> EngineModelLoader::SetupImageInfos(MaterialComponent &material)
+{
+    std::array<VkDescriptorImageInfo, 5> imageInfos{};
+
+    imageInfos[0] = material.albedoMap->getDescriptorInfo();
+    imageInfos[1] = material.normalMap->getDescriptorInfo();
+    imageInfos[2] = material.metallicRoughnessMap->getDescriptorInfo();
+    imageInfos[3] = material.aoMap->getDescriptorInfo();
+    imageInfos[4] = material.emissiveMap->getDescriptorInfo();
+
+    return imageInfos;
 }

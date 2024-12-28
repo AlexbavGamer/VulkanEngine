@@ -1,11 +1,16 @@
 #include "../Component.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/euler_angles.hpp>
 
 struct CameraComponent : public Component
 {
     glm::mat4 projection;
     glm::mat4 view;
+
+    float width;
+    float height;
 
     float yaw = -90.0f;       // Initial yaw angle
     float pitch = 0.0f;       // Initial pitch angle

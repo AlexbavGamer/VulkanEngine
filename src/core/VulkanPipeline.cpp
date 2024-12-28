@@ -319,7 +319,6 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
 
     if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
     {
@@ -355,7 +354,6 @@ void VulkanPipeline::bindScenePipeline(VkCommandBuffer commandBuffer)
 {
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, sceneGraphicsPipeline);
 }
-
 
 VkPipeline VulkanPipeline::createMaterialPipeline(
     VkPipelineLayout& outPipelineLayout,
@@ -447,9 +445,8 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Use consistent descriptor set layout
-    auto bindings = core.getDescriptor()->getDescriptorSetLayoutBindings();
-    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->createDescriptorSetLayout(bindings);
+    // Usar o descriptor set layout existente do VulkanDescriptor
+    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->getDescriptorSetLayout();
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

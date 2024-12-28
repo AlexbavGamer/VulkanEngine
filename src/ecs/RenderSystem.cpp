@@ -1,11 +1,13 @@
 #include "RenderSystem.h"
-#include "VulkanRenderer.h"
-#include <glm/glm.hpp>
+#include "components/RenderComponent.h"
+#include "components/TransformComponent.h"
 #include "../Scene.h"
+#include "../VulkanRenderer.h"
 #include "../core/VulkanCore.h"
 #include "../core/VulkanDescriptor.h"
-#include "../VulkanRenderer.h"
+#include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+
 void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
 {
     VulkanRenderer &vulkanRender = VulkanRenderer::getInstance();
