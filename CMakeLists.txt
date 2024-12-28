@@ -1,47 +1,61 @@
 cmake_minimum_required(VERSION 3.14)
 project(VulkanEngine)
 
+message(STATUS "Starting VulkanEngine CMake configuration...")
+
 # Definir o padrão C++ como C++17
+message(STATUS "Setting C++ standard to C++17")
 set(CMAKE_CXX_STANDARD 17)
 
 # Configuração para diferentes plataformas
+message(STATUS "Checking platform-specific configurations...")
 if(WIN32)
+    message(STATUS "Windows platform detected")
     # Verificação do Vulkan SDK no Windows
     if(NOT DEFINED ENV{VULKAN_SDK})
         message(FATAL_ERROR "Vulkan SDK não encontrado! Certifique-se de que o Vulkan SDK está instalado e a variável de ambiente VULKAN_SDK está configurada corretamente.")
     endif()
 
+    message(STATUS "Configuring Vulkan SDK paths for Windows...")
     # Configurações específicas para Windows
     set(VULKAN_SDK $ENV{VULKAN_SDK})
     string(REPLACE "\\" "/" VULKAN_SDK ${VULKAN_SDK})  # Troca barras invertidas por barras normais
+    message(STATUS "Vulkan SDK path: ${VULKAN_SDK}")
 
     set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
-    set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")  # Caminho para vulkan-1.lib
-    set(GLSLC "${VULKAN_SDK}/Bin/glslc.exe")          # Caminho para o compilador de shaders
+    set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")
+    set(GLSLC "${VULKAN_SDK}/Bin/glslc.exe")
     
     # Configurações específicas para MinGW no Windows
     if(MINGW)
+        message(STATUS "MinGW detected, configuring specific flags...")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole -mwindows")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -static")
     endif()
 
 elseif(UNIX)
+    message(STATUS "Linux platform detected")
     # Procurar Vulkan SDK no sistema Linux
+    message(STATUS "Searching for Vulkan SDK...")
     find_package(Vulkan REQUIRED)
     
+    message(STATUS "Configuring Vulkan paths for Linux...")
     # Definir variáveis para Vulkan no Linux
     set(VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
     set(VULKAN_LIB ${Vulkan_LIBRARIES})
     
+    message(STATUS "Searching for GLSL compiler...")
     # Encontrar o compilador de shaders
     find_program(GLSLC glslc REQUIRED)
 endif()
 
 # Incluir dependências multiplataforma
+message(STATUS "Starting third-party dependencies configuration...")
 include(FetchContent)
 
 # GLFW
+message(STATUS "Fetching GLFW from GitHub...")
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -50,6 +64,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glfw)
 
 # GLM (matemática 3D)
+message(STATUS "Fetching GLM (OpenGL Mathematics) from GitHub...")
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -58,6 +73,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glm)
 
 # STB (carregamento de texturas)
+message(STATUS "Fetching STB image library from GitHub...")
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
@@ -66,35 +82,39 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(stb)
 
 # Assimp
+message(STATUS "Fetching Assimp (Asset Import Library) from GitHub...")
 FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git
     GIT_TAG v5.3.1
 )
 
+message(STATUS "Configuring Assimp build options...")
 # Configurações do Assimp
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ZLIB ON CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "Disable building of Assimp samples")
-set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "Disable building of Assimp docs")
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_BLEND_IMPORTER ON CACHE BOOL "" FORCE)
-set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "Disable Assimp tests" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "Disable Assimp installation" FORCE)
+set(ASSIMP_BUILD_ZLIB ON CACHE BOOL "Enable ZLIB building" FORCE)
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "Disable building of Assimp samples" FORCE)
+set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "Disable building of Assimp docs" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries" FORCE)
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "Disable export functionality" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "Disable Assimp tools" FORCE)
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "Disable all importers by default" FORCE)
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "Enable OBJ importer" FORCE)
+set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE BOOL "Enable FBX importer" FORCE)
+set(ASSIMP_BUILD_BLEND_IMPORTER ON CACHE BOOL "Enable Blender importer" FORCE)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "Disable warnings as errors" FORCE)
 
 # Configurações específicas para MinGW
 if(WIN32 AND MINGW)
+    message(STATUS "Configuring MinGW-specific settings for Assimp...")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 endif()
 
 FetchContent_MakeAvailable(assimp)
 
 # Magic Enum
+message(STATUS "Fetching Magic Enum library from GitHub...")
 FetchContent_Declare(
     magic_enum
     GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
@@ -103,6 +123,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(magic_enum)
 
 # ImGui
+message(STATUS "Fetching Dear ImGui from GitHub...")
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -110,6 +131,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+message(STATUS "Setting up ImGui source files...")
 # Arquivos fonte do ImGui
 set(IMGUI_SOURCES
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -121,16 +143,32 @@ set(IMGUI_SOURCES
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 
+# ImGuiFileDialog
+message(STATUS "Fetching ImGui File Dialog from GitHub...")
+FetchContent_Declare(
+    imguifiledialog
+    GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(imguifiledialog)
+target_include_directories(ImGuiFileDialog PRIVATE
+    ${imgui_SOURCE_DIR}
+)
+message(STATUS "Collecting source files...")
 # Encontrar todos os arquivos fonte
 file(GLOB_RECURSE SOURCES 
     "src/**.h"
     "src/**.cpp"
 )
 
+message(STATUS "Creating executable target...")
 # Criar executável
 add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_DIR})
+target_sources(VulkanEngine PRIVATE 
+    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
+)
 
-
+message(STATUS "Setting up font generation...")
 set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
@@ -146,6 +184,7 @@ foreach(FONT_FILE ${FONT_FILES})
     
     set(OUTPUT_FILE "${GENERATED_DIR}/${FONT_NAME}.h")
     
+    message(STATUS "Setting up font generation for ${FONT_NAME}")
     add_custom_command(
         OUTPUT ${OUTPUT_FILE}
         COMMAND ${CMAKE_COMMAND}
@@ -161,10 +200,12 @@ foreach(FONT_FILE ${FONT_FILES})
     list(APPEND GENERATED_HEADERS ${OUTPUT_FILE})
 endforeach()
 
+message(STATUS "Creating font headers target...")
 # Create custom target for font headers
 add_custom_target(FontHeaders ALL DEPENDS ${GENERATED_HEADERS})
 add_dependencies(VulkanEngine FontHeaders)
 
+message(STATUS "Configuring include directories...")
 # Configurar diretórios de inclusão
 set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
 
@@ -184,9 +225,11 @@ target_include_directories(VulkanEngine PRIVATE
     ${CMAKE_SOURCE_DIR}/src/imgui
     ${assimp_BINARY_DIR}/include
     ${magic_enum_SOURCE_DIR}/include
+    ${imguifiledialog_SOURCE_DIR}
     ${GENERATED_DIR}
 )
 
+message(STATUS "Setting up library linkage...")
 # Links de biblioteca
 target_link_libraries(VulkanEngine
     ${VULKAN_LIB}
@@ -194,6 +237,7 @@ target_link_libraries(VulkanEngine
     assimp
 )
 
+message(STATUS "Setting up shader compilation...")
 # Configuração de shaders
 file(GLOB SHADERS "${CMAKE_SOURCE_DIR}/shaders/*.vert" "${CMAKE_SOURCE_DIR}/shaders/*.frag")
 
@@ -214,6 +258,7 @@ foreach(SHADER ${SHADERS})
     set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_BINARY})
     
+    message(STATUS "Setting up compilation for shader: ${SHADER_NAME}")
     add_custom_command(
         OUTPUT ${SPIRV_BINARY}
         COMMAND ${GLSLC} ${SHADER} -o ${SPIRV_BINARY}
@@ -223,12 +268,14 @@ foreach(SHADER ${SHADERS})
     )
 endforeach()
 
+message(STATUS "Creating shader build target...")
 # Target para shaders
 add_custom_target(ShadersBuild ALL DEPENDS ${SPIRV_BINARY_FILES})
 
 # Dependência de shaders
 add_dependencies(VulkanEngine ShadersBuild)
 
+message(STATUS "Setting up asset copying...")
 # Copiar pasta assets para o diretório de build
 add_custom_command(
     TARGET VulkanEngine POST_BUILD
@@ -240,6 +287,7 @@ add_custom_command(
 
 # Configurações adicionais para Linux
 if(UNIX)
+    message(STATUS "Configuring additional Linux settings...")
     # Links adicionais para Linux
     target_link_libraries(VulkanEngine
         dl      # Biblioteca de carregamento dinâmico
@@ -249,3 +297,5 @@ if(UNIX)
     # Flags adicionais para Linux
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
+
+message(STATUS "CMake configuration completed successfully!")

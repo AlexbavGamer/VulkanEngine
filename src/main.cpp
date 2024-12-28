@@ -63,10 +63,7 @@ int main() {
 
         // Ajustar posição inicial da câmera e cubo
         if(modelLoader.LoadModel("engine/models/cubo.fbx", entity)) {
-            TransformComponent& transform = entity->addComponent<TransformComponent>();
-            transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
-            transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
-            transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
+            std::cout << "Model loaded successfully" << std::endl;
         }
 
         // Ajustar câmera para ver o cubo

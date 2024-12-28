@@ -1,9 +1,10 @@
 #version 450
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(binding = 0) uniform UBO {
     mat4 model;
     mat4 view;
     mat4 proj;
+    vec4 material;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
@@ -16,8 +17,8 @@ layout(location = 2) out vec2 fragTexCoord;
 
 void main() {
     vec4 worldPos = ubo.model * vec4(inPosition, 1.0);
-    gl_Position = ubo.proj * ubo.view * worldPos;
     fragPos = worldPos.xyz;
-    fragNormal = mat3(transpose(inverse(ubo.model))) * inNormal;
+    fragNormal = mat3(ubo.model) * inNormal;
     fragTexCoord = inTexCoord;
+    gl_Position = ubo.proj * ubo.view * worldPos;
 }

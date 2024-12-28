@@ -4,19 +4,21 @@
 #include "../../core/VulkanDescriptor.h"
 #include "../../rendering/TextureManager.h"
 
-bool EngineModelLoader::LoadModel(const std::string& path, std::shared_ptr<Entity> entity) {
+bool EngineModelLoader::LoadModel(const std::string &path, std::shared_ptr<Entity> entity)
+{
     Assimp::Importer importer;
-    
+
     // Configurar flags para otimização
-    unsigned int flags = aiProcess_Triangulate | 
-                        aiProcess_GenNormals |
-                        aiProcess_CalcTangentSpace |
-                        aiProcess_JoinIdenticalVertices |
-                        aiProcess_OptimizeMeshes;
+    unsigned int flags = aiProcess_Triangulate |
+                         aiProcess_GenNormals |
+                         aiProcess_CalcTangentSpace |
+                         aiProcess_JoinIdenticalVertices |
+                         aiProcess_OptimizeMeshes;
 
-    const aiScene* scene = importer.ReadFile(path, flags);
+    const aiScene *scene = importer.ReadFile(path, flags);
 
-    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
         throw std::runtime_error("Failed to load model: " + std::string(importer.GetErrorString()));
         return false;
     }
@@ -26,67 +28,79 @@ bool EngineModelLoader::LoadModel(const std::string& path, std::shared_ptr<Entit
     return true;
 }
 
-void EngineModelLoader::ProcessNode(aiNode* node, const aiScene* scene, std::shared_ptr<Entity> entity) {
+void EngineModelLoader::ProcessNode(aiNode *node, const aiScene *scene, std::shared_ptr<Entity> entity)
+{
     // Processar todas as malhas do nó
-    for(unsigned int i = 0; i < node->mNumMeshes; i++) {
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+    for (unsigned int i = 0; i < node->mNumMeshes; i++)
+    {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
         ProcessMesh(mesh, scene, entity);
     }
 
     // Processar nós filhos recursivamente
-    for(unsigned int i = 0; i < node->mNumChildren; i++) {
+    for (unsigned int i = 0; i < node->mNumChildren; i++)
+    {
         ProcessNode(node->mChildren[i], scene, entity);
     }
 }
 
-void EngineModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::shared_ptr<Entity> entity) {
-    auto& renderComponent = entity->AddOrGetComponent<RenderComponent>();
-    auto& meshComponent = renderComponent.mesh;
-    auto& materialComponent = renderComponent.material;
+void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::shared_ptr<Entity> entity)
+{
+    auto &transform = entity->AddOrGetComponent<TransformComponent>();
+    transform.setPosition(glm::vec3(0.0f, 0.0f, -5.0f));
+    transform.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
+    transform.setScale(glm::vec3(1.0f, 1.0f, 1.0f));
+
+    auto &renderComponent = entity->AddOrGetComponent<RenderComponent>();
+    auto &meshComponent = renderComponent.mesh;
+    auto &materialComponent = renderComponent.material;
 
     std::cout << "\nProcessing mesh: " << mesh->mName.C_Str() << std::endl;
     std::cout << "Vertices: " << mesh->mNumVertices << std::endl;
+    std::cout << "Faces: " << mesh->mNumFaces << std::endl;
     std::cout << "Has normals: " << (mesh->HasNormals() ? "yes" : "no") << std::endl;
     std::cout << "Has texture coords: " << (mesh->HasTextureCoords(0) ? "yes" : "no") << std::endl;
+    std::cout << "Material ID: " << mesh->mMaterialIndex << std::endl;
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
     // Processar vértices
-    for(unsigned int i = 0; i < mesh->mNumVertices; i++) {
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+    {
         Vertex vertex{};
-        
+
         // Posição
         vertex.position = {
             mesh->mVertices[i].x,
             mesh->mVertices[i].y,
-            mesh->mVertices[i].z
-        };
+            mesh->mVertices[i].z};
 
         // Normal
-        if(mesh->HasNormals()) {
+        if (mesh->HasNormals())
+        {
             vertex.normal = {
                 mesh->mNormals[i].x,
                 mesh->mNormals[i].y,
-                mesh->mNormals[i].z
-            };
+                mesh->mNormals[i].z};
         }
 
         // Coordenadas de textura
-        if(mesh->mTextureCoords[0]) {
+        if (mesh->mTextureCoords[0])
+        {
             vertex.texCoord = {
                 mesh->mTextureCoords[0][i].x,
-                mesh->mTextureCoords[0][i].y
-            };
+                mesh->mTextureCoords[0][i].y};
         }
 
         vertices.push_back(vertex);
     }
 
     // Processar índices
-    for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
+    for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+    {
         aiFace face = mesh->mFaces[i];
-        for(unsigned int j = 0; j < face.mNumIndices; j++)
+        for (unsigned int j = 0; j < face.mNumIndices; j++)
             indices.push_back(face.mIndices[j]);
     }
 
@@ -99,16 +113,14 @@ void EngineModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::sha
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         meshComponent.vertexBuffer,
-        meshComponent.vertexBufferMemory
-    );
+        meshComponent.vertexBufferMemory);
 
     vulkanRenderer.getCore()->createBuffer(
         indexBufferSize,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         meshComponent.indexBuffer,
-        meshComponent.indexBufferMemory
-    );
+        meshComponent.indexBufferMemory);
 
     // Copiar dados para os buffers
     vulkanRenderer.getCore()->copyDataToBuffer(vertices.data(), meshComponent.vertexBufferMemory, vertexBufferSize);
@@ -116,20 +128,24 @@ void EngineModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, std::sha
     meshComponent.indexCount = static_cast<uint32_t>(indices.size());
 
     // Processar material
-    if(mesh->mMaterialIndex >= 0) {
-        aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+    if (mesh->mMaterialIndex >= 0)
+    {
+        aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
         LoadMaterialTextures(material, materialComponent);
-    } else {
+    }
+    else
+    {
         CreateDefaultMaterial(materialComponent);
     }
 
     SetupDescriptors(materialComponent);
-    
+
     // Configurar nome do componente de renderização
     renderComponent.name = mesh->mName.length > 0 ? mesh->mName.C_Str() : "Unnamed Mesh";
 }
 
-void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material) {
+void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
+{
     material.albedoMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(glm::vec4(1.0f));
     material.normalMap = vulkanRenderer.getTextureManager()->createDefaultNormalTexture();
     material.metallicRoughnessMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(glm::vec4(0.0f, 0.5f, 0.0f, 0.0f));
@@ -137,27 +153,29 @@ void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material) {
     material.emissiveMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(glm::vec4(0.0f));
 }
 
-void EngineModelLoader::SetupDescriptors(MaterialComponent &material) {
+void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
+{
     // Layout bindings para UBO e texturas
     std::vector<VkDescriptorSetLayoutBinding> bindings = {
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // UBO
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // albedo
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normal
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallic-roughness
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // ao
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}  // emissive
+        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // albedo
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // normal
+        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // metallic-roughness
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // ao
+        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}                       // emissive
     };
 
     // Criar layout e descriptor set
     auto descriptorSetLayout = vulkanRenderer.getCore()->getDescriptor()->createDescriptorSetLayout(bindings);
-    
+
     // Criar pipeline layout
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-    if (vkCreatePipelineLayout(vulkanRenderer.getCore()->getDevice(), &pipelineLayoutInfo, nullptr, &material.pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(vulkanRenderer.getCore()->getDevice(), &pipelineLayoutInfo, nullptr, &material.pipelineLayout) != VK_SUCCESS)
+    {
         throw std::runtime_error("failed to create pipeline layout!");
     }
 
@@ -168,85 +186,116 @@ void EngineModelLoader::SetupDescriptors(MaterialComponent &material) {
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         material.uniformBuffer,
-        material.uniformBufferMemory
-    );
+        material.uniformBufferMemory);
 
-    // Criar descriptor set
-    material.descriptorSet = vulkanRenderer.getCore()->getDescriptor()->createDescriptorSet(
+    auto allocation = vulkanRenderer.getCore()->getDescriptor()->createDescriptorSet(
         bindings,
         vulkanRenderer.getCore()->getDescriptor()->getBufferInfo(material.uniformBuffer, bufferSize),
-        {
-            material.albedoMap->getDescriptorInfo(),
-            material.normalMap->getDescriptorInfo(),
-            material.metallicRoughnessMap->getDescriptorInfo(),
-            material.aoMap->getDescriptorInfo(),
-            material.emissiveMap->getDescriptorInfo()
-        }
-    );
+        {material.albedoMap->getDescriptorInfo(),
+         material.normalMap->getDescriptorInfo(),
+         material.metallicRoughnessMap->getDescriptorInfo(),
+         material.aoMap->getDescriptorInfo(),
+         material.emissiveMap->getDescriptorInfo()});
+    // Criar descriptor set
+    material.descriptorSet = allocation.set;
 
     // Criar pipeline
     material.pipeline = vulkanRenderer.getCore()->getPipeline()->createMaterialPipeline(
         material.pipelineLayout,
         "shaders/pbr.vert.spv",
-        "shaders/pbr.frag.spv"
-    );
+        "shaders/pbr.frag.spv");
+
+    vulkanRenderer.getCore()->getDescriptor()->addDescriptorPool(allocation.pool);
 }
 
-void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialComponent &materialComponent) {
+void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialComponent &materialComponent)
+{
     aiString texturePath;
-    
+    std::cout << "Starting material texture loading..." << std::endl;
+
     // Albedo/Base Color
-    if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS) {
+    std::cout << "Loading Albedo/Base Color texture..." << std::endl;
+    if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
+    {
         std::string fullPath = directory + "/" + texturePath.C_Str();
+        std::cout << "Found albedo texture at: " << fullPath << std::endl;
         materialComponent.albedoMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
-    } else {
-        // Verifica propriedades de cor base
+    }
+    else
+    {
         aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
         material->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor);
+        std::cout << "No albedo texture found. Creating solid color texture with values: (" 
+                  << baseColor.r << ", " << baseColor.g << ", " << baseColor.b << ", " << baseColor.a << ")" << std::endl;
         materialComponent.albedoMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
-            glm::vec4(baseColor.r, baseColor.g, baseColor.b, baseColor.a)
-        );
+            glm::vec4(baseColor.r, baseColor.g, baseColor.b, baseColor.a));
     }
 
     // Normal Map
-    if (material->GetTexture(aiTextureType_NORMALS, 0, &texturePath) == AI_SUCCESS) {
+    std::cout << "Loading Normal Map texture..." << std::endl;
+    if (material->GetTexture(aiTextureType_NORMALS, 0, &texturePath) == AI_SUCCESS)
+    {
         std::string fullPath = directory + "/" + texturePath.C_Str();
+        std::cout << "Found normal map at: " << fullPath << std::endl;
         materialComponent.normalMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
-    } else {
+    }
+    else
+    {
+        std::cout << "No normal map found. Creating default normal texture." << std::endl;
         materialComponent.normalMap = vulkanRenderer.getTextureManager()->createDefaultNormalTexture();
     }
 
     // Metallic-Roughness Map
-    if (material->GetTexture(aiTextureType_METALNESS, 0, &texturePath) == AI_SUCCESS) {
+    std::cout << "Loading Metallic-Roughness Map texture..." << std::endl;
+    if (material->GetTexture(aiTextureType_METALNESS, 0, &texturePath) == AI_SUCCESS)
+    {
         std::string fullPath = directory + "/" + texturePath.C_Str();
+        std::cout << "Found metallic-roughness map at: " << fullPath << std::endl;
         materialComponent.metallicRoughnessMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
-    } else {
+    }
+    else
+    {
         float metallicFactor = 0.0f;
         float roughnessFactor = 0.5f;
         material->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor);
         material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor);
+        std::cout << "No metallic-roughness map found. Creating solid color texture with metallic: " 
+                  << metallicFactor << ", roughness: " << roughnessFactor << std::endl;
         materialComponent.metallicRoughnessMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
-            glm::vec4(0.0f, roughnessFactor, metallicFactor, 0.0f)
-        );
+            glm::vec4(0.0f, roughnessFactor, metallicFactor, 0.0f));
     }
 
     // Ambient Occlusion
-    if (material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &texturePath) == AI_SUCCESS) {
+    std::cout << "Loading Ambient Occlusion texture..." << std::endl;
+    if (material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &texturePath) == AI_SUCCESS)
+    {
         std::string fullPath = directory + "/" + texturePath.C_Str();
+        std::cout << "Found ambient occlusion map at: " << fullPath << std::endl;
         materialComponent.aoMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
-    } else {
+    }
+    else
+    {
+        std::cout << "No ambient occlusion map found. Creating solid white texture." << std::endl;
         materialComponent.aoMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(glm::vec4(1.0f));
     }
 
     // Emissive Map
-    if (material->GetTexture(aiTextureType_EMISSIVE, 0, &texturePath) == AI_SUCCESS) {
+    std::cout << "Loading Emissive Map texture..." << std::endl;
+    if (material->GetTexture(aiTextureType_EMISSIVE, 0, &texturePath) == AI_SUCCESS)
+    {
         std::string fullPath = directory + "/" + texturePath.C_Str();
+        std::cout << "Found emissive map at: " << fullPath << std::endl;
         materialComponent.emissiveMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
-    } else {
+    }
+    else
+    {
         aiColor3D emissiveColor(0.0f, 0.0f, 0.0f);
         material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor);
+        std::cout << "No emissive map found. Creating solid color texture with values: (" 
+                  << emissiveColor.r << ", " << emissiveColor.g << ", " << emissiveColor.b << ")" << std::endl;
         materialComponent.emissiveMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
-            glm::vec4(emissiveColor.r, emissiveColor.g, emissiveColor.b, 1.0f)
-        );
+            glm::vec4(emissiveColor.r, emissiveColor.g, emissiveColor.b, 1.0f));
     }
+    
+    std::cout << "Material texture loading completed." << std::endl;
 }

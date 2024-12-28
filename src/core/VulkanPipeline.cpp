@@ -54,29 +54,6 @@ void VulkanPipeline::setWireframeMode(bool enabled)
     wireframeModeChanged = true;
 }
 
-void VulkanPipeline::recreatePipelineIfNeeded()
-{
-    if (wireframeModeChanged) {
-        vkDeviceWaitIdle(core.getDevice());
-        
-        // Store current pipeline
-        VkPipeline oldPipeline = graphicsPipeline;
-        
-        // Set current pipeline to null before creating new one
-        graphicsPipeline = VK_NULL_HANDLE;
-        
-        // Create new pipeline
-        create(core.getRenderPass(), core.getSwapChain()->getExtent());
-        
-        // Destroy old pipeline if it was valid
-        if (oldPipeline != VK_NULL_HANDLE) {
-            vkDestroyPipeline(core.getDevice(), oldPipeline, nullptr);
-        }
-        
-        wireframeModeChanged = false;
-    }
-}
-
 void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D extent)
 {
     vkDeviceWaitIdle(core.getDevice());
@@ -367,7 +344,6 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
 
-    // Configuração dos estágios de shader
     VkPipelineShaderStageCreateInfo shaderStages[] = {
         {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -383,7 +359,6 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
         }
     };
 
-    // Vertex Input Info
     std::vector<VkVertexInputBindingDescription> bindingDescriptions = Vertex::getBindingDescription();
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions = Vertex::getAttributeDescriptions();
 
@@ -394,13 +369,11 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-    // Input Assembly
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    // [Rest of the code remains the same...]
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -420,7 +393,6 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     viewportState.scissorCount = 1;
     viewportState.pScissors = &scissor;
 
-    // Rasterização
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
@@ -431,26 +403,31 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
-    // Multisampling
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    // Depth and Stencil
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
     depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
     depthStencil.stencilTestEnable = VK_FALSE;
 
-    // Color Blending
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | 
                                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -458,7 +435,6 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Criação do Pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
@@ -471,10 +447,9 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = layout;
-    pipelineInfo.renderPass = core.getRenderPass(); // Usar o mesmo RenderPass do core
+    pipelineInfo.renderPass = core.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.basePipelineIndex = -1;
 
     VkPipeline pipeline;
     if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {

@@ -24,6 +24,18 @@ struct TransformComponent : Component {
                glm::scale(glm::mat4(1.0f), scale);
     }
 
+    void setPosition(glm::vec3 newPosition) {
+        position = newPosition;
+    }
+
+    void setRotation(glm::vec3 newRotation) {
+        rotation = newRotation;
+    }
+
+    void setScale(glm::vec3 newScale) {
+        scale = newScale;
+    }
+
     void renderComponent() override 
     {
         ImGui::Text("Transform Component");

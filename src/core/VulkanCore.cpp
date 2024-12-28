@@ -13,6 +13,8 @@
 #include "VulkanSwapChain.h"
 #include "VulkanPipeline.h"
 #include "VulkanDescriptor.h"
+#include "VulkanRenderer.h"
+#include "project/projectManagment.h"
 #include "VulkanImGui.h"
 #include "Scene.h"
 
@@ -38,6 +40,7 @@ void VulkanCore::init(GLFWwindow *window)
     createRenderPass();
     createSceneRenderPass();
     createSceneResources();
+    createSceneFramebuffer();
     pipeline->create(renderPass, swapChain->getExtent());
     createFramebuffers();
     createCommandBuffers();
@@ -347,7 +350,7 @@ void VulkanCore::renderFrame()
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        recreateSwapChain();
+        handleResize();
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -394,7 +397,7 @@ void VulkanCore::renderFrame()
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
-        recreateSwapChain();
+        handleResize();
     }
     else if (result != VK_SUCCESS)
     {
@@ -518,79 +521,178 @@ void VulkanCore::transitionImageLayout(VkImage image, VkFormat format,
 
 void VulkanCore::cleanup()
 {
-    // Wait for all GPU operations to complete
     vkDeviceWaitIdle(device);
 
-    // Cleanup high-level systems first
+    // Limpa ImGui primeiro
     if (imgui)
-        imgui->cleanup();
-    if (swapChain)
-        swapChain->cleanup();
-    if (pipeline)
-        pipeline->cleanup();
-    if (descriptor)
-        descriptor->cleanup();
-
-    // Cleanup sync objects
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-        vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-        vkDestroyFence(device, inFlightFences[i], nullptr);
+        imgui->cleanup();
     }
 
-    // Cleanup command pool before framebuffers
-    vkDestroyCommandPool(device, commandPool, nullptr);
+    // Limpa recursos de descriptor
+    if (descriptor)
+    {
+        descriptor->cleanup();
+    }
 
-    // Cleanup framebuffers before their dependencies
+    if(sceneDescriptorSetLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(device, sceneDescriptorSetLayout, nullptr);
+    }
+
+    if(textureSampler)
+    {
+        vkDestroySampler(device, textureSampler, nullptr);
+    }
+
+    // Limpa recursos da cena
+    if (sceneFramebuffer != VK_NULL_HANDLE)
+    {
+        vkDestroyFramebuffer(device, sceneFramebuffer, nullptr);
+    }
+
+    if (sceneImageView != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, sceneImageView, nullptr);
+    }
+
+    if (sceneImage != VK_NULL_HANDLE)
+    {
+        vkDestroyImage(device, sceneImage, nullptr);
+    }
+
+    if (sceneImageMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(device, sceneImageMemory, nullptr);
+    }
+
+    // Limpa recursos de profundidade
+    if (depthImageView != VK_NULL_HANDLE)
+    {
+        vkDestroyImageView(device, depthImageView, nullptr);
+    }
+
+    if (depthImage != VK_NULL_HANDLE)
+    {
+        vkDestroyImage(device, depthImage, nullptr);
+    }
+
+    if (depthImageMemory != VK_NULL_HANDLE)
+    {
+        vkFreeMemory(device, depthImageMemory, nullptr);
+    }
+
+    // Limpa framebuffers
     for (auto framebuffer : framebuffers)
     {
         vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
-    framebuffers.clear();
 
-    // Now safe to cleanup render pass
-    vkDestroyRenderPass(device, renderPass, nullptr);
+    // Limpa render passes
+    if (renderPass != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(device, renderPass, nullptr);
+    }
 
-    // Cleanup descriptor layouts
-    vkDestroyDescriptorSetLayout(device, sceneDescriptorSetLayout, nullptr);
+    if (sceneRenderPass != VK_NULL_HANDLE)
+    {
+        vkDestroyRenderPass(device, sceneRenderPass, nullptr);
+    }
 
-    // Now safe to cleanup image views and related resources
-    vkDestroyImageView(device, sceneImageView, nullptr);
-    vkDestroyImage(device, sceneImage, nullptr);
-    vkFreeMemory(device, sceneImageMemory, nullptr);
+    // Limpa pipeline
+    if (pipeline)
+    {
+        pipeline->cleanup();
+    }
 
-    // Cleanup debug messenger
-    if (enableValidationLayers)
+    // Limpa swap chain
+    if (swapChain)
+    {
+        swapChain->cleanup();
+    }
+
+    // Limpa objetos de sincronização
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        if (imageAvailableSemaphores[i] != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+        }
+        if (renderFinishedSemaphores[i] != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+        }
+        if (inFlightFences[i] != VK_NULL_HANDLE)
+        {
+            vkDestroyFence(device, inFlightFences[i], nullptr);
+        }
+    }
+
+    // Limpa command pool
+    if (commandPool != VK_NULL_HANDLE)
+    {
+        vkDestroyCommandPool(device, commandPool, nullptr);
+    }
+
+    // Limpa device e recursos de instância
+    if (device != VK_NULL_HANDLE)
+    {
+        vkDestroyDevice(device, nullptr);
+    }
+
+    if (enableValidationLayers && debugMessenger != VK_NULL_HANDLE)
     {
         DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
     }
 
-    // Final device and instance cleanup
-    vkDestroyDevice(device, nullptr);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-    vkDestroyInstance(instance, nullptr);
+    if (surface != VK_NULL_HANDLE)
+    {
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+    }
+
+    if (instance != VK_NULL_HANDLE)
+    {
+        vkDestroyInstance(instance, nullptr);
+    }
 }
 
-void VulkanCore::handleResize()
-{
+void VulkanCore::handleResize() {
     int width = 0, height = 0;
     glfwGetFramebufferSize(window, &width, &height);
-    while (width == 0 || height == 0)
-    {
+    while (width == 0 || height == 0) {
         glfwGetFramebufferSize(window, &width, &height);
         glfwWaitEvents();
     }
 
     vkDeviceWaitIdle(device);
-    recreateSwapChain();
-}
 
-void VulkanCore::recreateSwapChain()
-{
+    // First destroy framebuffers that use the image views
+    for (auto framebuffer : framebuffers) {
+        if (framebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+    }
+    framebuffers.clear();
+
+    if (sceneFramebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(device, sceneFramebuffer, nullptr);
+        sceneFramebuffer = VK_NULL_HANDLE;
+    }
+
+    // Now safe to destroy image views
+    if (sceneImageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, sceneImageView, nullptr);
+        sceneImageView = VK_NULL_HANDLE;
+    }
+
+    // Recreate swapchain and dependent resources
     swapChain->cleanup();
     swapChain->create();
+    createSceneResources();
+    createSceneFramebuffer();
     createFramebuffers();
+
+    pipeline->recreate(renderPass, swapChain->getExtent());
 }
 
 uint32_t VulkanCore::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -862,6 +964,11 @@ VkImageView VulkanCore::createImageView(VkImage image, VkFormat format, VkImageA
     return imageView;
 }
 
+ProjectManager *VulkanCore::getProjectManager() const
+{
+    return VulkanRenderer::getInstance().getProjectManager();
+}
+
 void VulkanCore::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
 {
     createInfo = {};
@@ -995,12 +1102,12 @@ void VulkanCore::createTextureSampler()
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.anisotropyEnable = VK_TRUE;
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
@@ -1127,7 +1234,6 @@ void VulkanCore::createSceneResources()
     descriptorWrite.pImageInfo = &imageInfo;
 
     vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-    createSceneFramebuffer();
 }
 
 void VulkanCore::createSceneRenderPass()

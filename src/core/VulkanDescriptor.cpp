@@ -31,6 +31,14 @@ void VulkanDescriptor::cleanup()
         descriptorPool = VK_NULL_HANDLE;
     }
 
+    for(auto pool : descriptorPools)
+    {
+        if(pool != VK_NULL_HANDLE) {
+            vkDestroyDescriptorPool(device, pool, nullptr);
+        }
+    }
+    descriptorPools.clear();
+
     if (descriptorSetLayout != VK_NULL_HANDLE)
     {
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
@@ -293,7 +301,7 @@ VkDescriptorSet VulkanDescriptor::createDescriptorSet()
     }
     return descriptorSet;
 }
-VkDescriptorSet VulkanDescriptor::createDescriptorSet(
+DescriptorAllocation VulkanDescriptor::createDescriptorSet(
     const std::vector<VkDescriptorSetLayoutBinding>& bindings,
     const VkDescriptorBufferInfo& bufferInfo,
     const std::vector<VkDescriptorImageInfo>& imageInfos
@@ -348,7 +356,12 @@ VkDescriptorSet VulkanDescriptor::createDescriptorSet(
         nullptr
     );
 
-    return descriptorSet;
+    return { descriptorSet, descriptorPool };
+}
+
+void VulkanDescriptor::addDescriptorPool(VkDescriptorPool descriptorPool)
+{
+    descriptorPools.push_back(descriptorPool);
 }
 
 void VulkanDescriptor::updateDescriptorSet(VkDescriptorSet descriptorSet,

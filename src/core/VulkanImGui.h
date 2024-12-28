@@ -20,6 +20,8 @@
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf999
 
+class VulkanRenderer;
+
 class VulkanImGui {
 public:
     VulkanImGui(VulkanCore& core);
@@ -35,8 +37,10 @@ private:
     void handleFileSelection(const std::string& filename);
     void showFileContextMenu(const std::string &filePath, const std::string id, bool isDirectory);
     VulkanCore& core;
+    VulkanRenderer& vulkanRenderer;
     VkDescriptorPool imguiPool;
     std::shared_ptr<Entity> selectedEntity;
+    
 
 private:
     ImFont* iconFont;

@@ -5,18 +5,22 @@
 #include "../core/VulkanCore.h"
 #include "../core/VulkanDescriptor.h"
 #include "../VulkanRenderer.h"
+#include <glm/gtx/string_cast.hpp>
 
-void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer) {
+void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
+{
     VulkanRenderer &vulkanRender = VulkanRenderer::getInstance();
 
-    const auto& camera = VulkanRenderer::getInstance().getCore()->getScene()->camera;
+    const auto &camera = VulkanRenderer::getInstance().getCore()->getScene()->camera;
 
     // Add debug print to track entities
     int entityCount = 0;
 
     registry.view<RenderComponent, TransformComponent>([&](std::shared_ptr<Entity> entity,
-                                                           RenderComponent &render, TransformComponent &transform) {
+                                                           RenderComponent &render, TransformComponent &transform)
+                                                       {
         entityCount++;
+
         const auto& mesh = render.mesh;
         const auto& material = render.material;
 
@@ -66,6 +70,5 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer) {
         vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         // 6. Draw
-        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
-    });
+        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0); });
 }

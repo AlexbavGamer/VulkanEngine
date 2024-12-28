@@ -16,7 +16,6 @@ public:
     void cleanup();
     void recreate(VkRenderPass renderPass, VkExtent2D extent);
     void setWireframeMode(bool enabled);
-    void recreatePipelineIfNeeded();
     void createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D extent);
 
     void createScenePipeline(VkRenderPass renderPass, VkExtent2D extent);

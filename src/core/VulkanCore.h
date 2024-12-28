@@ -14,6 +14,7 @@ class VulkanSwapChain;
 class VulkanPipeline;
 class VulkanDescriptor;
 class VulkanImGui;
+class ProjectManager;
 class Scene;
 
 class VulkanCore {
@@ -22,7 +23,6 @@ public:
     void cleanup();
     void renderFrame();
     void handleResize();
-    void recreateSwapChain();
     void waitIdle() { vkDeviceWaitIdle(device); }
 
     // Getters
@@ -32,6 +32,7 @@ public:
     VkQueue getPresentQueue() const { return presentQueue; }
     VkCommandPool getCommandPool() const { return commandPool; }
     VkRenderPass getRenderPass() const { return renderPass; }
+    VkRenderPass getSceneRenderPass() const { return sceneRenderPass; }
     VulkanSwapChain* getSwapChain() const { return swapChain.get(); }
     VulkanPipeline* getPipeline() const { return pipeline.get(); }
     VulkanDescriptor* getDescriptor() const { return descriptor.get(); }
@@ -44,7 +45,7 @@ public:
     uint32_t getMaxFramesInFlight() const { return MAX_FRAMES_IN_FLIGHT; }
     VkDescriptorSetLayout getSceneDescriptorSetLayout() const { return sceneDescriptorSetLayout; }
     VkDescriptorSet getSceneDescriptorSet() const { return sceneDescriptorSet; }
-
+    ProjectManager* getProjectManager() const;
     // Resource Creation
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);

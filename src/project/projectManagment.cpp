@@ -3,13 +3,17 @@
 
 ProjectManager::ProjectManager(VulkanCore *core) : vulkanCore(core)
 {
-
 }
 
 bool ProjectManager::createProject(const std::string &projectName, const std::string &projectPath)
 {
     m_config.projectName = projectName;
     m_config.projectPath = projectPath;
+
+    if (!createProjectStructure())
+        return false;
+
+    m_isProjectOpen = true;
 
     return createProjectStructure();
 }
@@ -23,7 +27,9 @@ bool ProjectManager::openProject(const std::string &projectPath)
 
     std::ifstream configFile(projectPath + "/project.config");
     std::getline(configFile, m_config.projectName);
-    
+
+    m_isProjectOpen = true;
+
     return true;
 }
 
@@ -36,11 +42,27 @@ bool ProjectManager::saveProject()
         configFile << m_config.projectPath << "\n";
         return true;
     }
-    catch(...)
+    catch (...)
     {
         return false;
     }
 }
+
+bool ProjectManager::closeProject()
+{
+    if (!m_isProjectOpen)
+        return true;
+
+    if (!saveProject())
+        return false;
+
+    m_config.projectName.clear();
+    m_config.projectPath.clear();
+    m_isProjectOpen = false;
+
+    return false;
+}
+
 bool ProjectManager::createProjectStructure()
 {
     try
@@ -53,11 +75,10 @@ bool ProjectManager::createProjectStructure()
         configFile << m_config.projectPath << "\n";
         return true;
     }
-    catch(...)
+    catch (...)
     {
         return false;
     }
-    
 }
 
 bool ProjectManager::validateProjectStructure()
@@ -89,7 +110,7 @@ bool ProjectManager::validateProjectStructure()
 
         return true;
     }
-    catch(...)
+    catch (...)
     {
         return false;
     }
