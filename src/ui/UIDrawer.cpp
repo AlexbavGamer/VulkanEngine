@@ -3,6 +3,7 @@
 #include "../core/VulkanCore.h"
 #include "../core/VulkanPipeline.h"
 #include "../project/projectManagment.h"
+#include "Scene.h"
 #include <managers/FileManager.h>
 
 UIDrawer::UIDrawer(VulkanCore &core) : core(core) {}
@@ -59,12 +60,29 @@ void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)
     ImGui::End();
 }
 
-void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity)
-{
+void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity) {
     ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, -1.0f), ImVec2(350.0f, -1.0f));
     ImGui::Begin("Hierarchy");
+    
+    // Verifica se clicou fora da janela
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+        selectedEntity = nullptr;
+    }
+    
+    core.getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render) 
+    {
+        if (ImGui::Selectable(render.name.c_str(), selectedEntity && selectedEntity->getId() == entity->getId())) {
+            if (selectedEntity && selectedEntity->getId() == entity->getId()) {
+                selectedEntity = nullptr;
+            } else {
+                selectedEntity = entity;
+            }
+        } 
+    });
+
     ImGui::End();
 }
+
 
 void UIDrawer::drawContentBrowser()
 {
