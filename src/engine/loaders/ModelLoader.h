@@ -3,7 +3,6 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <memory>
-#include "../../VulkanRenderer.h"
 #include "../../core/VulkanCore.h"
 #include "../../core/VulkanDescriptor.h"
 #include "../../ecs/Component.h"

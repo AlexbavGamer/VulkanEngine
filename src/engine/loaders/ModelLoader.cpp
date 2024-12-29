@@ -1,4 +1,5 @@
 #include "ModelLoader.h"
+#include "../../VulkanRenderer.h"
 
 bool EngineModelLoader::LoadModel(const std::string &path, std::shared_ptr<Entity> entity)
 {

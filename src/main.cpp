@@ -8,7 +8,6 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
-#include "engine/loaders/ModelLoader.h"
 
 uint32_t WIDTH = 800;
 uint32_t HEIGHT = 600;
@@ -56,16 +55,12 @@ int main() {
 
         Scene& scene = *renderer.getCore()->getScene();
 
-        EngineModelLoader modelLoader(renderer);
+        std::shared_ptr<Entity> cuboEntity = scene.registry->createEntity();
 
-        // Create entity using ECS
-        std::shared_ptr<Entity> entity = scene.registry->createEntity();
-
-        // Ajustar posição inicial da câmera e cubo
-        if(modelLoader.LoadModel("engine/models/cubo.fbx", entity)) {
-            std::cout << "Model Loaded" << std::endl;
+        if(!renderer.getModelLoader()->LoadModel("engine/models/cubo.fbx", cuboEntity)) {
+            throw std::runtime_error("Failed load 'cubo.fbx' model in engine/models folder");
         }
-
+     
         // Ajustar câmera para ver o cubo
         CameraComponent camera;
         camera.width = WIDTH;

@@ -67,8 +67,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     }
 
     // Carregar e criar módulos de shader
-    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv");
-    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv");
+    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv"); // Atualizado para PBR
+    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv"); // Atualizado para PBR
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -124,6 +124,22 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     viewportState.scissorCount = 1;
     viewportState.pScissors = &scissor;
 
+    // Ensure viewport and scissor are valid
+    if (viewportState.pViewports == nullptr || viewportState.pScissors == nullptr) {
+        throw std::runtime_error("Viewport or scissor state is null!");
+    }
+
+    // Set dynamic states for viewport and scissor
+    std::vector<VkDynamicState> dynamicStates = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicState{}; 
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO; 
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()); 
+    dynamicState.pDynamicStates = dynamicStates.data();
+
     // Configuração de rasterização
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -153,8 +169,7 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->getDescriptorSetLayout();
-
+    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->getDescriptorSetLayout(); // Ensure this layout matches the pipeline layout requirements
     VkPushConstantRange pushConstantRange{};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
@@ -186,16 +201,6 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
         flags |= VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
     }
 
-    std::vector<VkDynamicState> dynamicStates = {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
-
-    VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    dynamicState.pDynamicStates = dynamicStates.data();
-
     // Criar pipeline
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -224,10 +229,9 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     vkDestroyShaderModule(core.getDevice(), vertShaderModule, nullptr);
 }
 
-void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D extent)
-{
-    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv");
-    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv");
+void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D extent) {
+    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv"); // Atualizado para PBR
+    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv"); // Atualizado para PBR
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -244,7 +248,8 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+    std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {vertShaderStageInfo, fragShaderStageInfo};
+
 
     auto bindingDescriptions = Vertex::getBindingDescription();
     auto attributeDescriptions = Vertex::getAttributeDescriptions();
@@ -304,7 +309,8 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     depthStencil.stencilTestEnable = VK_FALSE;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | 
+                                         VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -313,22 +319,22 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    auto descriptorSetLayout = core.getDescriptor()->getDescriptorSetLayout();
+    // Usar o descriptor set layout existente do VulkanDescriptor
+    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->getDescriptorSetLayout();
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
-    {
+    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create scene pipeline layout!");
     }
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.stageCount = shaderStages.size();
+    pipelineInfo.pStages = shaderStages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
@@ -341,8 +347,7 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sceneGraphicsPipeline) != VK_SUCCESS)
-    {
+    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &sceneGraphicsPipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create scene graphics pipeline!");
     }
 

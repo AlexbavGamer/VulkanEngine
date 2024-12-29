@@ -35,7 +35,7 @@ public:
     std::vector<VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings() const;
 
     void createUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
-    void updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo);
+    void updateUniformBuffer(VkDeviceMemory uniformBufferMemory, const UBO &ubo);
 
 private:
     VulkanCore &core;

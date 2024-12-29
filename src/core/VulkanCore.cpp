@@ -35,7 +35,6 @@ void VulkanCore::init(GLFWwindow *window)
 
     createDepthResources();
     swapChain->create();
-
     descriptor->createDescriptorSetLayout();
     descriptor->create();
     createRenderPass();
@@ -864,77 +863,57 @@ void VulkanCore::createImage(uint32_t width, uint32_t height, VkFormat format,
                              VkMemoryPropertyFlags properties, VkImage &image,
                              VkDeviceMemory &imageMemory)
 {
-    // Verificar limites do dispositivo
+    // Verificar dimensões contra os limites do dispositivo
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
     if (width > deviceProperties.limits.maxImageDimension2D ||
         height > deviceProperties.limits.maxImageDimension2D)
     {
-        throw std::runtime_error("image dimensions exceed device limits!");
+        throw std::runtime_error("Image dimensions exceed device limits!");
     }
 
+    // Configuração de VkImageCreateInfo
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
+    imageInfo.extent = {width, height, 1}; // Dimensões da imagem
+    imageInfo.mipLevels = 1;               // Apenas 1 nível de mip
+    imageInfo.arrayLayers = 1;             // Apenas 1 camada
     imageInfo.format = format;
     imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // Layout inicial
     imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.flags = 0;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;         // Sem multisampling
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // Apenas 1 fila usa
 
     if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create image!");
+        throw std::runtime_error("Failed to create image!");
     }
 
+    // Obter requisitos de memória
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device, image, &memRequirements);
 
-    // Verificar se há memória disponível
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-    uint32_t memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-    // Verificar se o tipo de memória é válido
-    if (memoryTypeIndex >= memProperties.memoryTypeCount)
-    {
-        vkDestroyImage(device, image, nullptr);
-        throw std::runtime_error("failed to find suitable memory type!");
-    }
-
+    // Alocar memória para a imagem
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = memoryTypeIndex;
+    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    // Verificar se há memória suficiente disponível
-    if (memRequirements.size > memProperties.memoryHeaps[memProperties.memoryTypes[memoryTypeIndex].heapIndex].size)
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
     {
         vkDestroyImage(device, image, nullptr);
-        throw std::runtime_error("not enough memory to allocate image!");
+        throw std::runtime_error("Failed to allocate image memory!");
     }
 
-    VkResult result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
-    if (result != VK_SUCCESS)
-    {
-        vkDestroyImage(device, image, nullptr);
-        throw std::runtime_error("failed to allocate image memory: " + std::to_string(result));
-    }
-
+    // Associar memória à imagem
     if (vkBindImageMemory(device, image, imageMemory, 0) != VK_SUCCESS)
     {
         vkFreeMemory(device, imageMemory, nullptr);
         vkDestroyImage(device, image, nullptr);
-        throw std::runtime_error("failed to bind image memory!");
+        throw std::runtime_error("Failed to bind image memory!");
     }
 }
 
@@ -1130,6 +1109,8 @@ void VulkanCore::createTextureSampler()
 
 void VulkanCore::createSceneResources()
 {
+    std::cout << "Creating scene resources..." << std::endl;
+
     VkFormat colorFormat = swapChain->getImageFormat();
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
@@ -1178,12 +1159,12 @@ void VulkanCore::createSceneResources()
 
     // Criação do descriptor set layout com todos os bindings necessários
     std::vector<VkDescriptorSetLayoutBinding> bindings = {
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // albedoMap
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normalMap
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallicRoughnessMap
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // aoMap
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}  // emissiveMap
+        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // UBO
+        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // albedoMap
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // normalMap
+        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // metallicRoughnessMap
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // aoMap
+        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}                       // emissiveMap
     };
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -1204,7 +1185,7 @@ void VulkanCore::createSceneResources()
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptor->getDescriptorPool();
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &sceneDescriptorSetLayout;
+    allocInfo.pSetLayouts = &sceneDescriptorSetLayout; // Certifique-se de que o layout corresponde ao esperado
 
     if (vkAllocateDescriptorSets(device, &allocInfo, &sceneDescriptorSet) != VK_SUCCESS)
     {
@@ -1222,7 +1203,7 @@ void VulkanCore::createSceneResources()
 
     // Atualização dos descriptors
     std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
-    
+
     // UBO
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = sceneUniformBuffer;
@@ -1242,8 +1223,8 @@ void VulkanCore::createSceneResources()
     for (size_t i = 0; i < 5; i++)
     {
         imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView = defaultTextureView;  // Use uma textura padrão ou a textura apropriada
-        imageInfos[i].sampler = textureSampler;     // Use um sampler padrão ou o sampler apropriado
+        imageInfos[i].imageView = defaultTextureView; // Use uma textura padrão ou a textura apropriada
+        imageInfos[i].sampler = textureSampler;       // Use um sampler padrão ou o sampler apropriado
 
         descriptorWrites[i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[i + 1].dstSet = sceneDescriptorSet;
@@ -1255,6 +1236,25 @@ void VulkanCore::createSceneResources()
     }
 
     vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
+
+void VulkanCore::createDefaultImage()
+{
+    VkFormat colorFormat = swapChain->getImageFormat();
+    uint32_t width = swapChain->getExtent().width;
+    uint32_t height = swapChain->getExtent().height;
+
+    validateImageDimensions(width, height);
+
+    createImage(width, height,
+                colorFormat,
+                VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                defaultTexture,
+                defaultTextureMemory);
+
+    defaultTextureView = createImageView(defaultTexture, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void VulkanCore::createSceneRenderPass()
@@ -1343,7 +1343,7 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
         renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        pipeline->bindScenePipeline(commandBuffer);
+        // pipeline->bindScenePipeline(commandBuffer);
         scene->renderSystem->render(*scene->registry, commandBuffer);
         vkCmdEndRenderPass(commandBuffer);
     }

@@ -27,7 +27,6 @@ public:
         const std::string& fragShaderPath
     );
 
-
     VkPipeline getPipeline() const { return graphicsPipeline; }
     VkPipelineLayout getPipelineLayout() const { return pipelineLayout; }
     bool wireframeModeChanged = false;

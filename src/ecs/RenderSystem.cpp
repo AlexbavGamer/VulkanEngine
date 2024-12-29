@@ -40,16 +40,11 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
 
-            UBO ubo{};
-            ubo.model = transform.getMatrix();
-            ubo.view = vulkanRender.getCore()->getScene()->camera.view;
-            ubo.proj = vulkanRender.getCore()->getScene()->camera.projection;
-            ubo.material.color = material.baseColorFactor;
-            ubo.material.metallic = material.metallicFactor;
-            ubo.material.roughness = material.roughnessFactor;
-            ubo.material.ambientOcclusion = 1.0f;
+            // Preencher UBO
+            UBO ubo = prepareUBO(transform, vulkanRender);
 
-            vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(commandBuffer, material.uniformBuffer, ubo);
+            // Atualizar Uniform Buffer
+            vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.uniformBufferMemory, ubo);
 
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer, offsets);
@@ -57,4 +52,18 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout, 0, 1, &material.descriptorSet, 0, nullptr);
             vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
         });
+}
+
+UBO RenderSystem::prepareUBO(const TransformComponent &transform, VulkanRenderer &vulkanRender)
+{
+    UBO ubo{};
+    ubo.model = transform.getMatrix();
+    ubo.view = vulkanRender.getCore()->getScene()->camera.view;
+    ubo.proj = vulkanRender.getCore()->getScene()->camera.projection;
+    ubo.material.color = glm::vec4(1.0f); // Exemplos de valores
+    ubo.material.metallic = 0.5f;
+    ubo.material.roughness = 0.8f;
+    ubo.material.ambientOcclusion = 1.0f;
+
+    return ubo;
 }

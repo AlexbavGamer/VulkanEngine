@@ -18,7 +18,9 @@ VulkanDescriptor::~VulkanDescriptor()
 void VulkanDescriptor::create()
 {
     createDescriptorSetLayout();
+    createUniformBuffer(core.getDevice(), core.getPhysicalDevice(), sizeof(UBO), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformBufferMemory);
     createDescriptorPool();
+    core.createDefaultImage();
     createDescriptorSets();
 }
 
@@ -49,7 +51,7 @@ void VulkanDescriptor::cleanup()
 
 void VulkanDescriptor::createDescriptorPool()
 {
-    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    std::array<VkDescriptorPoolSize, 3> poolSizes{}; // Updated to 3 for PBR
 
     // Para UBOs
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -58,6 +60,10 @@ void VulkanDescriptor::createDescriptorPool()
     // Para Combined Image Samplers
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     poolSizes[1].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 500); // 5 texturas por material
+
+    // Para Storage Images (PBR)
+    poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    poolSizes[2].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 100); // Ajuste conforme necessário
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -74,23 +80,23 @@ void VulkanDescriptor::createDescriptorPool()
 
 void VulkanDescriptor::createDescriptorSetLayout()
 {
-    std::vector<VkDescriptorSetLayoutBinding> bindings = {
+    std::vector<VkDescriptorSetLayoutBinding> bindings = { 
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // albedoMap
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // normalMap
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // metallicRoughnessMap
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // aoMap
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}  // emissiveMap
+        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
     };
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo{}; 
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(core.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
     {
-        throw std::runtime_error("falha ao criar layout do descriptor set!");
+        throw std::runtime_error("failed to create descriptor set layout!");
     }
 }
 
@@ -111,23 +117,64 @@ void VulkanDescriptor::createDescriptorSets()
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
-    for (size_t i = 0; i < core.getMaxFramesInFlight(); i++)
-    {
+    for (size_t i = 0; i < core.getMaxFramesInFlight(); i++) {
+        // Update uniform buffer
+        if (uniformBuffer == VK_NULL_HANDLE) {
+            throw std::runtime_error("Uniform buffer is not created or is invalid!");
+        }
+        
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = uniformBuffer;
+        bufferInfo.buffer = uniformBuffer; 
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UBO);
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite.dstSet = descriptorSets[i];
-        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstBinding = 0; // Uniform buffer binding
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrite.descriptorCount = 1;
         descriptorWrite.pBufferInfo = &bufferInfo;
 
         vkUpdateDescriptorSets(core.getDevice(), 1, &descriptorWrite, 0, nullptr);
+
+        // Update combined image sampler
+        VkDescriptorImageInfo imageInfo{}; 
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; 
+        imageInfo.imageView = core.getDefaultTextureView(); // Ensure this is set to your texture image view 
+        if (imageInfo.imageView == VK_NULL_HANDLE) {
+            throw std::runtime_error("Default texture view is null!");
+        }
+        imageInfo.sampler = core.getTextureSampler(); // Ensure this is set to your texture sampler 
+
+        VkWriteDescriptorSet samplerWrite{};
+        samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        samplerWrite.dstSet = descriptorSets[i];
+        samplerWrite.dstBinding = 1; // Combined image sampler binding
+        samplerWrite.dstArrayElement = 0;
+        samplerWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerWrite.descriptorCount = 1;
+        samplerWrite.pImageInfo = &imageInfo;
+
+        vkUpdateDescriptorSets(core.getDevice(), 1, &samplerWrite, 0, nullptr);
+
+        // Update storage image for PBR
+        VkDescriptorImageInfo storageImageInfo{};
+        storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // Ajuste conforme necessário
+        storageImageInfo.imageView = core.getDefaultTextureView(); // Certifique-se de que isso esteja definido
+        storageImageInfo.sampler = VK_NULL_HANDLE; // Não é necessário para imagens de armazenamento
+
+        VkWriteDescriptorSet storageImageWrite{};
+        storageImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        storageImageWrite.dstSet = descriptorSets[i];
+        storageImageWrite.dstBinding = 2; // Storage image binding
+        storageImageWrite.dstArrayElement = 0;
+        storageImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        storageImageWrite.descriptorCount = 1;
+        storageImageWrite.pImageInfo = &storageImageInfo;
+
+        vkUpdateDescriptorSets(core.getDevice(), 1, &storageImageWrite, 0, nullptr);
     }
 }
 
@@ -136,10 +183,8 @@ std::vector<VkDescriptorSetLayoutBinding> VulkanDescriptor::getDescriptorSetLayo
     return {
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
         {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}};
+        {2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // Adicionado para PBR
+    };
 }
 
 void VulkanDescriptor::createUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory)
@@ -172,7 +217,7 @@ void VulkanDescriptor::createUniformBuffer(VkDevice device, VkPhysicalDevice phy
 }
 
 // Improved uniform buffer update with proper synchronization
-void VulkanDescriptor::updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuffer uniformBuffer, const UBO &ubo)
+void VulkanDescriptor::updateUniformBuffer(VkDeviceMemory uniformBufferMemory, const UBO &ubo)
 {
     VkDeviceSize bufferSize = sizeof(UBO);
 
@@ -187,7 +232,6 @@ void VulkanDescriptor::updateUniformBuffer(VkCommandBuffer commandBuffer, VkBuff
 
 VkDescriptorBufferInfo VulkanDescriptor::getBufferInfo(VkBuffer buffer, VkDeviceSize size)
 {
-
     VkDescriptorBufferInfo bufferInfo{};
     bufferInfo.buffer = buffer;
     bufferInfo.offset = 0;

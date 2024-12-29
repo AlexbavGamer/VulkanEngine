@@ -42,13 +42,13 @@ public:
     VkInstance getInstance() const { return instance; }
     VkSurfaceKHR getSurface() const { return surface; }
     VkImageView getDepthImageView() const { return depthImageView; }
+    VkImageView getDefaultTextureView() const { return defaultTextureView; }
     uint32_t getMaxFramesInFlight() const { return MAX_FRAMES_IN_FLIGHT; }
     VkDescriptorSetLayout getSceneDescriptorSetLayout() const { return sceneDescriptorSetLayout; }
     VkDescriptorSet getSceneDescriptorSet() const { return sceneDescriptorSet; }
     VkBuffer getSceneUniformBuffer() const { return sceneUniformBuffer; }
     ProjectManager* getProjectManager() const;
     VkSampler getTextureSampler() const { return textureSampler; }
-    VkImageView getDefaultTextureView() const { return defaultTextureView; }
     // Resource Creation
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
@@ -137,7 +137,7 @@ private:
     VkDeviceMemory depthImageMemory{VK_NULL_HANDLE};
     VkImageView depthImageView{VK_NULL_HANDLE};
 
-    // Default Texture Resources
+    // storageImage Resources
     VkImage defaultTexture{VK_NULL_HANDLE};
     VkDeviceMemory defaultTextureMemory{VK_NULL_HANDLE};
     VkImageView defaultTextureView{VK_NULL_HANDLE};
@@ -156,6 +156,9 @@ private:
     void createTextureSampler();
     void createSceneFramebuffer();
     void createSceneResources();
+public:
+    void createDefaultImage();
+private:
     void createSceneRenderPass();
 
     // Helper Methods

@@ -20,5 +20,6 @@ void VulkanRenderer::initVulkan(GLFWwindow* window) {
     core->init(window);
     textureManager = std::make_unique<TextureManager>(core.get());
     projectManager = std::make_unique<ProjectManager>(core.get());
+    modelLoader = std::make_unique<EngineModelLoader>(*this);
 }
 
