@@ -14,12 +14,13 @@ struct MaterialComponent : public Component
     std::shared_ptr<Texture> emissiveMap;
 
     VkDescriptorSet descriptorSet;
+    VkDescriptorSetLayout descriptorSetLayout;
+    
     VkBuffer uniformBuffer;
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
     VkDeviceMemory uniformBufferMemory;
-
     glm::vec4 baseColorFactor = glm::vec4(1.0f);
     float metallicFactor = 1.0f;
     float roughnessFactor = 1.0f;

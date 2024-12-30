@@ -32,7 +32,6 @@ public:
     VkQueue getPresentQueue() const { return presentQueue; }
     VkCommandPool getCommandPool() const { return commandPool; }
     VkRenderPass getRenderPass() const { return renderPass; }
-    VkRenderPass getSceneRenderPass() const { return sceneRenderPass; }
     VulkanSwapChain* getSwapChain() const { return swapChain.get(); }
     VulkanPipeline* getPipeline() const { return pipeline.get(); }
     VulkanDescriptor* getDescriptor() const { return descriptor.get(); }
@@ -44,11 +43,10 @@ public:
     VkImageView getDepthImageView() const { return depthImageView; }
     VkImageView getDefaultTextureView() const { return defaultTextureView; }
     uint32_t getMaxFramesInFlight() const { return MAX_FRAMES_IN_FLIGHT; }
-    VkDescriptorSetLayout getSceneDescriptorSetLayout() const { return sceneDescriptorSetLayout; }
-    VkDescriptorSet getSceneDescriptorSet() const { return sceneDescriptorSet; }
-    VkBuffer getSceneUniformBuffer() const { return sceneUniformBuffer; }
     ProjectManager* getProjectManager() const;
     VkSampler getTextureSampler() const { return textureSampler; }
+    VkDescriptorSet getSceneDescriptorSet() const { return sceneDescriptorSet; }
+    VkDescriptorSetLayout getSceneDescriptorSetLayout() const { return sceneDescriptorSetLayout; }
     // Resource Creation
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
@@ -83,7 +81,7 @@ public:
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 private:
-    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 1;
     const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
     const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
@@ -101,7 +99,6 @@ private:
     VkQueue graphicsQueue{VK_NULL_HANDLE};
     VkQueue presentQueue{VK_NULL_HANDLE};
     VkSurfaceKHR surface{VK_NULL_HANDLE};
-    VkDescriptorSetLayout sceneDescriptorSetLayout{VK_NULL_HANDLE};
     VkCommandPool commandPool{VK_NULL_HANDLE};
     VkRenderPass renderPass{VK_NULL_HANDLE};
     VkSampler textureSampler{VK_NULL_HANDLE};
@@ -120,17 +117,21 @@ private:
 
     uint32_t currentFrame = 0;
 
-    // Scene Resources
-    VkImage sceneImage{VK_NULL_HANDLE};
-    VkDeviceMemory sceneImageMemory{VK_NULL_HANDLE};
-    VkImageView sceneImageView{VK_NULL_HANDLE};
-    VkSampler sceneSampler{VK_NULL_HANDLE};
-    VkRenderPass sceneRenderPass{VK_NULL_HANDLE};
-    VkFramebuffer sceneFramebuffer{VK_NULL_HANDLE};
-    VkDescriptorSet sceneDescriptorSet{VK_NULL_HANDLE};
-    
-    VkBuffer sceneUniformBuffer{VK_NULL_HANDLE};
-    VkDeviceMemory sceneUniformBufferMemory{VK_NULL_HANDLE};
+private:
+    VkDescriptorSet sceneDescriptorSet;
+    VkDescriptorSetLayout sceneDescriptorSetLayout;
+
+    void createSceneDescriptorSet();
+
+private:
+    VkRenderPass sceneRenderPass;
+    VkFramebuffer sceneFramebuffer;
+    VkImage sceneImage;
+    VkDeviceMemory sceneImageMemory;
+    VkImageView sceneImageView;
+
+    void createSceneResources();
+    void createSceneRenderPass();
 
     // Depth Resources
     VkImage depthImage{VK_NULL_HANDLE};
@@ -154,13 +155,9 @@ private:
     void createFramebuffers();
     void createDepthResources();
     void createTextureSampler();
-    void createSceneFramebuffer();
-    void createSceneResources();
 public:
     void createDefaultImage();
 private:
-    void createSceneRenderPass();
-
     // Helper Methods
     bool isDeviceSuitable(VkPhysicalDevice device);
     bool checkValidationLayerSupport();

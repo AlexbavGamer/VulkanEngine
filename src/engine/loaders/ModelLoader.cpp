@@ -122,16 +122,10 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::sha
     CreateVertexBuffer(meshComponent, vertices);
     CreateIndexBuffer(meshComponent, indices);
 
-    if (mesh->mMaterialIndex >= 0)
-    {
-        LoadMaterialTextures(scene->mMaterials[mesh->mMaterialIndex], materialComponent);
-    }
-    else
-    {
-        CreateDefaultMaterial(materialComponent);
-    }
-
+    ProcessMaterial(mesh, scene, materialComponent);
+    CreateMaterialPipeline(materialComponent);
     SetupDescriptors(materialComponent);
+
     renderComponent.name = mesh->mName.length > 0 ? mesh->mName.C_Str() : "Unnamed Mesh";
 }
 
@@ -148,14 +142,14 @@ void EngineModelLoader::CreateUniformBuffer(MaterialComponent &material)
 
 void EngineModelLoader::UpdateDescriptorSets(MaterialComponent &material, const std::array<VkDescriptorImageInfo, 5> &imageInfos)
 {
-    std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
+    std:: array<VkWriteDescriptorSet, 6> descriptorWrites{};
 
     VkDescriptorBufferInfo bufferInfo{material.uniformBuffer, 0, sizeof(UBO)};
 
     descriptorWrites[0] = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = material.descriptorSet,
-        .dstBinding = 0,
+        .dstBinding = 0, // Uniform buffer binding
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .pBufferInfo = &bufferInfo};
@@ -165,18 +159,21 @@ void EngineModelLoader::UpdateDescriptorSets(MaterialComponent &material, const 
         descriptorWrites[i + 1] = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = material.descriptorSet,
-            .dstBinding = static_cast<uint32_t>(i + 1),
+            .dstBinding = static_cast<uint32_t>(i + 1), // Combined image sampler bindings
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &imageInfos[i]};
+            .pImageInfo = &imageInfos[i]}; // Ensure imageInfos[i] contains valid VkDescriptorImageInfo
     }
 
-    vkUpdateDescriptorSets(
-        vulkanRenderer.getCore()->getDevice(),
-        static_cast<uint32_t>(descriptorWrites.size()),
-        descriptorWrites.data(),
-        0,
-        nullptr);
+    // Ensure the sampler is valid before updating the descriptor set
+    std::cout << "Albedo map sampler: " << material.albedoMap->sampler << std::endl; // Debug log for albedo map sampler
+    if (material.albedoMap && material.albedoMap->sampler != VK_NULL_HANDLE) {
+        vkUpdateDescriptorSets(vulkanRenderer.getCore()->getDevice(),
+            static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
+    else {
+        throw std::runtime_error("Invalid sampler for albedo map!");
+    }
 }
 
 void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
@@ -312,30 +309,68 @@ void EngineModelLoader::ProcessMaterial(aiMesh *mesh, const aiScene *scene, Mate
 void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
 {
     CreateUniformBuffer(material);
-    CreateMaterialPipeline(material);
-    // AllocateDescriptorSet(material, vulkanRenderer.getCore()->getDescriptor()->getDescriptorSetLayout());
-    AllocateDescriptorSet(material, vulkanRenderer.getCore()->getSceneDescriptorSetLayout());
+    AllocateDescriptorSet(material, material.descriptorSetLayout);
     auto imageInfos = SetupImageInfos(material);
     UpdateDescriptorSets(material, imageInfos);
 }
 
 void EngineModelLoader::CreateMaterialPipeline(MaterialComponent &material)
 {
-    material.pipeline = vulkanRenderer.getCore()->getPipeline()->getPipeline();
-    material.pipelineLayout = vulkanRenderer.getCore()->getPipeline()->getPipelineLayout();
+    // Criação do descriptor set layout
+    std::vector<VkDescriptorSetLayoutBinding> bindings(6);
+
+    // Binding para o UBO
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    // Bindings para as 5 texturas
+    for (size_t i = 1; i <= 5; ++i) {
+        bindings[i].binding = i; // 1, 2, 3, 4, 5
+        bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Para texturas
+        bindings[i].descriptorCount = 1;
+        bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // Apenas no fragment shader
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(vulkanRenderer.getCore()->getDevice(), &layoutInfo, nullptr, &material.descriptorSetLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Falha ao criar descriptor set layout!");
+    }
+
+    // Criação do pipeline layout
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &material.descriptorSetLayout;
+
+    if (vkCreatePipelineLayout(vulkanRenderer.getCore()->getDevice(), &pipelineLayoutInfo, nullptr, &material.pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Falha ao criar pipeline layout!");
+    }
+
+    // Agora você pode criar o pipeline usando material.pipelineLayout
+    material.pipeline = vulkanRenderer.getCore()->getPipeline()->createMaterialPipeline(
+        material.pipelineLayout,
+        material.descriptorSetLayout,
+        "shaders/pbr.vert.spv", // Caminho do shader de vértice
+        "shaders/pbr.frag.spv"  // Caminho do shader de fragmento
+    );
 }
 
 void EngineModelLoader::AllocateDescriptorSet(MaterialComponent &material, VkDescriptorSetLayout layout)
 {
-    VkDescriptorSetAllocateInfo allocInfo{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = vulkanRenderer.getCore()->getDescriptor()->getDescriptorPool(),
-        .descriptorSetCount = 1,
-        .pSetLayouts = &layout};
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = vulkanRenderer.getCore()->getDescriptor()->getDescriptorPool();
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &layout; // Use o layout correto
 
-    if (vkAllocateDescriptorSets(vulkanRenderer.getCore()->getDevice(), &allocInfo, &material.descriptorSet) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Falha ao alocar descriptor sets!");
+    if (vkAllocateDescriptorSets(vulkanRenderer.getCore()->getDevice(), &allocInfo, &material.descriptorSet) != VK_SUCCESS) {
+        throw std::runtime_error("Falha ao alocar descriptor set!");
     }
 }
 

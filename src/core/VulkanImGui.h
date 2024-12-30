@@ -24,21 +24,22 @@ class VulkanRenderer;
 
 class VulkanImGui {
 public:
-    VulkanImGui(VulkanCore& core);
-    ~VulkanImGui();
-    
-    void init(VkRenderPass renderPass);
+    VulkanImGui(VulkanCore* core) : core(core) {};
+
+    void init();
     void setupStyles();
     void cleanup();
-    void render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDescriptorSet);
+    void render(VkCommandBuffer commandBuffer);
     
 private:
+    void setupDescriptorSetLayout();
     void setupDescriptorPool();
     void handleFileSelection(const std::string& filename);
     void showFileContextMenu(const std::string &filePath, const std::string id, bool isDirectory);
-    VulkanCore& core;
-    VulkanRenderer& vulkanRenderer;
+    VulkanCore* core;
     VkDescriptorPool imguiPool;
+    VkDescriptorSet imguiDescriptorSet;
+    VkDescriptorSetLayout imguiDescriptorSetLayout;
     std::shared_ptr<Entity> selectedEntity;
     
 

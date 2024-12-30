@@ -8,7 +8,7 @@
 
 VulkanPipeline::VulkanPipeline(VulkanCore &core) : core(core),
                                                    graphicsPipeline(VK_NULL_HANDLE),
-                                                   pipelineLayout(VK_NULL_HANDLE),
+                                                   scenePipelineLayout(VK_NULL_HANDLE),
                                                    wireframeMode(false)
 {
 }
@@ -23,10 +23,10 @@ void VulkanPipeline::cleanup()
     if (!core.getDevice())
         return;
 
-    if (pipelineLayout != VK_NULL_HANDLE)
+    if (scenePipelineLayout != VK_NULL_HANDLE)
     {
-        vkDestroyPipelineLayout(core.getDevice(), pipelineLayout, nullptr);
-        pipelineLayout = VK_NULL_HANDLE;
+        vkDestroyPipelineLayout(core.getDevice(), scenePipelineLayout, nullptr);
+        scenePipelineLayout = VK_NULL_HANDLE;
     }
 
     if (graphicsPipeline != VK_NULL_HANDLE)
@@ -67,8 +67,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     }
 
     // Carregar e criar módulos de shader
-    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv"); // Atualizado para PBR
-    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv"); // Atualizado para PBR
+    auto vertShaderCode = core.readFile("shaders/vertex.vert.spv"); // Atualizado para PBR
+    auto fragShaderCode = core.readFile("shaders/fragment.frag.spv"); // Atualizado para PBR
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -181,7 +181,7 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &scenePipelineLayout) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create pipeline layout!");
     }
@@ -214,8 +214,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = core.getSceneRenderPass();
+    pipelineInfo.layout = scenePipelineLayout;
+    pipelineInfo.renderPass = core.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -230,8 +230,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
 }
 
 void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D extent) {
-    auto vertShaderCode = core.readFile("shaders/pbr.vert.spv"); // Atualizado para PBR
-    auto fragShaderCode = core.readFile("shaders/pbr.frag.spv"); // Atualizado para PBR
+    auto vertShaderCode = core.readFile("shaders/vertex.vert.spv"); // Atualizado para PBR
+    auto fragShaderCode = core.readFile("shaders/fragment.frag.spv"); // Atualizado para PBR
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -327,7 +327,7 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(core.getDevice(), &pipelineLayoutInfo, nullptr, &scenePipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create scene pipeline layout!");
     }
 
@@ -342,7 +342,7 @@ void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D ext
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = scenePipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -362,6 +362,7 @@ void VulkanPipeline::bindScenePipeline(VkCommandBuffer commandBuffer)
 
 VkPipeline VulkanPipeline::createMaterialPipeline(
     VkPipelineLayout& outPipelineLayout,
+    VkDescriptorSetLayout descriptorSetLayout,
     const std::string& vertShaderPath,
     const std::string& fragShaderPath
     ) {
@@ -451,8 +452,6 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     colorBlending.pAttachments = &colorBlendAttachment;
 
     // Usar o descriptor set layout existente do VulkanDescriptor
-    VkDescriptorSetLayout descriptorSetLayout = core.getDescriptor()->getDescriptorSetLayout();
-
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
@@ -475,7 +474,7 @@ VkPipeline VulkanPipeline::createMaterialPipeline(
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = outPipelineLayout;
-    pipelineInfo.renderPass = core.getSceneRenderPass();
+    pipelineInfo.renderPass = core.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 

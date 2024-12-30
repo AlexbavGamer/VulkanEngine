@@ -83,7 +83,7 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
 ) {
     auto texture = std::make_shared<Texture>();
     
-    // Cria buffer temporário
+    // Criação da imagem e buffer temporário
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     
@@ -98,7 +98,7 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
     // Copia dados para o buffer
     vulkanCore->copyDataToBuffer(data, stagingBufferMemory, size);
     
-    // Cria a imagem
+    // Criação da imagem
     vulkanCore->createImage(
         width,
         height,
@@ -115,9 +115,10 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
     vulkanCore->copyBufferToImage(stagingBuffer, texture->image, width, height);
     vulkanCore->transitionImageLayout(texture->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     
+    // Criação da imageView
     texture->imageView = vulkanCore->createImageView(texture->image, format, VK_IMAGE_ASPECT_COLOR_BIT);
     
-    // Cria sampler
+    // Criação do sampler
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -132,8 +133,14 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    texture->sampler = vulkanCore->createTextureSampler(samplerInfo);
-    
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+    samplerInfo.mipLodBias = 0.0f;
+
+    if (vkCreateSampler(vulkanCore->getDevice(), &samplerInfo, nullptr, &texture->sampler) != VK_SUCCESS) {
+        throw std::runtime_error("Falha ao criar sampler!");
+    }
+    std::cout << "Sampler created: " << texture->sampler << std::endl;
     // Limpa recursos temporários
     vkDestroyBuffer(vulkanCore->getDevice(), stagingBuffer, nullptr);
     vkFreeMemory(vulkanCore->getDevice(), stagingBufferMemory, nullptr);

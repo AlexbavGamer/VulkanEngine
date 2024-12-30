@@ -15,8 +15,6 @@
 #include "VulkanDescriptor.h"
 #include "VulkanRenderer.h"
 #include "project/projectManagment.h"
-#include "VulkanImGui.h"
-#include "Scene.h"
 
 void VulkanCore::init(GLFWwindow *window)
 {
@@ -40,15 +38,14 @@ void VulkanCore::init(GLFWwindow *window)
     createRenderPass();
     createSceneRenderPass();
     createSceneResources();
-    createSceneFramebuffer();
-    pipeline->create(renderPass, swapChain->getExtent());
     createFramebuffers();
     createCommandBuffers();
     createSyncObjects();
 
-    imgui = std::make_unique<VulkanImGui>(*this);
-    imgui->init(renderPass);
     scene = std::make_unique<Scene>(this);
+
+    imgui = std::make_unique<VulkanImGui>(this);
+    imgui->init();
 
     descriptor->createUniformBuffer(device, physicalDevice, sizeof(UBO),
                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -518,6 +515,54 @@ void VulkanCore::transitionImageLayout(VkImage image, VkFormat format,
     endSingleTimeCommands(commandBuffer);
 }
 
+void VulkanCore::createSceneDescriptorSet()
+{
+    VkDescriptorSetLayoutBinding binding{};
+    binding.binding = 0;
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    binding.pImmutableSamplers = nullptr;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &binding;
+
+    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &sceneDescriptorSetLayout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create descriptor set layout for scene!");
+    }
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptor->getDescriptorPool();
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &sceneDescriptorSetLayout;
+
+    if (vkAllocateDescriptorSets(device, &allocInfo, &sceneDescriptorSet) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to allocate descriptor set for scene!");
+    }
+
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = sceneImageView;
+    imageInfo.sampler = textureSampler;
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = sceneDescriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pImageInfo = &imageInfo;
+
+    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+}
+
+
 void VulkanCore::cleanup()
 {
     vkDeviceWaitIdle(device);
@@ -694,7 +739,6 @@ void VulkanCore::handleResize()
     swapChain->cleanup();
     swapChain->create();
     createSceneResources();
-    createSceneFramebuffer();
     createFramebuffers();
 
     pipeline->recreate(renderPass, swapChain->getExtent());
@@ -1109,134 +1153,34 @@ void VulkanCore::createTextureSampler()
 
 void VulkanCore::createSceneResources()
 {
-    std::cout << "Creating scene resources..." << std::endl;
-
     VkFormat colorFormat = swapChain->getImageFormat();
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
-    validateImageDimensions(width, height);
-
-    // Criação dos recursos da cena
-    createImage(width, height,
-                colorFormat,
-                VK_IMAGE_TILING_OPTIMAL,
+    createImage(width, height, colorFormat, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                sceneImage,
-                sceneImageMemory);
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sceneImage, sceneImageMemory);
 
     sceneImageView = createImageView(sceneImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    // Transição de layout da imagem
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+    // Criar Framebuffer para a cena
+    std::array<VkImageView, 2> attachments = {sceneImageView, depthImageView};
 
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = sceneImage;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = sceneRenderPass;
+    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    framebufferInfo.pAttachments = attachments.data();
+    framebufferInfo.width = width;
+    framebufferInfo.height = height;
+    framebufferInfo.layers = 1;
 
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier);
-
-    endSingleTimeCommands(commandBuffer);
-
-    // Criação do descriptor set layout com todos os bindings necessários
-    std::vector<VkDescriptorSetLayoutBinding> bindings = {
-        {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}, // UBO
-        {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // albedoMap
-        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // normalMap
-        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // metallicRoughnessMap
-        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},                      // aoMap
-        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}                       // emissiveMap
-    };
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-    layoutInfo.pBindings = bindings.data();
-
-    if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &sceneDescriptorSetLayout) != VK_SUCCESS)
+    if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &sceneFramebuffer) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create scene descriptor set layout!");
+        throw std::runtime_error("failed to create scene framebuffer!");
     }
-
-    // Criação do pipeline após ter o descriptor set layout
-    pipeline->createScenePipeline(sceneRenderPass, swapChain->getExtent());
-
-    // Alocação do descriptor set
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptor->getDescriptorPool();
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &sceneDescriptorSetLayout; // Certifique-se de que o layout corresponde ao esperado
-
-    if (vkAllocateDescriptorSets(device, &allocInfo, &sceneDescriptorSet) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate scene descriptor set!");
-    }
-
-    // Criação do uniform buffer
-    VkDeviceSize bufferSize = sizeof(UBO);
-    createBuffer(
-        bufferSize,
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        sceneUniformBuffer,
-        sceneUniformBufferMemory);
-
-    // Atualização dos descriptors
-    std::array<VkWriteDescriptorSet, 6> descriptorWrites{};
-
-    // UBO
-    VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = sceneUniformBuffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = bufferSize;
-
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = sceneDescriptorSet;
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-    // Texturas
-    std::array<VkDescriptorImageInfo, 5> imageInfos{};
-    for (size_t i = 0; i < 5; i++)
-    {
-        imageInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfos[i].imageView = defaultTextureView; // Use uma textura padrão ou a textura apropriada
-        imageInfos[i].sampler = textureSampler;       // Use um sampler padrão ou o sampler apropriado
-
-        descriptorWrites[i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[i + 1].dstSet = sceneDescriptorSet;
-        descriptorWrites[i + 1].dstBinding = i + 1;
-        descriptorWrites[i + 1].dstArrayElement = 0;
-        descriptorWrites[i + 1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[i + 1].descriptorCount = 1;
-        descriptorWrites[i + 1].pImageInfo = &imageInfos[i];
-    }
-
-    vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
+
 
 void VulkanCore::createDefaultImage()
 {
@@ -1296,13 +1240,16 @@ void VulkanCore::createSceneRenderPass()
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                              VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                              VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.srcAccessMask = 0;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT; // Add this flag to match the pipeline's render pass
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                               VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
@@ -1328,44 +1275,34 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
         throw std::runtime_error("failed to begin recording command buffer!");
     }
 
-    // Scene rendering only
-    {
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = sceneRenderPass;
-        renderPassInfo.framebuffer = sceneFramebuffer;
-        renderPassInfo.renderArea = {{0, 0}, swapChain->getExtent()};
+    // Primeiro Render Pass: Cena
+    VkRenderPassBeginInfo sceneRenderPassInfo{};
+    sceneRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    sceneRenderPassInfo.renderPass = sceneRenderPass;
+    sceneRenderPassInfo.framebuffer = sceneFramebuffer;
+    sceneRenderPassInfo.renderArea = {{0, 0}, swapChain->getExtent()};
+    VkClearValue clearValues[2] = {{{0.0f, 0.0f, 0.0f, 1.0f}}, {1.0f, 0}};
+    sceneRenderPassInfo.clearValueCount = 2;
+    sceneRenderPassInfo.pClearValues = clearValues;
 
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {{0.0f, 0.1f, 0.2f, 1.0f}};
-        clearValues[1].depthStencil = {1.0f, 0};
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
+    vkCmdBeginRenderPass(commandBuffer, &sceneRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    // Renderizar a cena aqui
+    vkCmdEndRenderPass(commandBuffer);
 
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        // pipeline->bindScenePipeline(commandBuffer);
-        scene->renderSystem->render(*scene->registry, commandBuffer);
-        vkCmdEndRenderPass(commandBuffer);
-    }
+    // Segundo Render Pass: ImGui
+    VkRenderPassBeginInfo imguiRenderPassInfo{};
+    imguiRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    imguiRenderPassInfo.renderPass = renderPass;
+    imguiRenderPassInfo.framebuffer = framebuffers[imageIndex];
+    imguiRenderPassInfo.renderArea = {{0, 0}, swapChain->getExtent()};
+    imguiRenderPassInfo.clearValueCount = 1;
+    imguiRenderPassInfo.pClearValues = clearValues;
 
-    // ImGui rendering
-    {
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = renderPass;
-        renderPassInfo.framebuffer = framebuffers[imageIndex];
-        renderPassInfo.renderArea = {{0, 0}, swapChain->getExtent()};
-
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        clearValues[1].depthStencil = {1.0f, 0};
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
-
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        imgui->render(commandBuffer, sceneDescriptorSet);
-        vkCmdEndRenderPass(commandBuffer);
-    }
+    vkCmdBeginRenderPass(commandBuffer, &imguiRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    auto descriptorSet = descriptor->getDescriptorSet(imageIndex);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getScenePipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+    imgui->render(commandBuffer);
+    vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
     {
@@ -1470,25 +1407,4 @@ void VulkanCore::validateImageDimensions(uint32_t &width, uint32_t &height)
 
     width = std::min(width, deviceProperties.limits.maxImageDimension2D);
     height = std::min(height, deviceProperties.limits.maxImageDimension2D);
-}
-
-void VulkanCore::createSceneFramebuffer()
-{
-    std::array<VkImageView, 2> attachments = {
-        sceneImageView,
-        depthImageView};
-
-    VkFramebufferCreateInfo framebufferInfo{};
-    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = sceneRenderPass;
-    framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-    framebufferInfo.pAttachments = attachments.data();
-    framebufferInfo.width = swapChain->getExtent().width;
-    framebufferInfo.height = swapChain->getExtent().height;
-    framebufferInfo.layers = 1;
-
-    if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &sceneFramebuffer) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create scene framebuffer!");
-    }
 }

@@ -57,13 +57,13 @@ void VulkanDescriptor::createDescriptorPool()
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 100);
 
-    // Para Combined Image Samplers
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 500); // 5 texturas por material
+    for (int i = 1; i <= 5; ++i)
+    {
+        poolSizes[i].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[i].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 500); // 5 texturas por material
+    }
 
     // Para Storage Images (PBR)
-    poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[2].descriptorCount = static_cast<uint32_t>(core.getMaxFramesInFlight() * 100); // Ajuste conforme necessário
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -80,7 +80,7 @@ void VulkanDescriptor::createDescriptorPool()
 
 void VulkanDescriptor::createDescriptorSetLayout()
 {
-    std::vector<VkDescriptorSetLayoutBinding> bindings = { 
+    std::vector<VkDescriptorSetLayoutBinding> bindings = {
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
         {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
         {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
@@ -117,14 +117,16 @@ void VulkanDescriptor::createDescriptorSets()
         throw std::runtime_error("failed to allocate descriptor sets!");
     }
 
-    for (size_t i = 0; i < core.getMaxFramesInFlight(); i++) {
+    for (size_t i = 0; i < core.getMaxFramesInFlight(); i++)
+    {
         // Update uniform buffer
-        if (uniformBuffer == VK_NULL_HANDLE) {
+        if (uniformBuffer == VK_NULL_HANDLE)
+        {
             throw std::runtime_error("Uniform buffer is not created or is invalid!");
         }
-        
+
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = uniformBuffer; 
+        bufferInfo.buffer = uniformBuffer;
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(UBO);
 
@@ -140,13 +142,14 @@ void VulkanDescriptor::createDescriptorSets()
         vkUpdateDescriptorSets(core.getDevice(), 1, &descriptorWrite, 0, nullptr);
 
         // Update combined image sampler
-        VkDescriptorImageInfo imageInfo{}; 
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; 
-        imageInfo.imageView = core.getDefaultTextureView(); // Ensure this is set to your texture image view 
-        if (imageInfo.imageView == VK_NULL_HANDLE) {
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = core.getDefaultTextureView(); // Ensure this is set to your texture image view
+        if (imageInfo.imageView == VK_NULL_HANDLE)
+        {
             throw std::runtime_error("Default texture view is null!");
         }
-        imageInfo.sampler = core.getTextureSampler(); // Ensure this is set to your texture sampler 
+        imageInfo.sampler = core.getTextureSampler(); // Ensure this is set to your texture sampler
 
         VkWriteDescriptorSet samplerWrite{};
         samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -161,16 +164,16 @@ void VulkanDescriptor::createDescriptorSets()
 
         // Update storage image for PBR
         VkDescriptorImageInfo storageImageInfo{};
-        storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // Ajuste conforme necessário
+        storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;    // Ajuste conforme necessário
         storageImageInfo.imageView = core.getDefaultTextureView(); // Certifique-se de que isso esteja definido
-        storageImageInfo.sampler = VK_NULL_HANDLE; // Não é necessário para imagens de armazenamento
+        storageImageInfo.sampler = VK_NULL_HANDLE;                 // Não é necessário para imagens de armazenamento
 
         VkWriteDescriptorSet storageImageWrite{};
         storageImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         storageImageWrite.dstSet = descriptorSets[i];
         storageImageWrite.dstBinding = 2; // Storage image binding
         storageImageWrite.dstArrayElement = 0;
-        storageImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        storageImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         storageImageWrite.descriptorCount = 1;
         storageImageWrite.pImageInfo = &storageImageInfo;
 
@@ -183,7 +186,10 @@ std::vector<VkDescriptorSetLayoutBinding> VulkanDescriptor::getDescriptorSetLayo
     return {
         {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
         {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
-        {2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr} // Adicionado para PBR
+        {2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
+        {5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
     };
 }
 
