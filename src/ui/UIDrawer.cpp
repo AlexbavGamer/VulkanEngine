@@ -6,8 +6,9 @@
 #include "Scene.h"
 #include <managers/FileManager.h>
 #include <ecs/components/RenderComponent.h>
+#include <iostream>
 
-UIDrawer::UIDrawer(VulkanCore* core) : core(core) {}
+UIDrawer::UIDrawer(VulkanCore *core) : core(core) {}
 
 void UIDrawer::drawMainMenuBar()
 {
@@ -24,6 +25,24 @@ void UIDrawer::drawMainMenuBar()
         ImGui::Separator();
         if (ImGui::BeginMenu("Project"))
         {
+            if (ImGui::MenuItem("New"))
+            {
+                if(showOpenProject)
+                {
+                    showOpenProject = false;
+                }
+                ImGui::OpenPopup("Create Project");
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Open"))
+            {
+                if(showCreateProject)
+                {
+                    showCreateProject = false;
+                }
+                showCreateProject = true;
+                ImGui::OpenPopup("Open Project");
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -61,17 +80,19 @@ void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)
     ImGui::End();
 }
 
-void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity) {
+void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity)
+{
     ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, -1.0f), ImVec2(350.0f, -1.0f));
     ImGui::Begin("Hierarchy");
-    
+
     // Verifica se clicou fora da janela
-    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered()) {
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered())
+    {
         selectedEntity = nullptr;
     }
-    
-    core->getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render) 
-    {
+
+    core->getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render)
+                                                      {
         std::string selectableLabel = render.name + "##" + std::to_string(entity->getId());
         
         if (ImGui::Selectable(selectableLabel.c_str(), selectedEntity && selectedEntity->getId() == entity->getId())) {
@@ -80,20 +101,22 @@ void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity) {
             } else {
                 selectedEntity = entity;
             }
-        }
-    });
+        } });
 
     ImGui::End();
 }
-
 
 void UIDrawer::drawContentBrowser()
 {
     ImGui::Begin("Content Browser");
+    auto &FileManager = FileManager::getInstance();
+    if (core->getProjectManager()->isProjectOpen())
+    {
+    }
     ImGui::End();
 }
 
-void UIDrawer::drawStatisticsWindow(bool &showStatistics)
+void UIDrawer::drawStatisticsWindow()
 {
     if (!showStatistics)
         return;
@@ -104,7 +127,7 @@ void UIDrawer::drawStatisticsWindow(bool &showStatistics)
     ImGui::End();
 }
 
-void UIDrawer::drawDebugWindow(bool &showDebugWindow)
+void UIDrawer::drawDebugWindow()
 {
     if (!showDebugWindow)
         return;
@@ -121,46 +144,27 @@ void UIDrawer::drawDebugWindow(bool &showDebugWindow)
     ImGui::End();
 }
 
-void UIDrawer::drawProjectCreationModal(bool &showCreateProject)
+void UIDrawer::drawProjectCreationModal()
 {
-    if (!showCreateProject)
-        return;
-
-    static char projectName[256] = "";
-    static char projectPath[1024] = "";
-
+    std::cout << "showCreateProject: " << showCreateProject << std::endl;
     if (ImGui::BeginPopupModal("Create Project", &showCreateProject, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::InputText("Project Name", projectName, IM_ARRAYSIZE(projectName));
-        ImGui::InputText("Project Path", projectPath, IM_ARRAYSIZE(projectPath));
+        ImGui::Text("Farofa 4321");
+        ImGui::Text("Farofa 4321");
+        ImGui::Text("Farofa 4321");
+        ImGui::Text("Farofa 4321");
+        ImGui::EndPopup();
+    }
+}
 
-        if (ImGui::Button("Browse"))
-        {
-            // File dialog implementation
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::Button("Create"))
-        {
-            if (strlen(projectName) > 0 && strlen(projectPath) > 0)
-            {
-                if (core->getProjectManager()->createProject(projectName, projectPath))
-                {
-                    showCreateProject = false;
-                    memset(projectName, 0, sizeof(projectName));
-                    memset(projectPath, 0, sizeof(projectPath));
-                }
-            }
-        }
-
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel"))
-        {
-            showCreateProject = false;
-            memset(projectName, 0, sizeof(projectName));
-            memset(projectPath, 0, sizeof(projectPath));
-        }
+void UIDrawer::drawOpenProjectModal()
+{
+    if (ImGui::BeginPopupModal("Open Project"))
+    {
+        ImGui::Text("Farofa 1234");
+        ImGui::Text("Farofa 1234");
+        ImGui::Text("Farofa 1234");
+        ImGui::Text("Farofa 1234");
 
         ImGui::EndPopup();
     }

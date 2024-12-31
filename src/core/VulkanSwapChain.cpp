@@ -203,7 +203,6 @@ VkPresentModeKHR VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPres
 
 VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        std::cout << "Opa: " << capabilities.currentExtent.width << "," << capabilities.currentExtent.height << std::endl;
         return capabilities.currentExtent;
     }
     

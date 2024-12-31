@@ -15,12 +15,17 @@ public:
     void drawInspectorWindow(std::shared_ptr<Entity>& selectedEntity);
     void drawHierarchyWindow(std::shared_ptr<Entity>& selectedEntity);
     void drawContentBrowser();
-    void drawStatisticsWindow(bool& showStatistics);
-    void drawDebugWindow(bool& showDebugWindow);
-    void drawProjectCreationModal(bool& showCreateProject);
-    
+    void drawStatisticsWindow();
+    void drawDebugWindow();
+    void drawProjectCreationModal();
+    void drawOpenProjectModal();
 private:
     VulkanCore* core;
     void showFileContextMenu(const std::string& filePath, const std::string& id, bool isDirectory);
     void handleFileSelection(const std::string& filename);
+
+    bool showStatistics = false;
+    bool showDebugWindow = false;
+    bool showCreateProject = false;
+    bool showOpenProject = true;
 };

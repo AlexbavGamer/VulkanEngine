@@ -20,9 +20,9 @@
 
 #include "Roboto-Regular.h"
 #include "fa-solid-900.h"
-#include <ui/UIDrawer.h>
+#include <ui/UIdrawer.h>
 
-VulkanImGui::VulkanImGui(VulkanCore* core) : core(core), vulkanRenderer(VulkanRenderer::getInstance()), imguiPool(VK_NULL_HANDLE)
+VulkanImGui::VulkanImGui(VulkanCore *core) : core(core), vulkanRenderer(VulkanRenderer::getInstance()), imguiPool(VK_NULL_HANDLE)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -40,6 +40,8 @@ VulkanImGui::VulkanImGui(VulkanCore* core) : core(core), vulkanRenderer(VulkanRe
     icons_config.MergeMode = true;
     icons_config.PixelSnapH = true;
     iconFont = io.Fonts->AddFontFromMemoryTTF((void *)EmbeddedFonts::fa_solid_900, sizeof(EmbeddedFonts::fa_solid_900), 16.0f, &icons_config, icons_ranges);
+
+    this->drawer = new UIDrawer(core);
 
     setupStyles();
 }
@@ -137,8 +139,6 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    UIDrawer drawer(core);
-
     // Setup dockspace
     ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->Pos);
@@ -158,10 +158,9 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
     {
         ImGui::PopStyleVar(3);
 
-        drawer.drawMainMenuBar();
+        drawer->drawMainMenuBar();
         ImGuiID dockspace_id = ImGui::GetID("EngineDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
-
         static const float MIN_PANEL_WIDTH = 250.0f;
         static bool first_time = true;
         if (first_time)
@@ -182,12 +181,15 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
             ImGui::DockBuilderDockWindow("Content Browser", dock_bottom_id);
             ImGui::DockBuilderFinish(dockspace_id);
         }
-        drawer.drawSceneWindow(sceneDescriptorSet);
-        drawer.drawInspectorWindow(selectedEntity);
-        drawer.drawHierarchyWindow(selectedEntity);
-        drawer.drawContentBrowser();
+        drawer->drawSceneWindow(sceneDescriptorSet);
+        drawer->drawInspectorWindow(selectedEntity);
+        drawer->drawHierarchyWindow(selectedEntity);
+        drawer->drawContentBrowser();
     }
     ImGui::End();
+
+    drawer->drawProjectCreationModal();
+    drawer->drawOpenProjectModal();
 
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

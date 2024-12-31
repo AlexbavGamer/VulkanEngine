@@ -41,8 +41,6 @@ std::shared_ptr<Texture> TextureManager::loadTexture(const std::string& path)
     // Cria a textura
     auto texture = createTextureFromData(pixels, imageSize, width, height);
     
-    std::cout << "Texture created: " << width << "x" << height << std::endl;
-
     // Libera os pixels
     stbi_image_free(pixels);
     

@@ -146,7 +146,7 @@ struct LightComponent : public Component
             {
                 // Luz Direcional: apenas a direção
                 ImGui::Text("Direction");
-                ImGui::DragFloat3("Direction", &direction[0], 0.1f, -1.0f, 1.0f);
+                ImGui::DragFloat3("Direction", &direction[0], 0.1f, -360.0, 360.0f);
 
                 break;
             }
@@ -172,7 +172,7 @@ struct LightComponent : public Component
                 ImGui::DragFloat3("Position", &position[0], 0.1f);
 
                 ImGui::Text("Direction");
-                ImGui::DragFloat3("Direction", &direction[0], 0.1f, -1.0f, 1.0f);
+                ImGui::DragFloat3("Direction", &direction[0], 0.1f, -360.0, 360.0f);
 
                 // Controle para os ângulos de corte do Spot
                 ImGui::SliderFloat("Inner Cutoff", &innerCutoff, 0.0f, 1.0f);

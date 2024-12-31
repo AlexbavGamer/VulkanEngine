@@ -21,6 +21,7 @@
 #define ICON_MAX_FA 0xf999
 
 class VulkanRenderer;
+class UIDrawer;
 
 class VulkanImGui {
 public:
@@ -37,6 +38,8 @@ private:
     void handleFileSelection(const std::string& filename);
     void showFileContextMenu(const std::string &filePath, const std::string id, bool isDirectory);
     VulkanCore* core;
+
+    UIDrawer* drawer;
     VulkanRenderer& vulkanRenderer;
     VkDescriptorPool imguiPool;
     std::shared_ptr<Entity> selectedEntity;
