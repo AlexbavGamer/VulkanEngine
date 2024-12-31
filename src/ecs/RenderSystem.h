@@ -6,6 +6,7 @@
 #include "../ecs/Entity.h"
 
 struct UBO;
+struct LightUBO;
 struct TransformComponent;
 class VulkanRenderer;
 
@@ -16,4 +17,5 @@ public:
     
     void render(Registry& registry, VkCommandBuffer commandBuffer);
     UBO prepareUBO(const TransformComponent &transform, VulkanRenderer &vulkanRender);
+    LightUBO prepareLightUBO(VulkanRenderer &vulkanRender);
 };

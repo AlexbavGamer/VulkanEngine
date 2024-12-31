@@ -219,20 +219,6 @@ void VulkanDescriptor::createUniformBuffer(VkDevice device, VkPhysicalDevice phy
     vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
-// Improved uniform buffer update with proper synchronization
-void VulkanDescriptor::updateUniformBuffer(VkDeviceMemory uniformBufferMemory, const UBO &ubo)
-{
-    VkDeviceSize bufferSize = sizeof(UBO);
-
-    void *data;
-    VkResult result = vkMapMemory(core.getDevice(), uniformBufferMemory, 0, bufferSize, 0, &data);
-    if (result == VK_SUCCESS)
-    {
-        memcpy(data, &ubo, bufferSize);
-        vkUnmapMemory(core.getDevice(), uniformBufferMemory);
-    }
-}
-
 VkDescriptorBufferInfo VulkanDescriptor::getBufferInfo(VkBuffer buffer, VkDeviceSize size)
 {
     VkDescriptorBufferInfo bufferInfo{};

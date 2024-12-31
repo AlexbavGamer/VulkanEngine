@@ -113,8 +113,8 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::sha
     ConfigureTransform(entity);
 
     auto &renderComponent = entity->AddOrGetComponent<RenderComponent>();
-    auto &meshComponent = renderComponent.mesh;
-    auto &materialComponent = renderComponent.material;
+    auto &meshComponent = entity->AddOrGetComponent<MeshComponent>();
+    auto &materialComponent = entity->AddOrGetComponent<MaterialComponent>();
 
     auto vertices = ExtractVertices(mesh);
     auto indices = ExtractIndices(mesh);
@@ -127,6 +127,19 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::sha
     SetupDescriptors(materialComponent);
 
     renderComponent.name = mesh->mName.length > 0 ? mesh->mName.C_Str() : "Unnamed Mesh";
+}
+
+void EngineModelLoader::CreateLightUniformBuffer(MaterialComponent &material)
+{
+    VkDeviceSize bufferSize = sizeof(LightUBO);
+
+    // Cria o buffer para a luz
+    vulkanRenderer.getCore()->createBuffer(
+        bufferSize,
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        material.lightBuffer,  // Aqui seria o buffer da luz
+        material.lightBufferMemory);  // Aqui seria a memória do buffer da luz
 }
 
 void EngineModelLoader::CreateUniformBuffer(MaterialComponent &material)
@@ -142,39 +155,50 @@ void EngineModelLoader::CreateUniformBuffer(MaterialComponent &material)
 
 void EngineModelLoader::UpdateDescriptorSets(MaterialComponent &material, const std::array<VkDescriptorImageInfo, 5> &imageInfos)
 {
-    std:: array<VkWriteDescriptorSet, 6> descriptorWrites{};
+    std::array<VkWriteDescriptorSet, 7> descriptorWrites{};  // Aumenta para 7, pois vamos adicionar o descriptor de luzes
 
+    // Atualizar o descriptor para o uniforme do material
     VkDescriptorBufferInfo bufferInfo{material.uniformBuffer, 0, sizeof(UBO)};
-
     descriptorWrites[0] = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = material.descriptorSet,
-        .dstBinding = 0, // Uniform buffer binding
+        .dstBinding = 0,  // Uniform buffer binding
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &bufferInfo};
+        .pBufferInfo = &bufferInfo
+    };
 
-    for (size_t i = 0; i < 5; i++)
-    {
+    // Atualizar os descriptors para as texturas (albedo, normal, metallicRoughness, etc.)
+    for (size_t i = 0; i < 5; i++) {
         descriptorWrites[i + 1] = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = material.descriptorSet,
             .dstBinding = static_cast<uint32_t>(i + 1), // Combined image sampler bindings
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &imageInfos[i]}; // Ensure imageInfos[i] contains valid VkDescriptorImageInfo
+            .pImageInfo = &imageInfos[i]}; // Certifique-se de que imageInfos[i] contenha um VkDescriptorImageInfo válido
     }
 
-    // Ensure the sampler is valid before updating the descriptor set
-    std::cout << "Albedo map sampler: " << material.albedoMap->sampler << std::endl; // Debug log for albedo map sampler
+    // Atualizar o descriptor para o buffer de luzes
+    VkDescriptorBufferInfo lightBufferInfo{material.lightBuffer, 0, sizeof(LightUBO)};
+    descriptorWrites[6] = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = material.descriptorSet,
+        .dstBinding = 6,  // Binding para o buffer de luzes
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,  // Buffer de luzes é geralmente um storage buffer
+        .pBufferInfo = &lightBufferInfo
+    };
+
+    // Garantir que o sampler seja válido antes de atualizar o descriptor set
     if (material.albedoMap && material.albedoMap->sampler != VK_NULL_HANDLE) {
         vkUpdateDescriptorSets(vulkanRenderer.getCore()->getDevice(),
             static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-    }
-    else {
+    } else {
         throw std::runtime_error("Invalid sampler for albedo map!");
     }
 }
+
 
 void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
 {
@@ -188,46 +212,35 @@ void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
 void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialComponent &materialComponent)
 {
     aiString texturePath;
-    std::cout << "Starting material texture loading..." << std::endl;
 
-    // Albedo/Base Color
-    std::cout << "Loading Albedo/Base Color texture..." << std::endl;
     if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
     {
         std::string fullPath = directory + "/" + texturePath.C_Str();
-        std::cout << "Found albedo texture at: " << fullPath << std::endl;
         materialComponent.albedoMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
     }
     else
     {
         aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
         material->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor);
-        std::cout << "No albedo texture found. Creating solid color texture with values: ("
-                  << baseColor.r << ", " << baseColor.g << ", " << baseColor.b << ", " << baseColor.a << ")" << std::endl;
         materialComponent.albedoMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
             glm::vec4(baseColor.r, baseColor.g, baseColor.b, baseColor.a));
     }
 
     // Normal Map
-    std::cout << "Loading Normal Map texture..." << std::endl;
     if (material->GetTexture(aiTextureType_NORMALS, 0, &texturePath) == AI_SUCCESS)
     {
         std::string fullPath = directory + "/" + texturePath.C_Str();
-        std::cout << "Found normal map at: " << fullPath << std::endl;
         materialComponent.normalMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
     }
     else
     {
-        std::cout << "No normal map found. Creating default normal texture." << std::endl;
         materialComponent.normalMap = vulkanRenderer.getTextureManager()->createDefaultNormalTexture();
     }
 
     // Metallic-Roughness Map
-    std::cout << "Loading Metallic-Roughness Map texture..." << std::endl;
     if (material->GetTexture(aiTextureType_METALNESS, 0, &texturePath) == AI_SUCCESS)
     {
         std::string fullPath = directory + "/" + texturePath.C_Str();
-        std::cout << "Found metallic-roughness map at: " << fullPath << std::endl;
         materialComponent.metallicRoughnessMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
     }
     else
@@ -236,40 +249,31 @@ void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialCompo
         float roughnessFactor = 0.5f;
         material->Get(AI_MATKEY_METALLIC_FACTOR, metallicFactor);
         material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughnessFactor);
-        std::cout << "No metallic-roughness map found. Creating solid color texture with metallic: "
-                  << metallicFactor << ", roughness: " << roughnessFactor << std::endl;
         materialComponent.metallicRoughnessMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
             glm::vec4(0.0f, roughnessFactor, metallicFactor, 0.0f));
     }
 
     // Ambient Occlusion
-    std::cout << "Loading Ambient Occlusion texture..." << std::endl;
     if (material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &texturePath) == AI_SUCCESS)
     {
         std::string fullPath = directory + "/" + texturePath.C_Str();
-        std::cout << "Found ambient occlusion map at: " << fullPath << std::endl;
         materialComponent.aoMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
     }
     else
     {
-        std::cout << "No ambient occlusion map found. Creating solid white texture." << std::endl;
         materialComponent.aoMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(glm::vec4(1.0f));
     }
 
     // Emissive Map
-    std::cout << "Loading Emissive Map texture..." << std::endl;
     if (material->GetTexture(aiTextureType_EMISSIVE, 0, &texturePath) == AI_SUCCESS)
     {
         std::string fullPath = directory + "/" + texturePath.C_Str();
-        std::cout << "Found emissive map at: " << fullPath << std::endl;
         materialComponent.emissiveMap = vulkanRenderer.getTextureManager()->loadTexture(fullPath);
     }
     else
     {
         aiColor3D emissiveColor(0.0f, 0.0f, 0.0f);
         material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveColor);
-        std::cout << "No emissive map found. Creating solid color texture with values: ("
-                  << emissiveColor.r << ", " << emissiveColor.g << ", " << emissiveColor.b << ")" << std::endl;
         materialComponent.emissiveMap = vulkanRenderer.getTextureManager()->createSolidColorTexture(
             glm::vec4(emissiveColor.r, emissiveColor.g, emissiveColor.b, 1.0f));
     }
@@ -309,6 +313,7 @@ void EngineModelLoader::ProcessMaterial(aiMesh *mesh, const aiScene *scene, Mate
 void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
 {
     CreateUniformBuffer(material);
+    CreateLightUniformBuffer(material);
     AllocateDescriptorSet(material, material.descriptorSetLayout);
     auto imageInfos = SetupImageInfos(material);
     UpdateDescriptorSets(material, imageInfos);
@@ -316,8 +321,8 @@ void EngineModelLoader::SetupDescriptors(MaterialComponent &material)
 
 void EngineModelLoader::CreateMaterialPipeline(MaterialComponent &material)
 {
-    // Criação do descriptor set layout
-    std::vector<VkDescriptorSetLayoutBinding> bindings(6);
+    // Criação do descriptor set layout com um binding extra para o LightUBO
+    std::vector<VkDescriptorSetLayoutBinding> bindings(7); // 6 bindings + 1 para o LightUBO
 
     // Binding para o UBO
     bindings[0].binding = 0;
@@ -327,12 +332,19 @@ void EngineModelLoader::CreateMaterialPipeline(MaterialComponent &material)
 
     // Bindings para as 5 texturas
     for (size_t i = 1; i <= 5; ++i) {
-        bindings[i].binding = i; // 1, 2, 3, 4, 5
+        bindings[i].binding = static_cast<uint32_t>(i); // 1, 2, 3, 4, 5
         bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; // Para texturas
         bindings[i].descriptorCount = 1;
         bindings[i].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // Apenas no fragment shader
     }
 
+    // Binding para o LightUBO
+    bindings[6].binding = 6; // O binding para o LightUBO
+    bindings[6].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[6].descriptorCount = 1;
+    bindings[6].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // Apenas no fragment shader
+
+    // Criação do layout do descriptor set
     VkDescriptorSetLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());

@@ -1,5 +1,21 @@
 #version 450
 
+#extension GL_EXT_scalar_block_layout : enable
+
+struct Light {
+    vec3 position;
+    vec3 direction;
+    vec3 color;
+    float intensity;
+    float range;
+    float innerCutoff;
+    float outerCutoff;
+    float constant;
+    float linear;
+    float quadratic;
+    int type;  // 0 = Directional, 1 = Point, 2 = Spot
+};
+
 struct Material {
     vec4 color;
     float metallic;
@@ -12,6 +28,7 @@ layout(binding = 0) uniform UBO {
     mat4 model;
     mat4 view;
     mat4 proj;
+    vec3 cameraPos;
     Material material;
 } ubo;
 
@@ -21,6 +38,11 @@ layout(binding = 3) uniform sampler2D metallicRoughnessMap;
 layout(binding = 4) uniform sampler2D aoMap;
 layout(binding = 5) uniform sampler2D emissiveMap;
 
+layout(std430, binding = 6) uniform LightUBO {
+    Light lights[4];  // Suporte para até 4 luzes
+    int numLights;
+} lightUbo;
+
 layout(location = 0) in vec3 fragPos;
 layout(location = 1) in vec3 fragNormal;
 layout(location = 2) in vec2 fragTexCoord;
@@ -29,6 +51,7 @@ layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
 
+// Funções existentes mantidas
 vec3 getNormalFromMap() {
     vec3 tangentNormal = texture(normalMap, fragTexCoord).xyz * 2.0 - 1.0;
     vec3 Q1 = dFdx(fragPos);
@@ -73,57 +96,82 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-void main() {
-    // Texturas
-    vec3 albedo = texture(albedoMap, fragTexCoord).rgb;
-    float metallic = texture(metallicRoughnessMap, fragTexCoord).b;
-    float roughness = texture(metallicRoughnessMap, fragTexCoord).g;
-    float ao = texture(aoMap, fragTexCoord).r;
-    vec3 emission = texture(emissiveMap, fragTexCoord).rgb;
+// Nova função para calcular atenuação
+float calculateAttenuation(vec3 lightPos, vec3 fragPos, Light light) {
+    float distance = length(lightPos - fragPos);
+    if(distance > light.range) return 0.0;
+    return 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+}
+
+// Nova função para calcular contribuição de cada luz
+vec3 calculateLightContribution(Light light, vec3 N, vec3 V, vec3 albedo, float metallic, float roughness, vec3 F0) {
+    vec3 L;
+    float attenuation = 1.0;
     
-    // Normal do mapa
-    vec3 N = getNormalFromMap();
-    vec3 V = normalize(-fragPos);
+    if(light.type == 0) { // Directional
+        L = normalize(-light.direction);
+    }
+    else if(light.type == 1) { // Point
+        L = normalize(light.position - fragPos);
+        attenuation = calculateAttenuation(light.position, fragPos, light);
+    }
+    else { // Spot
+        L = normalize(light.position - fragPos);
+        float theta = dot(L, normalize(-light.direction));
+        float epsilon = light.innerCutoff - light.outerCutoff;
+        float spotIntensity = clamp((theta - light.outerCutoff) / epsilon, 0.0, 1.0);
+        attenuation = calculateAttenuation(light.position, fragPos, light) * spotIntensity;
+    }
     
-    // Base da fresnel para materiais não metálicos
-    vec3 F0 = vec3(0.04); 
-    F0 = mix(F0, albedo, metallic);
+    vec3 H = normalize(V + L);
     
-    // Acumulação de luz
-    vec3 Lo = vec3(0.0);
+    // Cook-Torrance BRDF
+    float NDF = DistributionGGX(N, H, roughness);
+    float G = GeometrySmith(N, V, L, roughness);
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
     
-    // Luz direcional exemplo
-    vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));  // Direção da luz
-    vec3 lightColor = vec3(1.0); // Cor da luz
-    
-    // Cálculos de iluminação
-    vec3 H = normalize(V + lightDir);
-    float NDF = DistributionGGX(N, H, roughness);  // Distribuição GGX
-    float G = GeometrySmith(N, V, lightDir, roughness);  // Oclusão geométrica
-    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);  // Reflexão Fresnel
-    
-    vec3 numerator = NDF * G * F; 
-    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, lightDir), 0.0) + 0.0001;
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
     vec3 specular = numerator / denominator;
     
     vec3 kS = F;
     vec3 kD = vec3(1.0) - kS;
     kD *= 1.0 - metallic;
     
-    // Iluminação difusa
-    float NdotL = max(dot(N, lightDir), 0.0);        
-    Lo += (kD * albedo / PI + specular) * lightColor * NdotL;
+    float NdotL = max(dot(N, L), 0.0);
+    return (kD * albedo / PI + specular) * light.color * light.intensity * NdotL * attenuation;
+}
+
+void main() {
+    vec3 albedo = texture(albedoMap, fragTexCoord).rgb;
+    float metallic = texture(metallicRoughnessMap, fragTexCoord).b;
+    float roughness = texture(metallicRoughnessMap, fragTexCoord).g;
+    float ao = texture(aoMap, fragTexCoord).r;
+    vec3 emission = texture(emissiveMap, fragTexCoord).rgb;
     
-    // Iluminação ambiente
+    vec3 N = getNormalFromMap();
+    if (!gl_FrontFacing) {
+        N = -N;
+    }
+    
+    vec3 V = normalize(ubo.cameraPos - fragPos);
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, albedo, metallic);
+    
+    vec3 Lo = vec3(0.0);
+    
+    // Calcular contribuição de todas as luzes
+    for(int i = 0; i < lightUbo.numLights; i++) {
+        Lo += calculateLightContribution(lightUbo.lights[i], N, V, albedo, metallic, roughness, F0);
+    }
+    
     vec3 ambient = vec3(0.03) * albedo * ao;
-    
-    // Combinação de todas as contribuições de luz
     vec3 color = ambient + Lo + emission;
     
-    // Tonemapping (correção de gama)
+    // HDR tonemapping
     color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0 / 2.2));  // Correção de gama
+    // Gamma correction
+    color = pow(color, vec3(1.0/2.2));
     
-    // Saída final da cor
     outColor = vec4(color, 1.0);
 }

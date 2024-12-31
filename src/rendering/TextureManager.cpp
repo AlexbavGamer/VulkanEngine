@@ -140,7 +140,6 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
     if (vkCreateSampler(vulkanCore->getDevice(), &samplerInfo, nullptr, &texture->sampler) != VK_SUCCESS) {
         throw std::runtime_error("Falha ao criar sampler!");
     }
-    std::cout << "Sampler created: " << texture->sampler << std::endl;
     // Limpa recursos temporários
     vkDestroyBuffer(vulkanCore->getDevice(), stagingBuffer, nullptr);
     vkFreeMemory(vulkanCore->getDevice(), stagingBufferMemory, nullptr);

@@ -18,6 +18,7 @@
 
 void VulkanCore::init(GLFWwindow *window)
 {
+    std::cout << "enableValidationLayers: " << enableValidationLayers << std::endl;
     this->window = window;
     createInstance();
     setupDebugMessenger();
@@ -985,6 +986,9 @@ void VulkanCore::createImage(uint32_t width, uint32_t height, VkFormat format,
         throw std::runtime_error("Image dimensions exceed device limits!");
     }
 
+    std::cout << "width: " << width << std::endl;
+    std::cout << "height: " << height << std::endl;
+
     // Configuração de VkImageCreateInfo
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1177,6 +1181,8 @@ void VulkanCore::createDepthResources()
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
+    std::cout << "createDepthResources: " << width << "," << height << std::endl;
+
     validateImageDimensions(width, height);
 
     createImage(width, height,
@@ -1220,6 +1226,8 @@ void VulkanCore::createSceneResources()
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
+    std::cout << "createSceneResources: " << width << "," << height << std::endl;
+
     // Certifique-se de que o formato é consistente
     createImage(width, height, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -1248,8 +1256,11 @@ void VulkanCore::createSceneResources()
 void VulkanCore::createDefaultImage()
 {
     VkFormat colorFormat = swapChain->getImageFormat();
+
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
+
+    std::cout << "createDefaultImage: " << width << "," << height << std::endl;
 
     validateImageDimensions(width, height);
 

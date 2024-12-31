@@ -66,3 +66,26 @@ struct UBO {
     alignas(16) glm::mat4 proj;
     alignas(16) Material material;
 };
+
+struct GPULight {
+    glm::vec3 position;
+    float padding1;
+    glm::vec3 direction;
+    float padding2;
+    glm::vec3 color;
+    float intensity;
+    float range;
+    float innerCutoff;
+    float outerCutoff;
+    float constant;
+    float linear;
+    float quadratic;
+    int type;
+    float padding3;
+};
+
+struct LightUBO {
+    GPULight lights[4];  // Máximo de 4 luzes
+    int numLights;
+    float padding[3];
+};

@@ -1,6 +1,6 @@
 #include "RenderSystem.h"
-#include "components/RenderComponent.h"
 #include "components/TransformComponent.h"
+#include "components/LightComponent.h"
 #include "../Scene.h"
 #include "../VulkanRenderer.h"
 #include "../core/VulkanCore.h"
@@ -24,12 +24,9 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
     scissor.offset = {0, 0};
     scissor.extent = vulkanRender.getCore()->getSwapChain()->getExtent();
 
-    registry.view<RenderComponent, TransformComponent>(
-        [&](std::shared_ptr<Entity> entity, RenderComponent &render, TransformComponent &transform)
+    registry.view<MeshComponent, MaterialComponent, TransformComponent>(
+        [&](std::shared_ptr<Entity> entity, const MeshComponent &mesh, const MaterialComponent &material, const TransformComponent &transform)
         {
-            const auto &mesh = render.mesh;
-            const auto &material = render.material;
-
             if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0 ||
                 !material.descriptorSet || !material.uniformBuffer || !material.pipeline || !material.pipelineLayout)
             {
@@ -40,12 +37,14 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
 
-
             // Preencher UBO
             UBO ubo = prepareUBO(transform, vulkanRender);
-            
+
             // Atualizar Uniform Buffer
             vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.uniformBufferMemory, ubo);
+
+            LightUBO LightUBO = prepareLightUBO(vulkanRender);
+            vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.lightBufferMemory, LightUBO);
 
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer, offsets);
@@ -67,4 +66,35 @@ UBO RenderSystem::prepareUBO(const TransformComponent &transform, VulkanRenderer
     ubo.material.ambientOcclusion = 1.0f;
 
     return ubo;
+}
+
+LightUBO RenderSystem::prepareLightUBO(VulkanRenderer &vulkanRender)
+{
+    LightUBO lightUBO{};
+
+    auto scene = vulkanRender.getCore()->getScene();
+    auto lights = scene->registry->viewWithSpecificComponents<LightComponent>();
+    lightUBO.numLights = lights.size();
+
+    for (size_t i = 0; i < lightUBO.numLights; ++i)
+    {
+        const LightComponent &lightComponent = lights[i]->getComponent<LightComponent>();
+        GPULight gpuLight
+        {
+            .position = lightComponent.position,
+            .direction = lightComponent.direction,
+            .color = lightComponent.color,
+            .intensity = lightComponent.intensity,
+            .range = lightComponent.range,
+            .innerCutoff = lightComponent.innerCutoff,
+            .outerCutoff = lightComponent.outerCutoff,
+            .constant = lightComponent.constant,
+            .linear = lightComponent.linear,
+            .quadratic = lightComponent.quadratic,
+            .type = static_cast<int>(lightComponent.type)
+        };
+        lightUBO.lights[i] = gpuLight;
+    }
+
+    return lightUBO;
 }

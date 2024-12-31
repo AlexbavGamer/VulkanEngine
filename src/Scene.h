@@ -18,6 +18,8 @@ public:
     CameraComponent camera;
 
     std::shared_ptr<Entity> createEntity();
+    std::shared_ptr<Entity> createLightEntity();
+    
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
     void updateCamera();
     void handleMouseInput(GLFWwindow* window, double xpos, double ypos);

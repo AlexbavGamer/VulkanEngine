@@ -72,13 +72,15 @@ void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity) {
     
     core->getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render) 
     {
-        if (ImGui::Selectable(render.name.c_str(), selectedEntity && selectedEntity->getId() == entity->getId())) {
+        std::string selectableLabel = render.name + "##" + std::to_string(entity->getId());
+        
+        if (ImGui::Selectable(selectableLabel.c_str(), selectedEntity && selectedEntity->getId() == entity->getId())) {
             if (selectedEntity && selectedEntity->getId() == entity->getId()) {
                 selectedEntity = nullptr;
             } else {
                 selectedEntity = entity;
             }
-        } 
+        }
     });
 
     ImGui::End();

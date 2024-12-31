@@ -4,7 +4,10 @@
 #include "core/VulkanDescriptor.h"
 #include "core/VulkanPipeline.h"
 #include "core/VulkanSwapChain.h"
+
+#include "ecs/components/LightComponent.h"
 #include <iostream>
+#include "ecs/components/RenderComponent.h"
 
 Scene::Scene(VulkanCore* core) : core(core) {
     registry = std::make_unique<Registry>();
@@ -15,6 +18,16 @@ Scene::~Scene() {}
 
 std::shared_ptr<Entity> Scene::createEntity() {
     return registry->createEntity();
+}
+
+std::shared_ptr<Entity> Scene::createLightEntity()
+{
+    std::shared_ptr<Entity> lightEntity = createEntity();
+    LightComponent& lightComponent = lightEntity->addComponent<LightComponent>();
+    lightComponent.setType(LightComponent::LightType::Point);
+    RenderComponent& renderComponent = lightEntity->addComponent<RenderComponent>();
+    renderComponent.name = "Point Light";
+    return lightEntity;
 }
 
 void Scene::updateCamera() {

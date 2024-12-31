@@ -35,7 +35,8 @@ public:
     std::vector<VkDescriptorSetLayoutBinding> getDescriptorSetLayoutBindings() const;
 
     void createUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
-    void updateUniformBuffer(VkDeviceMemory uniformBufferMemory, const UBO &ubo);
+    template <typename T>
+    void updateUniformBuffer(VkDeviceMemory uniformBufferMemory, const T &ubo);
 
 private:
     VulkanCore &core;
@@ -49,3 +50,17 @@ public:
     VkDeviceMemory uniformBufferMemory;
     void *uniformBufferMapped;
 };
+
+template <typename T>
+inline void VulkanDescriptor::updateUniformBuffer(VkDeviceMemory uniformBufferMemory, const T &ubo)
+{
+    VkDeviceSize bufferSize = sizeof(T);
+
+    void *data;
+    VkResult result = vkMapMemory(core.getDevice(), uniformBufferMemory, 0, bufferSize, 0, &data);
+    if (result == VK_SUCCESS)
+    {
+        memcpy(data, &ubo, bufferSize);
+        vkUnmapMemory(core.getDevice(), uniformBufferMemory);
+    }
+}

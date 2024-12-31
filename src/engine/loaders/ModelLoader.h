@@ -36,9 +36,9 @@ private:
     void CreateMaterialPipeline(MaterialComponent &material);
     void AllocateDescriptorSet(MaterialComponent &material, VkDescriptorSetLayout layout);
     void CreateUniformBuffer(MaterialComponent &material);
+    void CreateLightUniformBuffer(MaterialComponent &material);
     std::array<VkDescriptorImageInfo, 5> SetupImageInfos(MaterialComponent &material);
     void UpdateDescriptorSets(MaterialComponent &material, const std::array<VkDescriptorImageInfo, 5> &imageInfos);
-
     void CreateDefaultMaterial(MaterialComponent &material);
     void LoadMaterialTextures(aiMaterial *material, MaterialComponent &materialComponent);
 

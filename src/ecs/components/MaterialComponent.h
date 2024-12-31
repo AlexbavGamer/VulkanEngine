@@ -16,11 +16,17 @@ struct MaterialComponent : public Component
     VkDescriptorSet descriptorSet;
     VkDescriptorSetLayout descriptorSetLayout;
     
-    VkBuffer uniformBuffer;
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
+    // Mesh Buffer
+    VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
+    
+    // Light Buffer
+    VkBuffer lightBuffer;
+    VkDeviceMemory lightBufferMemory;
+
     glm::vec4 baseColorFactor = glm::vec4(1.0f);
     float metallicFactor = 1.0f;
     float roughnessFactor = 1.0f;

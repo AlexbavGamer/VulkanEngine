@@ -11,8 +11,6 @@ struct RenderComponent : public Component
     RenderComponent() {}
 
     std::string name;
-    MeshComponent mesh;
-    MaterialComponent material;
 
     void renderComponent() override
     {
