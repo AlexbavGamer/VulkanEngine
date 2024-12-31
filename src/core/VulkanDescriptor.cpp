@@ -5,6 +5,7 @@
 #include "VulkanCore.h"
 
 #include <stdexcept>
+#include <iostream>
 
 VulkanDescriptor::VulkanDescriptor(VulkanCore &core) : core(core), descriptorPool(VK_NULL_HANDLE), descriptorSetLayout(VK_NULL_HANDLE)
 {
@@ -145,11 +146,7 @@ void VulkanDescriptor::createDescriptorSets()
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = core.getDefaultTextureView(); // Ensure this is set to your texture image view
-        if (imageInfo.imageView == VK_NULL_HANDLE)
-        {
-            throw std::runtime_error("Default texture view is null!");
-        }
-        imageInfo.sampler = core.getTextureSampler(); // Ensure this is set to your texture sampler
+        imageInfo.sampler = core.getTextureSampler();
 
         VkWriteDescriptorSet samplerWrite{};
         samplerWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -166,7 +163,7 @@ void VulkanDescriptor::createDescriptorSets()
         VkDescriptorImageInfo storageImageInfo{};
         storageImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;    // Ajuste conforme necessário
         storageImageInfo.imageView = core.getDefaultTextureView(); // Certifique-se de que isso esteja definido
-        storageImageInfo.sampler = VK_NULL_HANDLE;                 // Não é necessário para imagens de armazenamento
+        storageImageInfo.sampler = core.getTextureSampler();                 // Não é necessário para imagens de armazenamento
 
         VkWriteDescriptorSet storageImageWrite{};
         storageImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

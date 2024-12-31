@@ -55,11 +55,11 @@ int main() {
 
         Scene& scene = *renderer.getCore()->getScene();
 
-        // std::shared_ptr<Entity> cuboEntity = scene.registry->createEntity();
+        std::shared_ptr<Entity> cuboEntity = scene.registry->createEntity();
 
-        // if(!renderer.getModelLoader()->LoadModel("engine/models/cubo.fbx", cuboEntity)) {
-        //     throw std::runtime_error("Failed load 'cubo.fbx' model in engine/models folder");
-        // }
+        if(!renderer.getModelLoader()->LoadModel("engine/models/cubo.fbx", cuboEntity)) {
+            throw std::runtime_error("Failed load 'cubo.fbx' model in engine/models folder");
+        }
      
         // Ajustar câmera para ver o cubo
         CameraComponent camera;

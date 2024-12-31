@@ -8,7 +8,7 @@ class Entity;
 
 class UIDrawer {
 public:
-    UIDrawer(VulkanCore& core);
+    UIDrawer(VulkanCore* core);
     
     void drawMainMenuBar();
     void drawSceneWindow(VkDescriptorSet sceneDescriptorSet);
@@ -20,7 +20,7 @@ public:
     void drawProjectCreationModal(bool& showCreateProject);
     
 private:
-    VulkanCore& core;
+    VulkanCore* core;
     void showFileContextMenu(const std::string& filePath, const std::string& id, bool isDirectory);
     void handleFileSelection(const std::string& filename);
 };

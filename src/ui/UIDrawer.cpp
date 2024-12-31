@@ -7,7 +7,7 @@
 #include <managers/FileManager.h>
 #include <ecs/components/RenderComponent.h>
 
-UIDrawer::UIDrawer(VulkanCore &core) : core(core) {}
+UIDrawer::UIDrawer(VulkanCore* core) : core(core) {}
 
 void UIDrawer::drawMainMenuBar()
 {
@@ -17,7 +17,7 @@ void UIDrawer::drawMainMenuBar()
         {
             if (ImGui::MenuItem("Exit", "Alt+F4"))
             {
-                glfwSetWindowShouldClose(core.getWindow(), GLFW_TRUE);
+                glfwSetWindowShouldClose(core->getWindow(), GLFW_TRUE);
             }
             ImGui::EndMenu();
         }
@@ -70,7 +70,7 @@ void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity) {
         selectedEntity = nullptr;
     }
     
-    core.getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render) 
+    core->getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render) 
     {
         if (ImGui::Selectable(render.name.c_str(), selectedEntity && selectedEntity->getId() == entity->getId())) {
             if (selectedEntity && selectedEntity->getId() == entity->getId()) {
@@ -113,7 +113,7 @@ void UIDrawer::drawDebugWindow(bool &showDebugWindow)
     static bool wireframeMode = false;
     if (ImGui::Checkbox("Wireframe Mode", &wireframeMode))
     {
-        core.getPipeline()->setWireframeMode(wireframeMode);
+        core->getPipeline()->setWireframeMode(wireframeMode);
     }
 
     ImGui::End();
@@ -143,7 +143,7 @@ void UIDrawer::drawProjectCreationModal(bool &showCreateProject)
         {
             if (strlen(projectName) > 0 && strlen(projectPath) > 0)
             {
-                if (core.getProjectManager()->createProject(projectName, projectPath))
+                if (core->getProjectManager()->createProject(projectName, projectPath))
                 {
                     showCreateProject = false;
                     memset(projectName, 0, sizeof(projectName));

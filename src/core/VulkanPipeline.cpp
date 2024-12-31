@@ -38,7 +38,7 @@ void VulkanPipeline::cleanup()
 
 void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D extent)
 {
-    createGraphicsPipeline(renderPass, extent);
+    createScenePipeline(renderPass, extent);
 }
 
 void VulkanPipeline::recreate(VkRenderPass renderPass, VkExtent2D extent)

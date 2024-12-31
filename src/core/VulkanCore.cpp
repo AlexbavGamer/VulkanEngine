@@ -37,7 +37,9 @@ void VulkanCore::init(GLFWwindow *window)
     descriptor->create();
     createRenderPass();
     createSceneRenderPass();
+    pipeline->create(renderPass, swapChain->getExtent());
     createSceneResources();
+    createSceneDescriptorSet();
     createFramebuffers();
     createCommandBuffers();
     createSyncObjects();
@@ -45,7 +47,7 @@ void VulkanCore::init(GLFWwindow *window)
     scene = std::make_unique<Scene>(this);
 
     imgui = std::make_unique<VulkanImGui>(this);
-    imgui->init();
+    imgui->init(renderPass);
 
     descriptor->createUniformBuffer(device, physicalDevice, sizeof(UBO),
                                     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -95,17 +97,18 @@ void VulkanCore::setupDebugMessenger()
     if (!enableValidationLayers)
         return;
 
-    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = debugCallback;
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+    debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                                      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                      VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                                  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                                  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    debugCreateInfo.pfnUserCallback = debugCallback;
+    debugCreateInfo.pUserData = nullptr; // Opcional: você pode passar dados personalizados aqui
 
-    if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
+    if (CreateDebugUtilsMessengerEXT(instance, &debugCreateInfo, nullptr, &debugMessenger) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to set up debug messenger!");
     }
@@ -190,7 +193,7 @@ void VulkanCore::createSurface()
 void VulkanCore::createRenderPass()
 {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapChain->getImageFormat();
+    colorAttachment.format = VK_FORMAT_B8G8R8A8_SRGB;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -233,7 +236,6 @@ void VulkanCore::createRenderPass()
     dependency.srcAccessMask = 0;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
                                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
     std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
     VkRenderPassCreateInfo renderPassInfo{};
@@ -545,10 +547,20 @@ void VulkanCore::createSceneDescriptorSet()
         throw std::runtime_error("failed to allocate descriptor set for scene!");
     }
 
+    if (textureSampler == VK_NULL_HANDLE)
+    {
+        throw std::runtime_error("Texture sampler is null!");
+    }
+
+    if (sceneImageView == VK_NULL_HANDLE)
+    {
+        throw std::runtime_error("sceneImageView está vazio!");
+    }
+
     VkDescriptorImageInfo imageInfo{};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo.imageView = sceneImageView;
     imageInfo.sampler = textureSampler;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -561,7 +573,6 @@ void VulkanCore::createSceneDescriptorSet()
 
     vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 }
-
 
 void VulkanCore::cleanup()
 {
@@ -738,7 +749,10 @@ void VulkanCore::handleResize()
     // Recreate swapchain and dependent resources
     swapChain->cleanup();
     swapChain->create();
+    createRenderPass();
+    createSceneRenderPass();
     createSceneResources();
+    createSceneDescriptorSet();
     createFramebuffers();
 
     pipeline->recreate(renderPass, swapChain->getExtent());
@@ -799,10 +813,64 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanCore::debugCallback(
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
     void *pUserData)
 {
+    // Exibir informações detalhadas
+    std::cerr << "[Validation Layer] Severity: ";
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+    {
+        std::cerr << "VERBOSE";
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+    {
+        std::cerr << "INFO";
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    {
+        std::cerr << "WARNING";
+    }
+    else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    {
+        std::cerr << "ERROR";
+    }
+    std::cerr << std::endl;
 
-    std::cerr << "\nValidation layer: " << pCallbackData->pMessage << "\n"
-              << std::endl;
-    return VK_FALSE;
+    std::cerr << "[Validation Layer] Type: ";
+    if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+    {
+        std::cerr << "GENERAL";
+    }
+    if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+    {
+        std::cerr << "VALIDATION";
+    }
+    if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+    {
+        std::cerr << "PERFORMANCE";
+    }
+    std::cerr << std::endl;
+
+    std::cerr << "[Validation Layer] Message: " << pCallbackData->pMessage << std::endl;
+
+    // Exibir objetos envolvidos
+    if (pCallbackData->objectCount > 0)
+    {
+        for (uint32_t i = 0; i < pCallbackData->objectCount; i++)
+        {
+            std::cerr << "    Object " << i << ": Handle = "
+                      << pCallbackData->pObjects[i].objectHandle
+                      << ", Type = "
+                      << pCallbackData->pObjects[i].objectType
+                      << std::endl;
+        }
+    }
+
+    // Opcional: Pausar em erros graves
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+    {
+        std::cerr << "Pausing due to error..." << std::endl;
+        std::cin.get(); // Pause até pressionar Enter
+    }
+
+    return VK_FALSE; // Continue execução
 }
 
 VkResult VulkanCore::CreateDebugUtilsMessengerEXT(
@@ -1124,26 +1192,22 @@ void VulkanCore::createDepthResources()
 
 void VulkanCore::createTextureSampler()
 {
-    VkPhysicalDeviceProperties properties{};
-    vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-
-    VkSamplerCreateInfo samplerInfo{};
+    VkSamplerCreateInfo samplerInfo = {};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.anisotropyEnable = VK_TRUE;
-    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-    samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_FALSE;
+    samplerInfo.maxAnisotropy = 1.0f;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.compareOp = VK_COMPARE_OP_NEVER;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
     if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
     {
@@ -1153,15 +1217,15 @@ void VulkanCore::createTextureSampler()
 
 void VulkanCore::createSceneResources()
 {
-    VkFormat colorFormat = swapChain->getImageFormat();
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
-    createImage(width, height, colorFormat, VK_IMAGE_TILING_OPTIMAL,
+    // Certifique-se de que o formato é consistente
+    createImage(width, height, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, sceneImage, sceneImageMemory);
 
-    sceneImageView = createImageView(sceneImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+    sceneImageView = createImageView(sceneImage, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
     // Criar Framebuffer para a cena
     std::array<VkImageView, 2> attachments = {sceneImageView, depthImageView};
@@ -1180,7 +1244,6 @@ void VulkanCore::createSceneResources()
         throw std::runtime_error("failed to create scene framebuffer!");
     }
 }
-
 
 void VulkanCore::createDefaultImage()
 {
@@ -1204,7 +1267,7 @@ void VulkanCore::createDefaultImage()
 void VulkanCore::createSceneRenderPass()
 {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = swapChain->getImageFormat();
+    colorAttachment.format = VK_FORMAT_B8G8R8A8_SRGB;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1281,12 +1344,12 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     sceneRenderPassInfo.renderPass = sceneRenderPass;
     sceneRenderPassInfo.framebuffer = sceneFramebuffer;
     sceneRenderPassInfo.renderArea = {{0, 0}, swapChain->getExtent()};
-    VkClearValue clearValues[2] = {{{0.0f, 0.0f, 0.0f, 1.0f}}, {1.0f, 0}};
+    VkClearValue sceneClearValues[2] = {{{0.0f, 0.0f, 0.2f, 1.0f}}, {1.0f, 0}};
     sceneRenderPassInfo.clearValueCount = 2;
-    sceneRenderPassInfo.pClearValues = clearValues;
+    sceneRenderPassInfo.pClearValues = sceneClearValues;
 
     vkCmdBeginRenderPass(commandBuffer, &sceneRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    // Renderizar a cena aqui
+    scene->renderSystem->render(*scene->registry, commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
 
     // Segundo Render Pass: ImGui
@@ -1295,13 +1358,12 @@ void VulkanCore::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t ima
     imguiRenderPassInfo.renderPass = renderPass;
     imguiRenderPassInfo.framebuffer = framebuffers[imageIndex];
     imguiRenderPassInfo.renderArea = {{0, 0}, swapChain->getExtent()};
-    imguiRenderPassInfo.clearValueCount = 1;
-    imguiRenderPassInfo.pClearValues = clearValues;
+    VkClearValue imguiClearValues[2] = {{{0.0f, 0.0f, 0.0f, 1.0f}}, {1.0f, 0}};
+    imguiRenderPassInfo.clearValueCount = 2; // Atualizado para refletir os anexos
+    imguiRenderPassInfo.pClearValues = imguiClearValues;
 
     vkCmdBeginRenderPass(commandBuffer, &imguiRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    auto descriptorSet = descriptor->getDescriptorSet(imageIndex);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->getScenePipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-    imgui->render(commandBuffer);
+    imgui->render(commandBuffer, sceneDescriptorSet);
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)

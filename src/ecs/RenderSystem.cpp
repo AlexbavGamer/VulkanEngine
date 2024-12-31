@@ -40,9 +40,10 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
 
+
             // Preencher UBO
             UBO ubo = prepareUBO(transform, vulkanRender);
-
+            
             // Atualizar Uniform Buffer
             vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.uniformBufferMemory, ubo);
 
