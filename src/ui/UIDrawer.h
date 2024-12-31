@@ -24,8 +24,12 @@ private:
     void showFileContextMenu(const std::string& filePath, const std::string& id, bool isDirectory);
     void handleFileSelection(const std::string& filename);
 
+private:
+    const char* createProjectFileDialogKey = "ChooseProjectDirectoryKey";
+    const char* openProjectFileDialogKey = "OpenProjectFileKey";
+
     bool showStatistics = false;
     bool showDebugWindow = false;
     bool showCreateProject = false;
-    bool showOpenProject = true;
+    bool showOpenProject = false;
 };

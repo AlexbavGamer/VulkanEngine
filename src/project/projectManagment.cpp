@@ -1,4 +1,6 @@
 #include "projectManagment.h"
+#include "../core/VulkanCore.h"
+#include "../managers/FileManager.h"
 #include <fstream>
 
 ProjectManager::ProjectManager(VulkanCore *core) : vulkanCore(core)
@@ -25,21 +27,20 @@ bool ProjectManager::openProject(const std::string &projectPath)
     if (!validateProjectStructure())
         return false;
 
-    std::ifstream configFile(projectPath + "/project.config");
-    std::getline(configFile, m_config.projectName);
+    if (FileManager::getInstance().readBinaryFile(projectPath + "/project.config", m_config))
+    {
+        m_isProjectOpen = true;
+        return true;
+    }
 
-    m_isProjectOpen = true;
-
-    return true;
+    return false;
 }
 
 bool ProjectManager::saveProject()
 {
     try
     {
-        std::ofstream configFile(m_config.projectPath + "/project.config");
-        configFile << m_config.projectName << "\n";
-        configFile << m_config.projectPath << "\n";
+        FileManager::getInstance().writeBinaryFile(m_config.projectPath + "/project.config", m_config);
         return true;
     }
     catch (...)
@@ -68,11 +69,10 @@ bool ProjectManager::createProjectStructure()
     try
     {
         std::filesystem::create_directories(m_config.projectPath);
-        std::filesystem::create_directories(m_config.projectPath + "/assets");
+        std::filesystem::create_directories(m_config.projectPath + "/Assets");
 
-        std::ofstream configFile(m_config.projectPath + "/project.config");
-        configFile << m_config.projectName << "\n";
-        configFile << m_config.projectPath << "\n";
+        FileManager::getInstance().writeBinaryFile(m_config.projectPath + "/project.config", m_config);
+        
         return true;
     }
     catch (...)
@@ -88,7 +88,7 @@ bool ProjectManager::validateProjectStructure()
         if (!std::filesystem::exists(m_config.projectPath))
             return false;
 
-        if (!std::filesystem::exists(m_config.projectPath + "/assets"))
+        if (!std::filesystem::exists(m_config.projectPath + "/Assets"))
             return false;
 
         if (!std::filesystem::exists(m_config.projectPath + "/project.config"))

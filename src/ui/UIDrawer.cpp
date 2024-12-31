@@ -8,6 +8,8 @@
 #include <ecs/components/RenderComponent.h>
 #include <iostream>
 
+#include "ImGuiFileDialog.h"
+
 UIDrawer::UIDrawer(VulkanCore *core) : core(core) {}
 
 void UIDrawer::drawMainMenuBar()
@@ -27,21 +29,12 @@ void UIDrawer::drawMainMenuBar()
         {
             if (ImGui::MenuItem("New"))
             {
-                if(showOpenProject)
-                {
-                    showOpenProject = false;
-                }
-                ImGui::OpenPopup("Create Project");
+                showCreateProject = true;
             }
             ImGui::Separator();
             if (ImGui::MenuItem("Open"))
             {
-                if(showCreateProject)
-                {
-                    showCreateProject = false;
-                }
-                showCreateProject = true;
-                ImGui::OpenPopup("Open Project");
+                showOpenProject = true;
             }
             ImGui::EndMenu();
         }
@@ -112,6 +105,7 @@ void UIDrawer::drawContentBrowser()
     auto &FileManager = FileManager::getInstance();
     if (core->getProjectManager()->isProjectOpen())
     {
+        ImGui::Text("Project Name: %s", core->getProjectManager()->getConfig().projectName.c_str());
     }
     ImGui::End();
 }
@@ -146,25 +140,117 @@ void UIDrawer::drawDebugWindow()
 
 void UIDrawer::drawProjectCreationModal()
 {
-    std::cout << "showCreateProject: " << showCreateProject << std::endl;
-    if (ImGui::BeginPopupModal("Create Project", &showCreateProject, ImGuiWindowFlags_AlwaysAutoResize))
+    if (showCreateProject)
     {
-        ImGui::Text("Farofa 4321");
-        ImGui::Text("Farofa 4321");
-        ImGui::Text("Farofa 4321");
-        ImGui::Text("Farofa 4321");
+        ImGui::OpenPopup("Create Project");
+        showCreateProject = false; // Reset após abrir
+    }
+
+    bool isOpen = true;
+    if (ImGui::BeginPopupModal("Create Project", &isOpen, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        static char projectName[256] = "";
+        static char projectPath[1024] = "";
+
+        ImGui::Text("Project Settings");
+        ImGui::Separator();
+
+        ImGui::Text("Project Name:");
+        ImGui::InputText("##projectname", projectName, IM_ARRAYSIZE(projectName));
+
+        ImGui::Text("Project Location:");
+        ImGui::InputText("##projectpath", projectPath, IM_ARRAYSIZE(projectPath));
+        ImGui::SameLine();
+
+        if (ImGui::Button("Browse..."))
+        {
+            ImGuiFileDialog::Instance()->OpenDialog(createProjectFileDialogKey,
+                                                    "Choose Directory",
+                                                    nullptr,
+                                                    {.flags = ImGuiFileDialogFlags_Modal});
+        }
+
+        ImGui::Separator();
+
+        if (ImGuiFileDialog::Instance()->Display(createProjectFileDialogKey,
+                                                 ImGuiWindowFlags_NoCollapse, ImVec2(600, 400)))
+        {
+            // Quando o usuário selecionar um diretório
+            if (ImGuiFileDialog::Instance()->IsOk())
+            {
+                std::string path = ImGuiFileDialog::Instance()->GetCurrentPath();
+                strncpy(projectPath, path.c_str(), sizeof(projectPath) - 1);
+            }
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        if (ImGui::Button("Create", ImVec2(120, 0)))
+        {
+            core->getProjectManager()->createProject(projectName, projectPath);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+
         ImGui::EndPopup();
     }
 }
 
 void UIDrawer::drawOpenProjectModal()
 {
-    if (ImGui::BeginPopupModal("Open Project"))
+    if (showOpenProject)
     {
-        ImGui::Text("Farofa 1234");
-        ImGui::Text("Farofa 1234");
-        ImGui::Text("Farofa 1234");
-        ImGui::Text("Farofa 1234");
+        ImGui::OpenPopup("Open Project");
+        showOpenProject = false; // Reset após abrir
+    }
+
+    bool isOpen = true;
+    if (ImGui::BeginPopupModal("Open Project", &isOpen, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        static char projectPath[1024] = "";
+
+        ImGui::Text("Select Project File");
+        ImGui::Separator();
+
+        ImGui::InputText("##projectpath", projectPath, IM_ARRAYSIZE(projectPath));
+        ImGui::SameLine();
+        if (ImGui::Button("Browse..."))
+        {
+            ImGuiFileDialog::Instance()->OpenDialog(openProjectFileDialogKey,
+                                                    "Choose Directory",
+                                                    nullptr,
+                                                    {.flags = ImGuiFileDialogFlags_Modal});
+        }
+
+        if (ImGuiFileDialog::Instance()->Display(openProjectFileDialogKey,
+                                                 ImGuiWindowFlags_NoCollapse, ImVec2(600, 400)))
+        {
+            // Quando o usuário selecionar um diretório
+            if (ImGuiFileDialog::Instance()->IsOk())
+            {
+                std::string path = ImGuiFileDialog::Instance()->GetCurrentPath();
+                strncpy(projectPath, path.c_str(), sizeof(projectPath) - 1);
+            }
+            ImGuiFileDialog::Instance()->Close();
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Open", ImVec2(120, 0)))
+        {
+            core->getProjectManager()->openProject(projectPath);
+            ImGui::CloseCurrentPopup();
+
+            std::cout << "Project Path: " << projectPath << std::endl;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
 
         ImGui::EndPopup();
     }

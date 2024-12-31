@@ -161,6 +161,7 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
         drawer->drawMainMenuBar();
         ImGuiID dockspace_id = ImGui::GetID("EngineDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
+
         static const float MIN_PANEL_WIDTH = 250.0f;
         static bool first_time = true;
         if (first_time)
@@ -181,6 +182,7 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
             ImGui::DockBuilderDockWindow("Content Browser", dock_bottom_id);
             ImGui::DockBuilderFinish(dockspace_id);
         }
+
         drawer->drawSceneWindow(sceneDescriptorSet);
         drawer->drawInspectorWindow(selectedEntity);
         drawer->drawHierarchyWindow(selectedEntity);
@@ -188,6 +190,7 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
     }
     ImGui::End();
 
+    // Render modals after the DockSpace
     drawer->drawProjectCreationModal();
     drawer->drawOpenProjectModal();
 
