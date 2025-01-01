@@ -50,6 +50,5 @@ struct CameraComponent : public Component
 
     void renderComponent() override
     {
-        
     }
 };

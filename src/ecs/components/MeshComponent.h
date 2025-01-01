@@ -5,6 +5,9 @@
 
 struct MeshComponent : public Component
 {
+    MeshComponent(std::shared_ptr<Entity> owner)
+        : Component(owner) {}
+
     VkBuffer vertexBuffer;
     VkBuffer indexBuffer;
     VkDeviceMemory vertexBufferMemory;

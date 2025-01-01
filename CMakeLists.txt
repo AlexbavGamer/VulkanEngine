@@ -7,6 +7,34 @@ message(STATUS "Starting VulkanEngine CMake configuration...")
 message(STATUS "Setting C++ standard to C++17")
 set(CMAKE_CXX_STANDARD 17)
 
+if(WIN32)
+message(STATUS "Configuring custom Boost paths for Windows...")
+set(BOOST_ROOT "C:/Boost")
+set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_87")
+set(BOOST_LIBRARYDIR "C:/Boost/lib")
+
+# Desabilitar o auto-link do Boost no Windows
+add_definitions(-DBOOST_ALL_NO_LIB)
+endif()
+
+# Encontrar Boost do sistema
+message(STATUS "Looking for Boost 1.87.0...")
+find_package(Boost 1.87.0 REQUIRED COMPONENTS 
+    filesystem
+    system
+    thread
+    chrono
+)
+
+if(NOT Boost_FOUND)
+    message(FATAL_ERROR "Boost not found. Check if paths are correct: BOOST_ROOT=${BOOST_ROOT}, BOOST_INCLUDEDIR=${BOOST_INCLUDEDIR}, BOOST_LIBRARYDIR=${BOOST_LIBRARYDIR}")
+endif()
+
+message(STATUS "Boost found:")
+message(STATUS "  Version: ${Boost_VERSION}")
+message(STATUS "  Include dirs: ${Boost_INCLUDE_DIRS}")
+message(STATUS "  Library dirs: ${Boost_LIBRARY_DIRS}")
+
 # Configuração para diferentes plataformas
 message(STATUS "Checking platform-specific configurations...")
 if(WIN32)
@@ -154,6 +182,7 @@ FetchContent_MakeAvailable(imguifiledialog)
 target_include_directories(ImGuiFileDialog PRIVATE
     ${imgui_SOURCE_DIR}
 )
+
 message(STATUS "Collecting source files...")
 # Encontrar todos os arquivos fonte
 file(GLOB_RECURSE SOURCES 
@@ -227,6 +256,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${magic_enum_SOURCE_DIR}/include
     ${imguifiledialog_SOURCE_DIR}
     ${GENERATED_DIR}
+    ${Boost_INCLUDE_DIRS}
 )
 
 message(STATUS "Setting up library linkage...")
@@ -235,6 +265,10 @@ target_link_libraries(VulkanEngine
     ${VULKAN_LIB}
     glfw
     assimp
+    Boost::filesystem
+    Boost::system
+    Boost::thread
+    Boost::chrono
 )
 
 message(STATUS "Setting up shader compilation...")

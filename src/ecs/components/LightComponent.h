@@ -1,12 +1,18 @@
+#pragma once
+
 #include "../Component.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
+#include <magic_enum.hpp>
 #include "imgui.h"
 
 struct LightComponent : public Component
 {
+    LightComponent(std::shared_ptr<Entity> owner)
+        : Component(owner) {}
+    
     enum class LightType
     {
         Directional,

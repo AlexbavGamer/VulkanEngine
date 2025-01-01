@@ -1,6 +1,5 @@
 #include "RenderSystem.h"
 #include "components/TransformComponent.h"
-#include "components/LightComponent.h"
 #include "../Scene.h"
 #include "../VulkanRenderer.h"
 #include "../core/VulkanCore.h"

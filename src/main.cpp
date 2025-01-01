@@ -77,7 +77,9 @@ int main()
                              glm::vec3(0.0f, 0.0f, 0),
                              glm::vec3(0.0f, 0.0f, -1.0f),
                              glm::vec3(0.0f, 1.0f, 0.0f));
+
         std::shared_ptr<Entity> lightEntity = scene->createLightEntity();
+        
         scene->camera = camera;
     }
     catch (const std::exception &e)

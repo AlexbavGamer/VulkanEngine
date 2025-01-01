@@ -9,6 +9,9 @@
 
 struct TransformComponent : public Component
 {
+    TransformComponent(std::shared_ptr<Entity> owner)
+        : Component(owner) {}
+    
     glm::vec3 position;
     glm::vec3 rotation;
     glm::vec3 scale;

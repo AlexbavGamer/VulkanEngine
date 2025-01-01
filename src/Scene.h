@@ -6,6 +6,9 @@
 #include "ecs/Registry.h"
 #include "ecs/RenderSystem.h"
 #include <glfw/glfw3.h>
+#include "ecs/components/LightComponent.h"
+#include "ecs/components/RenderComponent.h"
+
 
 class VulkanCore;
 class Scene {
@@ -18,7 +21,7 @@ public:
     CameraComponent camera;
 
     std::shared_ptr<Entity> createEntity();
-    std::shared_ptr<Entity> createLightEntity();
+    std::shared_ptr<Entity> createLightEntity(LightComponent::LightType lightType = LightComponent::LightType::Point);
     
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);
     void updateCamera();

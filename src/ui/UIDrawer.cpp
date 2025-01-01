@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "ImGuiFileDialog.h"
+#include <core/VulkanImGui.h>
 
 UIDrawer::UIDrawer(VulkanCore *core) : core(core) {}
 
@@ -36,6 +37,29 @@ void UIDrawer::drawMainMenuBar()
             {
                 showOpenProject = true;
             }
+            ImGui::EndMenu();
+        }
+        if(ImGui::BeginMenu("Test Write"))
+        {
+            if(ImGui::MenuItem("Write"))
+            {
+                TestStruct _struct {
+                    .valor = 3,
+                    .valor2 = 5,
+                };
+                FileManager::getInstance().writeBinaryFile("D:/ProjectTest/project.info", _struct);
+            }
+
+            if(ImGui::MenuItem("Read"))
+            {
+                TestStruct _struct {};
+                if(FileManager::getInstance().readBinaryFile("D:/ProjectTest/project.info", _struct))
+                {
+                    std::cout << _struct.valor << std::endl;
+                    std::cout << _struct.valor2 << std::endl;
+                }
+            }
+
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
@@ -101,13 +125,14 @@ void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity)
 
 void UIDrawer::drawContentBrowser()
 {
-    ImGui::Begin("Content Browser");
-    auto &FileManager = FileManager::getInstance();
-    if (core->getProjectManager()->isProjectOpen())
+    if (ImGui::Begin("Content Browser"))
     {
-        ImGui::Text("Project Name: %s", core->getProjectManager()->getConfig().projectName.c_str());
+        if(!core->getProjectManager()->isProjectOpen())
+        {
+            return ImGui::End();
+        }
+        ImGui::End();
     }
-    ImGui::End();
 }
 
 void UIDrawer::drawStatisticsWindow()
@@ -243,8 +268,6 @@ void UIDrawer::drawOpenProjectModal()
         {
             core->getProjectManager()->openProject(projectPath);
             ImGui::CloseCurrentPopup();
-
-            std::cout << "Project Path: " << projectPath << std::endl;
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancel", ImVec2(120, 0)))

@@ -7,6 +7,9 @@
 
 struct MaterialComponent : public Component
 {
+    MaterialComponent(std::shared_ptr<Entity> owner)
+        : Component(owner) {}
+
     std::shared_ptr<Texture> albedoMap;
     std::shared_ptr<Texture> normalMap;
     std::shared_ptr<Texture> metallicRoughnessMap;
@@ -15,14 +18,14 @@ struct MaterialComponent : public Component
 
     VkDescriptorSet descriptorSet;
     VkDescriptorSetLayout descriptorSetLayout;
-    
+
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
     // Mesh Buffer
     VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
-    
+
     // Light Buffer
     VkBuffer lightBuffer;
     VkDeviceMemory lightBufferMemory;

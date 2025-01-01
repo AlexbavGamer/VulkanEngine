@@ -2,6 +2,9 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
+#include <boost/hana.hpp>
+
+namespace hana = boost::hana;
 
 bool FileManager::writeTextFile(const std::string &filename, const std::string &content)
 {

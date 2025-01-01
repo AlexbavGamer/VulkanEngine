@@ -1,7 +1,9 @@
 #include "projectManagment.h"
 #include "../core/VulkanCore.h"
 #include "../managers/FileManager.h"
+#include <cstring>
 #include <fstream>
+#include <iostream>
 
 ProjectManager::ProjectManager(VulkanCore *core) : vulkanCore(core)
 {
@@ -17,12 +19,14 @@ bool ProjectManager::createProject(const std::string &projectName, const std::st
 
     m_isProjectOpen = true;
 
-    return createProjectStructure();
+    return true;
 }
 
 bool ProjectManager::openProject(const std::string &projectPath)
 {
     m_config.projectPath = projectPath;
+
+    std::cout << m_config.projectPath << std::endl;
 
     if (!validateProjectStructure())
         return false;
@@ -60,8 +64,8 @@ bool ProjectManager::closeProject()
     m_config.projectName.clear();
     m_config.projectPath.clear();
     m_isProjectOpen = false;
-
-    return false;
+    
+    return true;
 }
 
 bool ProjectManager::createProjectStructure()
@@ -72,7 +76,7 @@ bool ProjectManager::createProjectStructure()
         std::filesystem::create_directories(m_config.projectPath + "/Assets");
 
         FileManager::getInstance().writeBinaryFile(m_config.projectPath + "/project.config", m_config);
-        
+
         return true;
     }
     catch (...)
@@ -85,30 +89,19 @@ bool ProjectManager::validateProjectStructure()
 {
     try
     {
-        if (!std::filesystem::exists(m_config.projectPath))
+        if (!std::filesystem::exists(m_config.projectPath) ||
+            !std::filesystem::exists(m_config.projectPath + "/Assets") ||
+            !std::filesystem::exists(m_config.projectPath + "/project.config"))
             return false;
 
-        if (!std::filesystem::exists(m_config.projectPath + "/Assets"))
+        ProjectConfig tempConfig;
+        if (!FileManager::getInstance().readBinaryFile(m_config.projectPath + "/project.config", tempConfig))
             return false;
 
-        if (!std::filesystem::exists(m_config.projectPath + "/project.config"))
+        if (tempConfig.projectName.empty() || tempConfig.projectPath.empty())
             return false;
 
-        std::ifstream configFile(m_config.projectPath + "/project.config");
-        if (!configFile.is_open())
-            return false;
-
-        std::string projectName, projectPath;
-        std::getline(configFile, projectName);
-        std::getline(configFile, projectPath);
-
-        if (projectName.empty() || projectPath.empty())
-            return false;
-
-        if (projectPath != m_config.projectPath)
-            return false;
-
-        return true;
+        return tempConfig.projectPath == m_config.projectPath;
     }
     catch (...)
     {

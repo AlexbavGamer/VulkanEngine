@@ -9,7 +9,7 @@
 
 using id_t = std::uint32_t;
 
-class Entity {
+class Entity : public std::enable_shared_from_this<Entity> {
     friend class Registry;
 private:
     id_t id;
@@ -25,7 +25,7 @@ public:
     T& addComponent(Args&&... args) {
         static_assert(std::is_base_of<Component, T>::value, "T must inherit from Component");
 
-        auto component = std::make_shared<T>(std::forward<Args>(args)...);
+        auto component = std::make_shared<T>(shared_from_this(), std::forward<Args>(args)...);
         
         components[std::type_index(typeid(T))] = component;
         

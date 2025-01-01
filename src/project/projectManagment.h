@@ -2,12 +2,27 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <boost/hana.hpp>
+
+namespace hana = boost::hana;
 
 struct ProjectConfig
 {
     std::string projectName;
     std::string projectPath;
 };
+
+BOOST_HANA_ADAPT_STRUCT(ProjectConfig,
+                        projectName,
+                        projectPath);
+
+struct TestStruct
+{
+    int valor;
+    int valor2;
+};
+
+BOOST_HANA_ADAPT_STRUCT(TestStruct, valor, valor2);
 
 class VulkanCore;
 
@@ -22,11 +37,9 @@ public:
     bool isProjectOpen() const { return m_isProjectOpen; }
     const ProjectConfig &getConfig() const { return m_config; }
 
-
-
 private:
     bool m_isProjectOpen = false;
-    ProjectConfig m_config;
+    ProjectConfig m_config{};
     VulkanCore *vulkanCore;
     bool createProjectStructure();
     bool validateProjectStructure();
