@@ -133,6 +133,7 @@ void VulkanImGui::cleanup()
     }
 }
 
+
 void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDescriptorSet)
 {
     ImGui_ImplVulkan_NewFrame();
@@ -156,6 +157,7 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
 
     ImGui::Begin("DockSpace", nullptr, window_flags);
     {
+        // Finalize style changes before docking
         ImGui::PopStyleVar(3);
 
         drawer->drawMainMenuBar();
@@ -183,7 +185,8 @@ void VulkanImGui::render(VkCommandBuffer commandBuffer, VkDescriptorSet sceneDes
             ImGui::DockBuilderFinish(dockspace_id);
         }
 
-        drawer->drawSceneWindow(sceneDescriptorSet);
+        // Draw the windows
+        drawer->drawSceneWindow(sceneDescriptorSet, selectedEntity);
         drawer->drawInspectorWindow(selectedEntity);
         drawer->drawHierarchyWindow(selectedEntity);
         drawer->drawContentBrowser();

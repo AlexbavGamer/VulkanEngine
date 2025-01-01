@@ -20,6 +20,7 @@ public:
     std::unique_ptr<RenderSystem> renderSystem;
     CameraComponent camera;
 
+    void addEntity(std::shared_ptr<Entity> entity);
     std::shared_ptr<Entity> createEntity();
     std::shared_ptr<Entity> createLightEntity(LightComponent::LightType lightType = LightComponent::LightType::Point);
     

@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
+#include <typeinfo>
 
 uint32_t WIDTH = 800;
 uint32_t HEIGHT = 600;
@@ -62,12 +63,21 @@ int main()
 
         Scene* scene = renderer.getCore()->getScene();
 
-        std::shared_ptr<Entity> cuboEntity = scene->createEntity();
+        std::shared_ptr<Entity> plano = scene->createEntity();
 
-        if (!renderer.getModelLoader()->LoadModel("engine/models/cubo.fbx", cuboEntity))
+        if(!renderer.getModelLoader()->LoadModel("engine/models/plano.fbx", plano))
         {
-            throw std::runtime_error("Failed load 'cubo.fbx' model in engine/models folder");
+            std::cout << "Failed to load model" << std::endl;
         }
+
+        // std::shared_ptr<Entity> planoEntity = scene->createEntity();
+
+        // std::shared_ptr<Entity> cuboEntity = scene->createEntity();
+
+        // if (!renderer.getModelLoader()->LoadModel("engine/models/cubo.fbx", cuboEntity))
+        // {
+        //     throw std::runtime_error("Failed load 'cubo.fbx' model in engine/models folder");
+        // }
 
         // Ajustar câmera para ver o cubo
         CameraComponent camera;
@@ -79,7 +89,20 @@ int main()
                              glm::vec3(0.0f, 1.0f, 0.0f));
 
         std::shared_ptr<Entity> lightEntity = scene->createLightEntity();
-        
+
+        std::cout << "Entities: " << scene->registry->getEntities().size() << std::endl;
+        for(auto& entity : scene->registry->getEntities())
+        {
+            std::cout << "Components: " << entity->getComponents().size() << std::endl;
+
+            for(auto& component : entity->getComponents())
+            {
+                std::cout << "Component Type: " << component.first.name() << std::endl;
+            }
+
+            std::cout << "Children Count: " << entity->getChildren().size() << std::endl;
+        }
+
         scene->camera = camera;
     }
     catch (const std::exception &e)

@@ -11,7 +11,7 @@ public:
     UIDrawer(VulkanCore* core);
     
     void drawMainMenuBar();
-    void drawSceneWindow(VkDescriptorSet sceneDescriptorSet);
+    void drawSceneWindow(VkDescriptorSet sceneDescriptorSet, std::shared_ptr<Entity>& selectedEntity);
     void drawInspectorWindow(std::shared_ptr<Entity>& selectedEntity);
     void drawHierarchyWindow(std::shared_ptr<Entity>& selectedEntity);
     void drawContentBrowser();
@@ -21,6 +21,7 @@ public:
     void drawOpenProjectModal();
 private:
     VulkanCore* core;
+    void renderGuizmo(std::shared_ptr<Entity>& selectedEntity);
     void showFileContextMenu(const std::string& filePath, const std::string& id, bool isDirectory);
     void handleFileSelection(const std::string& filename);
 

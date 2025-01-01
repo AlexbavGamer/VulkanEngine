@@ -21,6 +21,11 @@ std::shared_ptr<Entity> Scene::createEntity()
     return registry->createEntity();
 }
 
+void Scene::addEntity(std::shared_ptr<Entity> entity)
+{
+    registry->addEntity(entity);
+}
+
 std::shared_ptr<Entity> Scene::createLightEntity(LightComponent::LightType lightType)
 {
     std::shared_ptr<Entity> lightEntity = createEntity();

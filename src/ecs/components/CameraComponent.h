@@ -43,6 +43,15 @@ struct CameraComponent : public Component
         view = glm::lookAt(position, position + front, up);
     }
 
+    glm::mat4 getViewMatrix() const {
+        return view;
+    }
+
+    glm::mat4 getProjectionMatrix() const
+    {
+        return projection;
+    }
+
     glm::mat4 getViewProjection() const
     {
         return projection * view;

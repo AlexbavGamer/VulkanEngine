@@ -56,7 +56,7 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
 UBO RenderSystem::prepareUBO(const TransformComponent &transform, VulkanRenderer &vulkanRender)
 {
     UBO ubo{};
-    ubo.model = transform.getMatrix();
+    ubo.model = transform.getWorldMatrix();
     ubo.view = vulkanRender.getCore()->getScene()->camera.view;
     ubo.proj = vulkanRender.getCore()->getScene()->camera.projection;
     ubo.material.color = glm::vec4(1.0f); // Exemplos de valores

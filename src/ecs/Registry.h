@@ -18,6 +18,13 @@ public:
         return entities;
     }
 
+    void addEntity(std::shared_ptr<Entity> entity)
+    {
+        entity->id = nextEntityId++;
+        
+        entities.push_back(entity);
+    }
+
     std::shared_ptr<Entity> createEntity()
     {
         auto entity = std::make_shared<Entity>();

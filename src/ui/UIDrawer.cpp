@@ -6,10 +6,13 @@
 #include "Scene.h"
 #include <managers/FileManager.h>
 #include <ecs/components/RenderComponent.h>
+#include <ecs/components/TransformComponent.h>
 #include <iostream>
 
+#include "ImGuizmo.h"
 #include "ImGuiFileDialog.h"
 #include <core/VulkanImGui.h>
+#include <glm/gtc/type_ptr.hpp>
 
 UIDrawer::UIDrawer(VulkanCore *core) : core(core) {}
 
@@ -39,21 +42,21 @@ void UIDrawer::drawMainMenuBar()
             }
             ImGui::EndMenu();
         }
-        if(ImGui::BeginMenu("Test Write"))
+        if (ImGui::BeginMenu("Test Write"))
         {
-            if(ImGui::MenuItem("Write"))
+            if (ImGui::MenuItem("Write"))
             {
-                TestStruct _struct {
+                TestStruct _struct{
                     .valor = 3,
                     .valor2 = 5,
                 };
                 FileManager::getInstance().writeBinaryFile("D:/ProjectTest/project.info", _struct);
             }
 
-            if(ImGui::MenuItem("Read"))
+            if (ImGui::MenuItem("Read"))
             {
-                TestStruct _struct {};
-                if(FileManager::getInstance().readBinaryFile("D:/ProjectTest/project.info", _struct))
+                TestStruct _struct{};
+                if (FileManager::getInstance().readBinaryFile("D:/ProjectTest/project.info", _struct))
                 {
                     std::cout << _struct.valor << std::endl;
                     std::cout << _struct.valor2 << std::endl;
@@ -66,13 +69,18 @@ void UIDrawer::drawMainMenuBar()
     }
 }
 
-void UIDrawer::drawSceneWindow(VkDescriptorSet sceneDescriptorSet)
+void UIDrawer::drawSceneWindow(VkDescriptorSet sceneDescriptorSet, std::shared_ptr<Entity> &selectedEntity)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoTitleBar);
 
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+
+    // Exibindo a textura da cena
     ImGui::Image((ImTextureID)sceneDescriptorSet, viewportSize, ImVec2(0, 0), ImVec2(1, 1));
+
+    // Desenhando o Guizmo após a cena
+    renderGuizmo(selectedEntity);
 
     ImGui::End();
     ImGui::PopStyleVar();
@@ -127,7 +135,7 @@ void UIDrawer::drawContentBrowser()
 {
     if (ImGui::Begin("Content Browser"))
     {
-        if(!core->getProjectManager()->isProjectOpen())
+        if (!core->getProjectManager()->isProjectOpen())
         {
             return ImGui::End();
         }
@@ -276,6 +284,41 @@ void UIDrawer::drawOpenProjectModal()
         }
 
         ImGui::EndPopup();
+    }
+}
+
+void UIDrawer::renderGuizmo(std::shared_ptr<Entity> &selectedEntity)
+{
+    if (selectedEntity)
+    {
+        // glm::mat4 projection = core->getScene()->camera.getViewProjection();
+        // glm::mat4 view = core->getScene()->camera.getViewMatrix();
+
+        // if (selectedEntity->hasComponent<TransformComponent>())
+        // {
+        //     glm::mat4 model = selectedEntity->getComponent<TransformComponent>().getTransform();
+
+        //     // Inicia o frame do ImGuizmo
+        //     ImGuizmo::BeginFrame();
+
+        //     // Configura o tamanho da área onde o Gizmo será renderizado
+        //     ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+
+        //     // Renderiza o manipulador de visualização
+        //     ImGuizmo::ViewManipulate(glm::value_ptr(view), 45.0f, ImVec2(10, 10), ImVec2(100, 100), 0x10101010);
+
+        //     // Manipula a transformação do objeto
+        //     bool manip = ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(projection),
+        //                                       ImGuizmo::TRANSLATE, ImGuizmo::LOCAL,
+        //                                       glm::value_ptr(model), nullptr, nullptr);
+        //     if (!manip)
+        //     {
+        //         std::cout << "Guizmo manipulation failed!" << std::endl;
+        //     }
+
+        //     // Aplica a nova transformação ao objeto selecionado
+        //     selectedEntity->getComponent<TransformComponent>().setTransform(model);
+        // }
     }
 }
 

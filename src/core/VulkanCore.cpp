@@ -582,15 +582,23 @@ void VulkanCore::cleanup()
     // Destruir os recursos de sincronização (semaphores, cercas)
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
     {
-        vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-        vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-        vkDestroyFence(device, inFlightFences[i], nullptr);
+        if (renderFinishedSemaphores[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+        }
+        if (imageAvailableSemaphores[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+        }
+        if (inFlightFences[i] != VK_NULL_HANDLE) {
+            vkDestroyFence(device, inFlightFences[i], nullptr);
+        }
     }
 
     // Destruir os framebuffers
     for (auto framebuffer : framebuffers)
     {
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
+        if (framebuffer != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
     }
 
     // Destruir o pool de comandos
@@ -626,33 +634,44 @@ void VulkanCore::cleanup()
         imgui->cleanup();
     }
 
-    for (auto entity : scene->registry->viewWithSpecificComponents<MaterialComponent>())
+    // Destruição dos componentes de Material e Mesh
+    for (auto entity : scene->registry->viewWithSpecificComponents<MaterialComponent, MeshComponent>())
     {
-        MaterialComponent material = entity->getComponent<MaterialComponent>();
+        MaterialComponent& material = entity->getComponent<MaterialComponent>();
+        MeshComponent& mesh = entity->getComponent<MeshComponent>();
 
-        // Certifique-se de destruir todos os recursos antes de destruir o device
+        // Destruir recursos de buffer e memória do material
         vkFreeMemory(device, material.uniformBufferMemory, nullptr);
         vkDestroyBuffer(device, material.uniformBuffer, nullptr);
 
         vkFreeMemory(device, material.lightBufferMemory, nullptr);
         vkDestroyBuffer(device, material.lightBuffer, nullptr);
 
+        // Destruir os pipelines do material
         vkDestroyPipeline(device, material.pipeline, nullptr);
         vkDestroyPipelineLayout(device, material.pipelineLayout, nullptr);
 
         vkDestroyDescriptorSetLayout(device, material.descriptorSetLayout, nullptr);
 
-        // Destruir as texturas
-        if (material.albedoMap)
+        // Destruir as texturas do material
+        if (material.albedoMap) {
             material.albedoMap->Destroy(device);
-        if (material.normalMap)
+        }
+        if (material.normalMap) {
             material.normalMap->Destroy(device);
-        if (material.metallicRoughnessMap)
+        }
+        if (material.metallicRoughnessMap) {
             material.metallicRoughnessMap->Destroy(device);
-        if (material.aoMap)
+        }
+        if (material.aoMap) {
             material.aoMap->Destroy(device);
-        if (material.emissiveMap)
+        }
+        if (material.emissiveMap) {
             material.emissiveMap->Destroy(device);
+        }
+
+        // Destruir o mesh
+        mesh.Destroy(device);
     }
 
     // Destruir o dispositivo lógico

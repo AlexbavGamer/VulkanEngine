@@ -171,6 +171,20 @@ set(IMGUI_SOURCES
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 
+# ImGuizmo
+message(STATUS "Fetching ImGuizmo from GitHub...")
+FetchContent_Declare(
+    imguizmo
+    GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(imguizmo)
+
+# Incluir arquivos fonte do ImGuizmo
+set(IMGUZMO_SOURCES
+    ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp
+)
+
 # ImGuiFileDialog
 message(STATUS "Fetching ImGui File Dialog from GitHub...")
 FetchContent_Declare(
@@ -196,6 +210,7 @@ add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_DIR})
 target_sources(VulkanEngine PRIVATE 
     ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
 )
+target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
 
 message(STATUS "Setting up font generation...")
 set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
@@ -255,6 +270,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${assimp_BINARY_DIR}/include
     ${magic_enum_SOURCE_DIR}/include
     ${imguifiledialog_SOURCE_DIR}
+    ${imguizmo_SOURCE_DIR}
     ${GENERATED_DIR}
     ${Boost_INCLUDE_DIRS}
 )
