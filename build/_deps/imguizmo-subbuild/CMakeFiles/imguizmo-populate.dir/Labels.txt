@@ -1,0 +1,14 @@
+# Target labels
+ imguizmo-populate
+# Source files and their labels
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/CMakeFiles/imguizmo-populate
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/CMakeFiles/imguizmo-populate.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/CMakeFiles/imguizmo-populate-complete.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-build.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-configure.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-download.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-install.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-mkdir.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-patch.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-test.rule
+D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-update.rule

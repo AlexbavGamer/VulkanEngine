@@ -1,0 +1,21 @@
+# ninja log v6
+2	46	7577201233074030	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-mkdir	35f7205357757fda
+2	46	7577201233074030	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-mkdir	35f7205357757fda
+47	3842	7577201271023910	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-download	bb9a289cedb27e3c
+47	3842	7577201271023910	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-download	bb9a289cedb27e3c
+3842	5047	7577201271070209	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-update	8d134486b2c217a8
+3842	5047	7577201271070209	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-update	8d134486b2c217a8
+5054	5096	7577201283573459	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-patch	e9e81262c4858df8
+5054	5096	7577201283573459	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-patch	e9e81262c4858df8
+5096	5137	7577201283980908	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-configure	197d6f27f758079
+5096	5137	7577201283980908	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-configure	197d6f27f758079
+5137	5178	7577201284391561	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-build	9fa03bc8f4da475b
+5137	5178	7577201284391561	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-build	9fa03bc8f4da475b
+5178	5221	7577201284822091	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-install	100601ecf8a45f8a
+5178	5221	7577201284822091	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-install	100601ecf8a45f8a
+5221	5262	7577201285230506	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-test	ff99b7a83e9de3
+5221	5262	7577201285230506	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-test	ff99b7a83e9de3
+5262	5319	7577201285797101	CMakeFiles/imguifiledialog-populate-complete	7036dee66a162c29
+5262	5319	7577201285797101	imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-done	7036dee66a162c29
+5262	5319	7577201285797101	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/CMakeFiles/imguifiledialog-populate-complete	7036dee66a162c29
+5262	5319	7577201285797101	D:/VulkanEngine/build/_deps/imguifiledialog-subbuild/imguifiledialog-populate-prefix/src/imguifiledialog-populate-stamp/imguifiledialog-populate-done	7036dee66a162c29

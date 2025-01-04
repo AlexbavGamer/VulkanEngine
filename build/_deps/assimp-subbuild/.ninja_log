@@ -1,0 +1,21 @@
+# ninja log v6
+2	44	7577200117300651	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-mkdir	af5bd1b487a7c6de
+2	44	7577200117300651	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-mkdir	af5bd1b487a7c6de
+44	66633	7577200783177136	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-download	9508cc76f0f79329
+44	66633	7577200783177136	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-download	9508cc76f0f79329
+66633	66735	7577200783222204	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-update	83d919ec046dea31
+66633	66735	7577200783222204	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-update	83d919ec046dea31
+66735	66776	7577200784619001	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-patch	988e7f5df3b1fcc7
+66735	66776	7577200784619001	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-patch	988e7f5df3b1fcc7
+66777	66819	7577200785044848	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-configure	b6aee6dffc002dfd
+66777	66819	7577200785044848	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-configure	b6aee6dffc002dfd
+66819	66860	7577200785455126	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-build	955035b42e3d4d03
+66819	66860	7577200785455126	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-build	955035b42e3d4d03
+66860	66901	7577200785862410	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-install	ce7e2f963998c04e
+66860	66901	7577200785862410	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-install	ce7e2f963998c04e
+66901	66943	7577200786276906	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-test	92cf699387732682
+66901	66943	7577200786276906	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-test	92cf699387732682
+66943	66999	7577200786836721	CMakeFiles/assimp-populate-complete	a82fb04285570fe8
+66943	66999	7577200786836721	assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-done	a82fb04285570fe8
+66943	66999	7577200786836721	D:/VulkanEngine/build/_deps/assimp-subbuild/CMakeFiles/assimp-populate-complete	a82fb04285570fe8
+66943	66999	7577200786836721	D:/VulkanEngine/build/_deps/assimp-subbuild/assimp-populate-prefix/src/assimp-populate-stamp/assimp-populate-done	a82fb04285570fe8

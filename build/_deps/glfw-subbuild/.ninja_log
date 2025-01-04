@@ -1,0 +1,21 @@
+# ninja log v6
+1	45	7577199600358533	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-mkdir	fa8cc6c7d638519
+1	45	7577199600358533	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-mkdir	fa8cc6c7d638519
+45	4584	7577199645749498	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-download	dff5a07fa22f8668
+45	4584	7577199645749498	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-download	dff5a07fa22f8668
+4584	4681	7577199645790053	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-update	6c5f826cddf5abe5
+4584	4681	7577199645790053	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-update	6c5f826cddf5abe5
+4682	4722	7577199647128732	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-patch	44fda6c0cffb0619
+4682	4722	7577199647128732	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-patch	44fda6c0cffb0619
+4722	4762	7577199647530595	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-configure	fb2fde7c1e9d4637
+4722	4762	7577199647530595	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-configure	fb2fde7c1e9d4637
+4762	4802	7577199647919682	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-build	b83313583d70d0fb
+4762	4802	7577199647919682	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-build	b83313583d70d0fb
+4802	4843	7577199648342491	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-install	52ed74ecfc03f60d
+4802	4843	7577199648342491	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-install	52ed74ecfc03f60d
+4843	4883	7577199648736851	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-test	8506f5dab57b5725
+4843	4883	7577199648736851	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-test	8506f5dab57b5725
+4883	4937	7577199649280041	CMakeFiles/glfw-populate-complete	e7f1e284e5b7f25e
+4883	4937	7577199649280041	glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-done	e7f1e284e5b7f25e
+4883	4937	7577199649280041	D:/VulkanEngine/build/_deps/glfw-subbuild/CMakeFiles/glfw-populate-complete	e7f1e284e5b7f25e
+4883	4937	7577199649280041	D:/VulkanEngine/build/_deps/glfw-subbuild/glfw-populate-prefix/src/glfw-populate-stamp/glfw-populate-done	e7f1e284e5b7f25e

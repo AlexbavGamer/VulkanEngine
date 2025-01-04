@@ -1,0 +1,21 @@
+# ninja log v6
+1	48	7577201182074528	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-mkdir	befc6dc8e4304ee
+1	48	7577201182074528	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-mkdir	befc6dc8e4304ee
+49	2874	7577201210331703	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-download	1109a370a3ca16d5
+49	2874	7577201210331703	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-download	1109a370a3ca16d5
+2874	4594	7577201210373548	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-update	c724b02e72db6d78
+2874	4594	7577201210373548	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-update	c724b02e72db6d78
+4613	4656	7577201228149376	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-patch	9256b9f1639455ae
+4613	4656	7577201228149376	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-patch	9256b9f1639455ae
+4656	4697	7577201228560654	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-configure	3c365ac206ad7562
+4656	4697	7577201228560654	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-configure	3c365ac206ad7562
+4697	4739	7577201228981456	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-build	60fb8dd902bf8cb2
+4697	4739	7577201228981456	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-build	60fb8dd902bf8cb2
+4739	4781	7577201229413049	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-install	3c40c9cd9d1c116f
+4739	4781	7577201229413049	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-install	3c40c9cd9d1c116f
+4781	4824	7577201229832144	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-test	4a824e9d94717a75
+4781	4824	7577201229832144	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-test	4a824e9d94717a75
+4824	4881	7577201230408593	CMakeFiles/imguizmo-populate-complete	2bf32947cef1097
+4824	4881	7577201230408593	imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-done	2bf32947cef1097
+4824	4881	7577201230408593	D:/VulkanEngine/build/_deps/imguizmo-subbuild/CMakeFiles/imguizmo-populate-complete	2bf32947cef1097
+4824	4881	7577201230408593	D:/VulkanEngine/build/_deps/imguizmo-subbuild/imguizmo-populate-prefix/src/imguizmo-populate-stamp/imguizmo-populate-done	2bf32947cef1097

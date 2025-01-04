@@ -1,0 +1,21 @@
+# ninja log v6
+1	44	7577200052604326	stb-populate-prefix/src/stb-populate-stamp/stb-populate-mkdir	cf7279727d11f68c
+1	44	7577200052604326	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-mkdir	cf7279727d11f68c
+44	4783	7577200099988303	stb-populate-prefix/src/stb-populate-stamp/stb-populate-download	be74b94b1abaf38f
+44	4783	7577200099988303	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-download	be74b94b1abaf38f
+4783	6024	7577200100039170	stb-populate-prefix/src/stb-populate-stamp/stb-populate-update	ade0ede81cc49b81
+4783	6024	7577200100039170	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-update	ade0ede81cc49b81
+6024	6065	7577200112801599	stb-populate-prefix/src/stb-populate-stamp/stb-populate-patch	7f665bca74add48
+6024	6065	7577200112801599	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-patch	7f665bca74add48
+6065	6119	7577200113342450	stb-populate-prefix/src/stb-populate-stamp/stb-populate-configure	48f9412c98efda9e
+6065	6119	7577200113342450	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-configure	48f9412c98efda9e
+6119	6162	7577200113780701	stb-populate-prefix/src/stb-populate-stamp/stb-populate-build	f3e27ba864cad6d9
+6119	6162	7577200113780701	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-build	f3e27ba864cad6d9
+6162	6206	7577200114221137	stb-populate-prefix/src/stb-populate-stamp/stb-populate-install	f8a1cfaea196d389
+6162	6206	7577200114221137	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-install	f8a1cfaea196d389
+6206	6251	7577200114663341	stb-populate-prefix/src/stb-populate-stamp/stb-populate-test	8df25e21b9c4d254
+6206	6251	7577200114663341	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-test	8df25e21b9c4d254
+6251	6309	7577200115254827	CMakeFiles/stb-populate-complete	fd8fb50f68ae7b00
+6251	6309	7577200115254827	stb-populate-prefix/src/stb-populate-stamp/stb-populate-done	fd8fb50f68ae7b00
+6251	6309	7577200115254827	D:/VulkanEngine/build/_deps/stb-subbuild/CMakeFiles/stb-populate-complete	fd8fb50f68ae7b00
+6251	6309	7577200115254827	D:/VulkanEngine/build/_deps/stb-subbuild/stb-populate-prefix/src/stb-populate-stamp/stb-populate-done	fd8fb50f68ae7b00
