@@ -23,7 +23,11 @@ file(GLOB_RECURSE SRC_FILES
 file(GLOB SLINT_FILES "ui/*.slint")
 
 # Criar o executável
-add_executable(Launcher ${SRC_FILES})
+if(WIN32)
+    add_executable(Launcher WIN32 ${SRC_FILES})
+else()
+    add_executable(Launcher ${SRC_FILES})
+endif()
 
 # Processar arquivos Slint
 slint_target_sources(Launcher ${SLINT_FILES})

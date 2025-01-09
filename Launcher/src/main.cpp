@@ -61,7 +61,11 @@ std::string browse_folder() {
     return result;
 }
 
+#ifdef __linux__
 int main(int argc, char **argv) 
+#else
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+#endif
 {
     auto window = EngineSelector::create();
 
@@ -86,7 +90,7 @@ int main(int argc, char **argv)
         }
         
         // Aqui você pode adicionar a lógica para iniciar o engine
-        MessageBoxA(NULL, "Iniciando Engine...", "Informação", MB_ICONINFORMATION);
+        // MessageBoxA(NULL, "Iniciando Engine...", "Informação", MB_ICONINFORMATION);
     });
 
     window->run();
