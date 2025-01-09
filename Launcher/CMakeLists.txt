@@ -1,31 +1,41 @@
-# Definição mínima do CMake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.21)
+project(Launcher LANGUAGES CXX)
 
-# Nome do projeto
-project(Launcher)
+find_package(Slint QUIET)
+if(NOT Slint_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        Slint
+        GIT_REPOSITORY https://github.com/slint-ui/slint.git
+        GIT_TAG release/1
+        SOURCE_SUBDIR api/cpp
+    )
+    FetchContent_MakeAvailable(Slint)
+endif()
 
-# Defina o padrão C++ para 17 ou superior
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Coletar todos os arquivos de código-fonte
+file(GLOB_RECURSE SRC_FILES
+    "src/**.h"
+    "src/**.cpp"
+)
 
-# Diretório de origem
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# Coletar todos os arquivos .slint
+file(GLOB SLINT_FILES "ui/*.slint")
 
-# Busca automaticamente todos os arquivos .cpp e .h no diretório src
-file(GLOB_RECURSE SOURCES ${SRC_DIR}/*.cpp)
-file(GLOB_RECURSE HEADERS ${SRC_DIR}/*.h)
+# Criar o executável
+add_executable(Launcher ${SRC_FILES})
 
-# Cria o executável para o launcher
-add_executable(Launcher ${SOURCES} ${HEADERS})
+# Processar arquivos Slint
+slint_target_sources(Launcher ${SLINT_FILES})
 
-# Inclui a pasta Engine, se necessário
-include_directories(${CMAKE_SOURCE_DIR}/Engine)
+# Linkar a biblioteca Slint
+target_link_libraries(Launcher PRIVATE Slint::Slint)
 
-# Linkar o launcher com a biblioteca Engine (se necessário)
-target_link_libraries(Launcher PRIVATE Engine)
-
-# Adiciona flags específicas para Linux
-if(UNIX AND NOT APPLE)
-    target_link_libraries(Launcher PRIVATE pthread dl)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+# Configuração específica para Windows
+if(WIN32)
+    add_custom_command(
+        TARGET Launcher POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:Launcher> $<TARGET_FILE_DIR:Launcher>
+        COMMAND_EXPAND_LISTS
+    )
 endif()

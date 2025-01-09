@@ -1039,8 +1039,20 @@
 },
 {
   "directory": "D:/VulkanEngine/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -ID:/VulkanEngine/Engine -g -std=gnu++17 -o Launcher\\CMakeFiles\\Launcher.dir\\src\\main.cpp.obj -c D:\\VulkanEngine\\Launcher\\src\\main.cpp",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -ID:/VulkanEngine/build/Launcher -isystem \"C:/Program Files/Slint-cpp 1.9.1/include/slint\" -g -std=gnu++20 -std=gnu++20 /bigobj -o Launcher\\CMakeFiles\\Launcher.dir\\src\\appview.cpp.obj -c D:\\VulkanEngine\\Launcher\\src\\appview.cpp",
+  "file": "D:\\VulkanEngine\\Launcher\\src\\appview.cpp",
+  "output": "Launcher\\CMakeFiles\\Launcher.dir\\src\\appview.cpp.obj"
+},
+{
+  "directory": "D:/VulkanEngine/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -ID:/VulkanEngine/build/Launcher -isystem \"C:/Program Files/Slint-cpp 1.9.1/include/slint\" -g -std=gnu++20 -std=gnu++20 /bigobj -o Launcher\\CMakeFiles\\Launcher.dir\\src\\main.cpp.obj -c D:\\VulkanEngine\\Launcher\\src\\main.cpp",
   "file": "D:\\VulkanEngine\\Launcher\\src\\main.cpp",
   "output": "Launcher\\CMakeFiles\\Launcher.dir\\src\\main.cpp.obj"
+},
+{
+  "directory": "D:/VulkanEngine/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -ID:/VulkanEngine/build/Launcher -isystem \"C:/Program Files/Slint-cpp 1.9.1/include/slint\" -g -std=gnu++20 -std=gnu++20 /bigobj -o Launcher\\CMakeFiles\\Launcher.dir\\slint_generated_app-window_1.cpp.obj -c D:\\VulkanEngine\\build\\Launcher\\slint_generated_app-window_1.cpp",
+  "file": "D:\\VulkanEngine\\build\\Launcher\\slint_generated_app-window_1.cpp",
+  "output": "Launcher\\CMakeFiles\\Launcher.dir\\slint_generated_app-window_1.cpp.obj"
 }
 ]

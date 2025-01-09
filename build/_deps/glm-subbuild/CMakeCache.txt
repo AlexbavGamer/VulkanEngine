@@ -27,7 +27,7 @@ CMAKE_FIND_PACKAGE_REDIRECTS_DIR:STATIC=D:/VulkanEngine/build/_deps/glm-subbuild
 CMAKE_INSTALL_PREFIX:PATH=C:/Program Files (x86)/glm-populate
 
 //No help, variable specified on the command line.
-CMAKE_MAKE_PROGRAM:FILEPATH=C:/Users/Alexsandre/.tools/ninja.exe
+CMAKE_MAKE_PROGRAM:FILEPATH=C:/msys64/mingw64/bin/ninja.exe
 
 //Value Computed by CMake
 CMAKE_PROJECT_DESCRIPTION:STATIC=

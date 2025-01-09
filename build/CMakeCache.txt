@@ -311,7 +311,7 @@ CMAKE_INSTALL_SYSCONFDIR:PATH=etc
 CMAKE_LINKER:FILEPATH=C:/msys64/ucrt64/bin/ld.exe
 
 //Program used to build from build.ninja files.
-CMAKE_MAKE_PROGRAM:FILEPATH=C:/Users/Alexsandre/.tools/ninja.exe
+CMAKE_MAKE_PROGRAM:FILEPATH=C:/msys64/mingw64/bin/ninja.exe
 
 //Flags used by the linker during the creation of modules during
 // all build types.
@@ -448,6 +448,9 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 // during the make.  This is useful for debugging only. With Visual
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
+
+//The default resource embedding option to pass to the Slint compiler
+DEFAULT_SLINT_EMBED_RESOURCES:STRING=as-absolute-path
 
 //Doxygen documentation generation tool (https://www.doxygen.nl)
 DOXYGEN_EXECUTABLE:FILEPATH=DOXYGEN_EXECUTABLE-NOTFOUND
@@ -650,6 +653,15 @@ MultiProject_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 MultiProject_SOURCE_DIR:STATIC=D:/VulkanEngine
+
+//Path to the slint-compiler executable
+SLINT_COMPILER:STRING=
+
+//The Slint widget style
+SLINT_STYLE:STRING=fluent
+
+//The directory containing a CMake configuration file for Slint.
+Slint_DIR:PATH=C:/Program Files/Slint-cpp 1.9.1/lib/cmake/Slint
 
 //Value Computed by CMake
 VulkanEngine_BINARY_DIR:STATIC=D:/VulkanEngine/build/Engine
@@ -915,6 +927,8 @@ CMAKE_STRIP-ADVANCED:INTERNAL=1
 CMAKE_TAPI-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
+//STRINGS property for variable: DEFAULT_SLINT_EMBED_RESOURCES
+DEFAULT_SLINT_EMBED_RESOURCES-STRINGS:INTERNAL=as-absolute-path;embed-files;embed-for-software-renderer
 //Have include dinput.h
 DINPUT_H_FOUND:INTERNAL=1
 //ADVANCED property for variable: DOXYGEN_EXECUTABLE

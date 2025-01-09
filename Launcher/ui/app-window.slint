@@ -1,0 +1,208 @@
+import { Button, ComboBox, LineEdit, ScrollView, StandardButton, GroupBox, CheckBox, TextEdit, SpinBox } from "std-widgets.slint";
+
+export component EngineSelector inherits Window {
+    title: "Game Engine Launcher";
+    width: 800.0px;
+    height: 480.0px;
+    background: #2e2e2e;
+
+    callback browse();
+    callback open_settings();
+    callback start_engine();
+
+    in-out property <string> project_path: "";
+    in-out property <string> project_version: "1.0";
+
+    VerticalLayout {
+        padding: 20.0px;
+        spacing: 15.0px;
+
+        // Cabeçalho
+        Text {
+            text: "Game Engine Launcher";
+            font-size: 24.0px;
+            color: white;
+            horizontal-alignment: center;
+        }
+
+        // Seleção do Projeto
+        GroupBox {
+            title: "Projeto";
+            vertical-stretch: 0;
+
+            VerticalLayout {
+                spacing: 10.0px;
+
+                HorizontalLayout {
+                    spacing: 10.0px;
+                    LineEdit {
+                        placeholder-text: "Caminho do Projeto";
+                        width: root.width - 140.0px;
+                        text: project_path;
+                    }
+
+                    Button {
+                        text: "Procurar";
+                        width: 90.0px;
+                        clicked => {
+                            root.browse();
+                        }
+                    }
+                }
+
+                ComboBox {
+                    model: ["Novo Projeto", "Projeto Existente"];
+                    current-value: "Novo Projeto";
+                }
+            }
+        }
+
+        // Configurações do Engine
+        GroupBox {
+            title: "Configurações do Engine";
+            vertical-stretch: 0;
+
+            GridLayout {
+                spacing: 20.0px;
+                Row {
+                    Text {
+                        text: "Versão:";
+                        color: white;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+
+                    TextEdit {
+                        font-size: 10.0px;
+                        text: project_version;
+                    }
+                }
+            }
+        }
+
+        // Botões de Ação
+        HorizontalLayout {
+            spacing: 10.0px;
+            alignment: end;
+
+            Button {
+                text: "Configurações Avançadas";
+                clicked => {
+                    root.open_settings();
+                }
+            }
+
+            Button {
+                text: "Iniciar Engine";
+                primary: true;
+                clicked => {
+                    root.start_engine();
+                }
+            }
+        }
+    }
+}
+export component SettingsWindow inherits Window {
+    title: "Settings";
+    width: 400px;
+    height: 500px;
+
+    callback save-settings();
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "Settings";
+            font-size: 24px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            color: white;
+        }
+
+        Rectangle {
+            background: #2b2b2b;
+            border-radius: 4px;
+            VerticalLayout {
+                padding: 16px;
+                spacing: 16px;
+
+                GroupBox {
+                    title: "Language";
+                    vertical-stretch: 0;
+                    ComboBox {
+                        width: 100%;
+                        model: ["English", "Português", "Español"];
+                        current-value: "English";
+                    }
+                }
+
+                GroupBox {
+                    title: "Display";
+                    vertical-stretch: 0;
+                    VerticalLayout {
+                        spacing: 8px;
+                        CheckBox {
+                            text: "Dark Mode";
+                            checked: true;
+                        }
+
+                        CheckBox {
+                            text: "Show tooltips";
+                            checked: true;
+                        }
+                    }
+                }
+
+                GroupBox {
+                    title: "Performance";
+                    vertical-stretch: 0;
+                    GridLayout {
+                        spacing: 8px;
+                        Row {
+                            Text {
+                                text: "Max FPS:";
+                                color: white;
+                                vertical-alignment: center;
+                            }
+
+                            SpinBox {
+                                width: 120px;
+                                value: 60;
+                                minimum: 30;
+                                maximum: 144;
+                            }
+                        }
+
+                        Row {
+                            Text {
+                                text: "Quality:";
+                                color: white;
+                                vertical-alignment: center;
+                            }
+
+                            ComboBox {
+                                width: 120px;
+                                model: ["Low", "Medium", "High"];
+                                current-value: "Medium";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            Button {
+                text: "Save";
+                primary: true;
+                clicked => {
+                    root.save-settings();
+                }
+            }
+        }
+    }
+}
