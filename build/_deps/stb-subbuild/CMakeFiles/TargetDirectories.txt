@@ -1,3 +1,0 @@
-D:/VulkanEngine/build/_deps/stb-subbuild/CMakeFiles/stb-populate.dir
-D:/VulkanEngine/build/_deps/stb-subbuild/CMakeFiles/edit_cache.dir
-D:/VulkanEngine/build/_deps/stb-subbuild/CMakeFiles/rebuild_cache.dir
