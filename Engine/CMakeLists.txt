@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.14)
 project(VulkanEngine)
 
+# Set policies to avoid warnings
+if(POLICY CMP0144)
+    cmake_policy(SET CMP0144 NEW)
+endif()
+
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 message(STATUS "Starting VulkanEngine CMake configuration...")
 
 # Definir o padrão C++ como C++17
@@ -10,16 +19,20 @@ set(CMAKE_CXX_STANDARD 17)
 if(WIN32)
 message(STATUS "Configuring custom Boost paths for Windows...")
 set(BOOST_ROOT "C:/Boost")
-set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_87")
+set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
 set(BOOST_LIBRARYDIR "C:/Boost/lib")
 
 # Desabilitar o auto-link do Boost no Windows
 add_definitions(-DBOOST_ALL_NO_LIB)
 endif()
 
+set(Boost_USE_STATIC_LIBS        ON)
+set(Boost_USE_STATIC_RUNTIME     ON)
+set(Boost_USE_MULTITHREADED      ON)
+
 # Encontrar Boost do sistema
-message(STATUS "Looking for Boost 1.87.0...")
-find_package(Boost 1.87.0 REQUIRED COMPONENTS 
+message(STATUS "Looking for Boost 1.88.0...")
+find_package(Boost 1.88.0 REQUIRED COMPONENTS 
     filesystem
     system
     thread
@@ -273,6 +286,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${imguizmo_SOURCE_DIR}
     ${GENERATED_DIR}
     ${Boost_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 message(STATUS "Setting up library linkage...")
