@@ -20,6 +20,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache Vulkan SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vulkan-sdk
+          key: ${{ runner.os }}-vulkan-sdk-${{ hashFiles('**/vulkan-config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vulkan-sdk-
+
       - name: Install Vulkan SDK
         uses: humbletim/install-vulkan-sdk@v1.1.1
         with:
