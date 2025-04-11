@@ -4,90 +4,69 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  clean:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@v2
-        with:
-          token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          keep_minimum_runs: 3
-
   build:
-    needs: clean
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
-        
-    runs-on: ${{ matrix.os }}
+        os: [ubuntu-latest, windows-latest]
 
     steps:
+      # Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache CMake files
-        uses: actions/cache@v3.3.1
+      # Set up the CMake environment
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v1
         with:
-          path: |
-            ~/.cmake
-            build/
-          key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-cmake-
+          cmake-version: '3.10'
 
-      - name: Install Doxygen
-        uses: ssciwr/doxygen-install@v1.2.0
-        with:
-          version: "1.12.0"
-          
-      - name: Install Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.1.1
-        with:
-          version: latest
-          cache: false
-
-      - name: Install Build Dependencies (Linux)
+      # Install dependencies (Linux-specific)
+      - name: Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake libwayland-dev wayland-protocols libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxkbcommon-dev vulkan-tools libvulkan-dev libglm-dev
+          sudo apt-get install -y build-essential cmake
 
-      - name: Configure and Build (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      - name: Configure and Build (Linux)
+      # Build the project (Linux)
+      - name: Build project (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
 
-      - name: Package Release Artifacts (Windows)
+      # Build the project (Windows)
+      - name: Build project (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir release
-          xcopy /E /I build\* release\
-          7z a VulkanEngine-windows.zip ./release/*
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
 
-      - name: Package Release Artifacts (Linux)
+      # Package release artifacts (Linux)
+      - name: Package release (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir release
           cp -r build/* release/
           zip -r VulkanEngine-linux.zip release/
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      # Package release artifacts (Windows)
+      - name: Package release (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir release
+          xcopy /E /I build\* release\
+          7z a VulkanEngine-windows.zip ./release/*
+
+      # Upload release artifacts
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v3
         with:
-          files: |
+          name: VulkanEngine-${{ matrix.os }}
+          path: |
             VulkanEngine-*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
