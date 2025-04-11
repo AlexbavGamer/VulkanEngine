@@ -40,13 +40,13 @@ message(STATUS "Checking platform-specific configurations...")
 if(WIN32)
     message(STATUS "Windows platform detected")
     # Verificação do Vulkan SDK no Windows
-    if(NOT DEFINED ENV{VULKAN_SDK})
+    if(NOT DEFINED ENV{VK_SDK_PATH})
         message(FATAL_ERROR "Vulkan SDK não encontrado! Certifique-se de que o Vulkan SDK está instalado e a variável de ambiente VULKAN_SDK está configurada corretamente.")
     endif()
 
     message(STATUS "Configuring Vulkan SDK paths for Windows...")
     # Configurações específicas para Windows
-    set(VULKAN_SDK $ENV{VULKAN_SDK})
+    set(VULKAN_SDK $ENV{VK_SDK_PATH})
     string(REPLACE "\\" "/" VULKAN_SDK ${VULKAN_SDK})  # Troca barras invertidas por barras normais
     message(STATUS "Vulkan SDK path: ${VULKAN_SDK}")
 
