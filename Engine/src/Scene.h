@@ -17,7 +17,7 @@ public:
 
     std::unique_ptr<Registry> registry;
     std::unique_ptr<RenderSystem> renderSystem;
-    CameraComponent camera;
+    std::shared_ptr<Entity> cameraEntity;
 
     void addEntity(std::shared_ptr<Entity> entity);
 
@@ -57,4 +57,5 @@ public:
     bool cursorEnabled = true;
     float mouseSensitivity = 0.05f;
     float moveSpeed = 0.1f;
+    float runSpeed = 1.0f;
 };

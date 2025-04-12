@@ -82,17 +82,14 @@ int main()
         // }
 
         // Ajustar câmera para ver o cubo
-        CameraComponent camera;
+        std::shared_ptr<Entity> cameraEntity = scene->createEntity();
+        cameraEntity->setName("Camera");
+        CameraComponent camera = cameraEntity->addComponent<CameraComponent>();
         camera.width = WIDTH;
         camera.height = HEIGHT;
-        camera::updateCamera(camera,
-                             glm::vec3(0.0f, 0.0f, 0),
-                             glm::vec3(0.0f, 0.0f, -1.0f),
-                             glm::vec3(0.0f, 1.0f, 0.0f));
-
+        camera::updateCamera(camera,camera.position, camera.front, camera.up);
         std::shared_ptr<Entity> lightEntity = scene->createLightEntity();
-
-        scene->camera = camera;
+        scene->cameraEntity = cameraEntity;
     }
     catch (const std::exception &e)
     {

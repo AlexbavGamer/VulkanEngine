@@ -58,8 +58,8 @@ void UIDrawer::drawSceneWindow(VkDescriptorSet sceneDescriptorSet, std::shared_p
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
     ImVec2 windowPos = ImGui::GetWindowPos();
 
-    glm::mat4 projection = core->getScene()->camera.projection;
-    glm::mat4 view = core->getScene()->camera.view;
+    glm::mat4 projection = core->getScene()->cameraEntity->getComponent<CameraComponent>().projection;
+    glm::mat4 view = core->getScene()->cameraEntity->getComponent<CameraComponent>().view;
 
     // Draw the scene texture first
     ImGui::Image((ImTextureID)sceneDescriptorSet, viewportSize, ImVec2(0, 0), ImVec2(1, 1));
@@ -118,6 +118,12 @@ void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)
         {
             auto& lightComponent = selectedEntity->getComponent<LightComponent>();
             DrawInspector(lightComponent, "Light Component");
+        }
+
+        if(selectedEntity->hasComponent<CameraComponent>())
+        {
+            auto& cameraComponent = selectedEntity->getComponent<CameraComponent>();
+            DrawInspector(cameraComponent, "Camera Component");
         }
 
 
@@ -457,7 +463,7 @@ inline void UIDrawer::DrawInspector(T &obj, const std::string_view &title)
         return;
 
     hana::for_each(hana::accessors<T>(), [&](auto pair)
-                   {
+    {
         constexpr auto name = hana::first(pair);
         auto accessor = hana::second(pair);
         using MemberType = std::remove_reference_t<decltype(accessor(obj))>;
@@ -471,10 +477,31 @@ inline void UIDrawer::DrawInspector(T &obj, const std::string_view &title)
             ImGui::Checkbox(fieldName.data(), &accessor(obj));
         } else if constexpr (std::is_same_v<MemberType, glm::vec3>) {
             ImGui::DragFloat3(fieldName.data(), &accessor(obj)[0], 0.1f);
+        } else if constexpr (std::is_same_v<MemberType, glm::quat>) {
+            ImGui::DragFloat4(fieldName.data(), &accessor(obj)[0], 0.1f);
+        } else if constexpr (std::is_same_v<MemberType, glm::vec4>) {
+            ImGui::DragFloat4(fieldName.data(), &accessor(obj)[0], 0.1f);
+        } else if constexpr (std::is_same_v<MemberType, std::string>) {
+            ImGui::InputText(fieldName.data(), &accessor(obj));
+        } else if constexpr (std::is_enum_v<MemberType>) {
+            auto names = magic_enum::enum_names<MemberType>();
+            std::vector<const char*> items;
+            items.reserve(names.size());
+            
+            // Convertendo cada string_view para const char*
+            for (const auto& name : names) {
+                items.push_back(name.data());
+            }
+            
+            int currentItem = static_cast<int>(accessor(obj));
+            if (ImGui::Combo(fieldName.data(), &currentItem, items.data(), static_cast<int>(items.size()))) {
+                accessor(obj) = static_cast<MemberType>(currentItem);
+            }
         } else {
             // Para structs aninhadas que também usam BOOST_HANA_DEFINE_STRUCT
             // DrawInspector(accessor(obj), fieldName);
-        } });
+        } 
+    });
 
     ImGui::TreePop();
 }

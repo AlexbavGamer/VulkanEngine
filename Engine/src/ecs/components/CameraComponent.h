@@ -7,7 +7,8 @@
 
 struct CameraComponent : public Component
 {
-    CameraComponent(std::shared_ptr<Entity> owner = nullptr) : Component(owner) {
+    CameraComponent(std::shared_ptr<Entity> owner = nullptr) : Component(owner) 
+    {
         this->projection = glm::mat4(1.0f);
         this->view = glm::mat4(1.0f);
         this->width = 800.0f;
@@ -16,7 +17,7 @@ struct CameraComponent : public Component
         this->yaw = -90.0f;
         this->pitch = 0;
         this->sensitivity = 0.1f;
-        this->fov = 90.0f;
+        this->fov = 45.0f;  // FOV padrão geralmente é 45 graus
 
         this->position = glm::vec3(0.0f, 0.0f, 3.0f);
         this->front = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -27,8 +28,8 @@ struct CameraComponent : public Component
     {
         yaw += deltaX * sensitivity;
         pitch += deltaY * sensitivity;
-
         // Constrain pitch to avoid camera flipping
+
         if (pitch > 89.0f)
             pitch = 89.0f;
         if (pitch < -89.0f)
@@ -40,7 +41,6 @@ struct CameraComponent : public Component
         newFront.y = sin(glm::radians(pitch));
         newFront.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
         front = glm::normalize(newFront);
-
         // Update view matrix
         view = glm::lookAt(position, position + front, up);
     }

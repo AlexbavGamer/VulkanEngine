@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
 
-void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
+void RenderSystem::render(Registry& registry, VkCommandBuffer commandBuffer)
 {
     VulkanRenderer &vulkanRender = VulkanRenderer::getInstance();
 
@@ -23,42 +23,73 @@ void RenderSystem::render(Registry &registry, VkCommandBuffer commandBuffer)
     scissor.offset = {0, 0};
     scissor.extent = vulkanRender.getCore()->getSwapChain()->getExtent();
 
-    registry.view<MeshComponent, MaterialComponent, TransformComponent>(
-        [&](std::shared_ptr<Entity> entity, const MeshComponent &mesh, const MaterialComponent &material, const TransformComponent &transform)
-        {
-            if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0 ||
-                !material.descriptorSet || !material.uniformBuffer || !material.pipeline || !material.pipelineLayout)
-            {
-                return;
+    // Set viewport and scissor once for all entities
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // Recursive function to render an entity and all its children
+    std::function<void(std::shared_ptr<Entity>)> renderEntityHierarchy = 
+        [&](std::shared_ptr<Entity> entity) {
+            // Render the entity if it has the required components
+            if (entity->hasComponent<MeshComponent>() && 
+                entity->hasComponent<MaterialComponent>() && 
+                entity->hasComponent<TransformComponent>()) {
+                
+                const auto& mesh = entity->getComponent<MeshComponent>();
+                const auto& material = entity->getComponent<MaterialComponent>();
+                const auto& transform = entity->getComponent<TransformComponent>();
+                
+                if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indexCount == 0 ||
+                    !material.descriptorSet || !material.uniformBuffer || !material.pipeline || !material.pipelineLayout) {
+                    // Skip entities with invalid components
+                }
+                else {
+                    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+
+                    // Prepare UBO
+                    UBO ubo = prepareUBO(transform, vulkanRender);
+
+                    // Update Uniform Buffer
+                    vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.uniformBufferMemory, ubo);
+
+                    LightUBO lightUBO = prepareLightUBO(vulkanRender);
+                    vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.lightBufferMemory, lightUBO);
+
+                    VkDeviceSize offsets[] = {0};
+                    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer, offsets);
+                    vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout, 0, 1, &material.descriptorSet, 0, nullptr);
+                    vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
+                }
             }
+            
+            // Recursively render all children
+            for (const auto& child : entity->getChildren()) {
+                auto childEntity = std::dynamic_pointer_cast<Entity>(child);
+                if (childEntity) {
+                    renderEntityHierarchy(childEntity);
+                }
+            }
+        };
 
-            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-            vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
-
-            // Preencher UBO
-            UBO ubo = prepareUBO(transform, vulkanRender);
-
-            // Atualizar Uniform Buffer
-            vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.uniformBufferMemory, ubo);
-
-            LightUBO LightUBO = prepareLightUBO(vulkanRender);
-            vulkanRender.getCore()->getDescriptor()->updateUniformBuffer(material.lightBufferMemory, LightUBO);
-
-            VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer, offsets);
-            vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipelineLayout, 0, 1, &material.descriptorSet, 0, nullptr);
-            vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
-        });
+    // Get all entities from the registry
+    auto entities = registry.getEntities();
+    
+    // Render only root entities (those without parents)
+    for (auto& entity : entities) {
+        // Check if this is a root entity (no parent)
+        if (!entity->getParent()) {
+            renderEntityHierarchy(entity);
+        }
+    }
 }
 
 UBO RenderSystem::prepareUBO(const TransformComponent &transform, VulkanRenderer &vulkanRender)
 {
     UBO ubo{};
     ubo.model = transform.getWorldMatrix();
-    ubo.view = vulkanRender.getCore()->getScene()->camera.view;
-    ubo.proj = vulkanRender.getCore()->getScene()->camera.projection;
+    ubo.view = vulkanRender.getCore()->getScene()->cameraEntity->getComponent<CameraComponent>().view;
+    ubo.proj = vulkanRender.getCore()->getScene()->cameraEntity->getComponent<CameraComponent>().projection;
     ubo.material.color = glm::vec4(1.0f); // Exemplos de valores
     ubo.material.metallic = 0.5f;
     ubo.material.roughness = 0.8f;
@@ -78,8 +109,7 @@ LightUBO RenderSystem::prepareLightUBO(VulkanRenderer &vulkanRender)
     for (size_t i = 0; i < lightUBO.numLights; ++i)
     {
         const LightComponent &lightComponent = lights[i]->getComponent<LightComponent>();
-        GPULight gpuLight
-        {
+        GPULight gpuLight{
             .position = lightComponent.position,
             .direction = lightComponent.direction,
             .color = lightComponent.color,
@@ -90,8 +120,7 @@ LightUBO RenderSystem::prepareLightUBO(VulkanRenderer &vulkanRender)
             .constant = lightComponent.constant,
             .linear = lightComponent.linear,
             .quadratic = lightComponent.quadratic,
-            .type = static_cast<int>(lightComponent.type)
-        };
+            .type = static_cast<int>(lightComponent.type)};
         lightUBO.lights[i] = gpuLight;
     }
 

@@ -12,6 +12,7 @@ void EngineModelLoader::ConfigureTransform(std::shared_ptr<Entity> entity)
     transform.setRotation(glm::vec3(0.0f));
     transform.setScale(glm::vec3(1.0f));
 }
+
 void EngineModelLoader::ProcessTransform(aiNode *node, TransformComponent &transform)
 {
     // Extract transformation from the node
@@ -24,6 +25,10 @@ void EngineModelLoader::ProcessTransform(aiNode *node, TransformComponent &trans
     glmTransform[2][0] = nodeTransform.a3; glmTransform[2][1] = nodeTransform.b3; glmTransform[2][2] = nodeTransform.c3; glmTransform[2][3] = nodeTransform.d3;
     glmTransform[3][0] = nodeTransform.a4; glmTransform[3][1] = nodeTransform.b4; glmTransform[3][2] = nodeTransform.c4; glmTransform[3][3] = nodeTransform.d4;
     
+    // Apply coordinate system correction (Blender Z-up to Y-up)
+    glm::mat4 correctionMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    glmTransform = correctionMatrix * glmTransform;
+
     // Extract position, rotation, and scale
     glm::vec3 scale;
     glm::quat rotation;
@@ -36,8 +41,8 @@ void EngineModelLoader::ProcessTransform(aiNode *node, TransformComponent &trans
     // Convert quaternion to euler angles
     glm::vec3 eulerAngles = glm::degrees(glm::eulerAngles(rotation));
     
-    // Apply a scale factor to reduce the size (0.01 = 1/100 of original size)
-    const float scaleFactor = 0.01f;
+    // Apply a scale factor if needed
+    const float scaleFactor = 1.0f;
     scale *= scaleFactor;
     translation *= scaleFactor;
     

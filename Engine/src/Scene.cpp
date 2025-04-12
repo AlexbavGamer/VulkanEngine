@@ -40,7 +40,7 @@ void Scene::updateCamera()
     glm::vec3 target(0.0f, 0.0f, 0.0f);
     glm::vec3 up(0.0f, 1.0f, 0.0f);
 
-    camera::updateCamera(camera, cameraPos, target, up);
+    camera::updateCamera(cameraEntity->getComponent<CameraComponent>(), cameraPos, target, up);
 }
 
 void Scene::handleKeyboardInput(GLFWwindow *window)
@@ -77,29 +77,31 @@ void Scene::handleKeyboardInput(GLFWwindow *window)
         glm::vec3 cameraUp = glm::normalize(glm::cross(cameraRight, cameraFront));
 
         // Get current camera position
-        glm::mat4 view = camera.view;
+        glm::mat4 view = cameraEntity->getComponent<CameraComponent>().view;
         glm::vec4 pos = glm::inverse(view)[3];
         glm::vec3 position = glm::vec3(pos.x, pos.y, pos.z);
 
+        // Get current speed based on shift key
+        float currentSpeed = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) ? runSpeed : moveSpeed;
+
         // Handle movement
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            position += cameraFront * moveSpeed;
+            position += cameraFront * currentSpeed;
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            position -= cameraFront * moveSpeed;
+            position -= cameraFront * currentSpeed;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            position -= cameraRight * moveSpeed;
+            position -= cameraRight * currentSpeed;
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            position += cameraRight * moveSpeed;
+            position += cameraRight * currentSpeed;
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-            position += cameraUp * moveSpeed; // Move up
+            position += cameraUp * currentSpeed; // Move up
         if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-            position -= cameraUp * moveSpeed; // Move down
+            position -= cameraUp * currentSpeed; // Move down
 
         // Update camera view matrix
-        camera.position = position;
-        camera.view = glm::lookAt(position, position + cameraFront, cameraUp);
-    }
-}
+        cameraEntity->getComponent<CameraComponent>().position = position;
+        cameraEntity->getComponent<CameraComponent>().view = glm::lookAt(position, position + cameraFront, cameraUp);
+    }}
 
 void Scene::handleMouseInput(GLFWwindow *window, double xpos, double ypos)
 {
@@ -133,12 +135,12 @@ void Scene::handleMouseInput(GLFWwindow *window, double xpos, double ypos)
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
 
     glm::vec3 cameraFront = glm::normalize(direction);
-    glm::mat4 view = camera.view;
+    glm::mat4 view = cameraEntity->getComponent<CameraComponent>().view;
     glm::vec4 pos = glm::inverse(view)[3];
     glm::vec3 position = glm::vec3(pos.x, pos.y, pos.z);
     glm::vec3 target = position + cameraFront;
 
-    camera.view = glm::lookAt(position, target, glm::vec3(0.0f, 1.0f, 0.0f));
+    cameraEntity->getComponent<CameraComponent>().view = glm::lookAt(position, target, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void Scene::updateMousePosition(double mouseX, double mouseY)
@@ -155,18 +157,18 @@ void Scene::updateMousePosition(double mouseX, double mouseY)
     double deltaY = currentMouseY - lastMouseY;
 
     // Update camera rotation based on mouse movement
-    camera.handleMouseMovement(deltaX, deltaY);
+    cameraEntity->getComponent<CameraComponent>().handleMouseMovement(deltaX, deltaY);
 }
 
 void Scene::updateCameraAspect(float aspectRatio)
 {
-    camera.projection = glm::perspective(glm::radians(camera.fov), aspectRatio, 0.1f, 100.0f);
-    camera.projection[1][1] *= -1;
+    cameraEntity->getComponent<CameraComponent>().projection = glm::perspective(glm::radians(cameraEntity->getComponent<CameraComponent>().fov), aspectRatio, 0.1f, 1000.0f);
+    cameraEntity->getComponent<CameraComponent>().projection[1][1] *= -1; // Correção para Vulkan
     
-    camera.view = glm::lookAt(
-        camera.position,
-        camera.position + camera.front,
-        camera.up
+    cameraEntity->getComponent<CameraComponent>().view = glm::lookAt(
+        cameraEntity->getComponent<CameraComponent>().position,
+        cameraEntity->getComponent<CameraComponent>().position + cameraEntity->getComponent<CameraComponent>().front,
+        cameraEntity->getComponent<CameraComponent>().up
     );
 }
 
