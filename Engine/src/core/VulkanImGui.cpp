@@ -18,8 +18,8 @@
 #include "ImGuizmo.h"
 #include "VulkanRenderer.h"
 
-#include "Roboto-Regular.h"
-#include "fa-solid-900.h"
+// #include "Roboto-Regular.h"
+// #include "fa-solid-900.h"
 #include <ui/UIdrawer.h>
 
 VulkanImGui::VulkanImGui(VulkanCore *core) : core(core), vulkanRenderer(VulkanRenderer::getInstance()), imguiPool(VK_NULL_HANDLE)
@@ -30,16 +30,16 @@ VulkanImGui::VulkanImGui(VulkanCore *core) : core(core), vulkanRenderer(VulkanRe
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-    ImFontConfig fontConfig;
-    fontConfig.FontDataOwnedByAtlas = false;
-    ImFont *robotoFont = io.Fonts->AddFontFromMemoryTTF((void *)EmbeddedFonts::Roboto_Regular, sizeof(EmbeddedFonts::Roboto_Regular), 20.0f, &fontConfig);
-    io.FontDefault = robotoFont;
+    // ImFontConfig fontConfig;
+    // fontConfig.FontDataOwnedByAtlas = false;
+    // ImFont *robotoFont = io.Fonts->AddFontFromMemoryTTF((void *)EmbeddedFonts::Roboto_Regular, sizeof(EmbeddedFonts::Roboto_Regular), 20.0f, &fontConfig);
+    // io.FontDefault = robotoFont;
 
-    static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
-    ImFontConfig icons_config;
-    icons_config.MergeMode = true;
-    icons_config.PixelSnapH = true;
-    iconFont = io.Fonts->AddFontFromMemoryTTF((void *)EmbeddedFonts::fa_solid_900, sizeof(EmbeddedFonts::fa_solid_900), 16.0f, &icons_config, icons_ranges);
+    // static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+    // ImFontConfig icons_config;
+    // icons_config.MergeMode = true;
+    // icons_config.PixelSnapH = true;
+    // iconFont = io.Fonts->AddFontFromMemoryTTF((void *)EmbeddedFonts::fa_solid_900, sizeof(EmbeddedFonts::fa_solid_900), 16.0f, &icons_config, icons_ranges);
 
     this->drawer = new UIDrawer(core);
 

@@ -5,13 +5,19 @@
 #include "../project/projectManagment.h"
 #include "Scene.h"
 #include <managers/FileManager.h>
-#include <ecs/components/RenderComponent.h>
 #include <ecs/components/TransformComponent.h>
+#include <ecs/components/LightComponent.h>
 #include <iostream>
-
+#include <boost/hana.hpp>
 #include "ImGuiFileDialog.h"
 #include <core/VulkanImGui.h>
 #include <glm/gtc/type_ptr.hpp>
+
+namespace hana = boost::hana;
+
+template <typename T>
+constexpr bool is_hana_struct_v = hana::Struct<std::decay_t<T>>::value;
+
 
 UIDrawer::UIDrawer(VulkanCore *core) : core(core) {}
 
@@ -97,13 +103,59 @@ void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)
 
     if (selectedEntity)
     {
-        for (const auto &[type_index, component] : selectedEntity->getComponents())
+        // Display entity name and ID
+        ImGui::Text("Entity: %s", selectedEntity->getName().c_str());
+        ImGui::Separator();
+        
+        // Display entity components
+        if (selectedEntity->hasComponent<TransformComponent>())
         {
-            if (component)
-            {
-                component->renderComponent();
-            }
+            auto& transform = selectedEntity->getComponent<TransformComponent>();
+            DrawInspector(transform, "Transform");
         }
+
+        if (selectedEntity->hasComponent<LightComponent>())
+        {
+            auto& lightComponent = selectedEntity->getComponent<LightComponent>();
+            DrawInspector(lightComponent, "Light Component");
+        }
+
+
+        
+        // Add other component types here
+        // For example:
+        // if (selectedEntity->hasComponent<RenderComponent>())
+        // {
+        //     auto& render = selectedEntity->getComponent<RenderComponent>();
+        //     DrawInspector(render, "Render");
+        // }
+        
+        // Add a button to add components
+        if (ImGui::Button("Add Component"))
+        {
+            ImGui::OpenPopup("AddComponentPopup");
+        }
+        
+        if (ImGui::BeginPopup("AddComponentPopup"))
+        {
+
+
+
+
+
+            // List available components to add
+            if (ImGui::MenuItem("Transform Component") && !selectedEntity->hasComponent<TransformComponent>())
+            {
+                selectedEntity->addComponent<TransformComponent>();
+            }
+            // Add other component types here
+            
+            ImGui::EndPopup();
+        }
+    }
+    else
+    {
+        ImGui::Text("No entity selected");
     }
 
     ImGui::End();
@@ -120,17 +172,8 @@ void UIDrawer::drawHierarchyWindow(std::shared_ptr<Entity> &selectedEntity)
         selectedEntity = nullptr;
     }
 
-    core->getScene()->registry->view<RenderComponent>([&](std::shared_ptr<Entity> entity, RenderComponent &render)
-                                                      {
-        std::string selectableLabel = render.name + "##" + std::to_string(entity->getId());
-        
-        if (ImGui::Selectable(selectableLabel.c_str(), selectedEntity && selectedEntity->getId() == entity->getId())) {
-            if (selectedEntity && selectedEntity->getId() == entity->getId()) {
-                selectedEntity = nullptr;
-            } else {
-                selectedEntity = entity;
-            }
-        } });
+    core->getScene()->registry->view([&](std::shared_ptr<Entity> entity)
+                                     { DrawEntityNode(selectedEntity, entity); });
 
     ImGui::End();
 }
@@ -201,10 +244,7 @@ void UIDrawer::drawProjectCreationModal()
 
         if (ImGui::Button("Browse..."))
         {
-            ImGuiFileDialog::Instance()->OpenDialog(createProjectFileDialogKey,
-                                                    "Choose Directory",
-                                                    nullptr,
-                                                    {.flags = ImGuiFileDialogFlags_Modal});
+            ImGuiFileDialog::Instance()->OpenDialog(createProjectFileDialogKey, "Choose Directory", nullptr, {.flags = ImGuiFileDialogFlags_Modal});
         }
 
         ImGui::Separator();
@@ -345,4 +385,96 @@ void UIDrawer::handleFileSelection(const std::string &filename)
         std::string command = "notepad \"" + filename + "\"";
         system(command.c_str());
     }
+}
+
+void UIDrawer::DrawEntityNode(std::shared_ptr<Entity> &selectedEntity, std::shared_ptr<Entity> &entity)
+{
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth;
+    if (entity->getChildren().empty())
+        flags |= ImGuiTreeNodeFlags_Leaf;
+
+    if (selectedEntity == entity)
+    {
+        flags |= ImGuiTreeNodeFlags_Selected;
+    }
+
+    bool open = ImGui::TreeNodeEx((void *)entity.get(), flags, "%s", entity->getName().c_str());
+
+    if (ImGui::IsItemClicked())
+    {
+        selectedEntity = entity;
+    }
+
+    if (ImGui::BeginPopupContextItem())
+    {
+        if (ImGui::MenuItem("Delete"))
+        {
+            // core->getScene()->removeEntity(entity);
+        }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginDragDropSource())
+    {
+        auto ptr = entity.get();
+        ImGui::SetDragDropPayload("ENTITY", &ptr, sizeof(Entity *));
+        ImGui::Text("Movendo %s", entity->getName().c_str());
+        ImGui::EndDragDropSource();
+    }
+
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload *payload = ImGui::AcceptDragDropPayload("ENTITY"))
+        {
+            Entity* droppedEntityPtr = *(Entity**)payload->Data;
+            std::shared_ptr<Entity> droppedEntity = std::dynamic_pointer_cast<Entity>(droppedEntityPtr->shared_from_this());
+            droppedEntity->setParent(entity);
+            core->getScene()->removeEntity(droppedEntity);
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    if (open)
+    {
+        const auto &children = entity->getChildren();
+
+        for (const auto &child : children)
+        {
+            std::shared_ptr<Entity> childPtr = std::dynamic_pointer_cast<Entity>(child);
+            if (childPtr)
+            {
+                DrawEntityNode(selectedEntity, childPtr);
+            }
+        }
+        ImGui::TreePop();
+    }
+}
+
+template <typename T>
+inline void UIDrawer::DrawInspector(T &obj, const std::string_view &title)
+{
+    if (!ImGui::TreeNode(title.data()))
+        return;
+
+    hana::for_each(hana::accessors<T>(), [&](auto pair)
+                   {
+        constexpr auto name = hana::first(pair);
+        auto accessor = hana::second(pair);
+        using MemberType = std::remove_reference_t<decltype(accessor(obj))>;
+        const std::string_view fieldName = hana::to<const char *>(name);
+
+        if constexpr (std::is_same_v<MemberType, float>) {
+            ImGui::DragFloat(fieldName.data(), &accessor(obj), 0.1f);
+        } else if constexpr (std::is_same_v<MemberType, int>) {
+            ImGui::DragInt(fieldName.data(), &accessor(obj));
+        } else if constexpr (std::is_same_v<MemberType, bool>) {
+            ImGui::Checkbox(fieldName.data(), &accessor(obj));
+        } else if constexpr (std::is_same_v<MemberType, glm::vec3>) {
+            ImGui::DragFloat3(fieldName.data(), &accessor(obj)[0], 0.1f);
+        } else {
+            // Para structs aninhadas que também usam BOOST_HANA_DEFINE_STRUCT
+            // DrawInspector(accessor(obj), fieldName);
+        } });
+
+    ImGui::TreePop();
 }

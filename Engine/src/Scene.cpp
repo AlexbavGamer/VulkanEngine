@@ -16,11 +16,6 @@ Scene::Scene(VulkanCore *core) : core(core)
 
 Scene::~Scene() {}
 
-std::shared_ptr<Entity> Scene::createEntity()
-{
-    return registry->createEntity();
-}
-
 void Scene::addEntity(std::shared_ptr<Entity> entity)
 {
     registry->addEntity(entity);
@@ -31,8 +26,7 @@ std::shared_ptr<Entity> Scene::createLightEntity(LightComponent::LightType light
     std::shared_ptr<Entity> lightEntity = createEntity();
     LightComponent &lightComponent = lightEntity->addComponent<LightComponent>();
     lightComponent.setType(lightType);
-    RenderComponent &renderComponent = lightEntity->addComponent<RenderComponent>();
-    renderComponent.name = std::string(magic_enum::enum_name(lightType).data()).append(" Light");
+    lightEntity->setName(std::string(magic_enum::enum_name(lightType).data()).append(" Light"));
     return lightEntity;
 }
 

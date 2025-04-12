@@ -7,7 +7,6 @@
 #include "ecs/RenderSystem.h"
 #include <glfw/glfw3.h>
 #include "ecs/components/LightComponent.h"
-#include "ecs/components/RenderComponent.h"
 
 
 class VulkanCore;
@@ -21,7 +20,16 @@ public:
     CameraComponent camera;
 
     void addEntity(std::shared_ptr<Entity> entity);
-    std::shared_ptr<Entity> createEntity();
+
+    template <typename... TArgs>
+    std::shared_ptr<Entity> createEntity(TArgs&&... args)
+    {
+        return registry->createEntity(std::forward<TArgs>(args)...);
+    }
+    void removeEntity(std::shared_ptr<Entity> entity) 
+    {
+        registry->removeEntity(entity);
+    }
     std::shared_ptr<Entity> createLightEntity(LightComponent::LightType lightType = LightComponent::LightType::Point);
     
     void updatePipelineReferences(VkPipeline newPipeline, VkPipelineLayout newLayout);

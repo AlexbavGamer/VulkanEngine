@@ -25,15 +25,25 @@ public:
         entities.push_back(entity);
     }
 
-    std::shared_ptr<Entity> createEntity()
+    template <typename... TArgs>
+    std::shared_ptr<Entity> createEntity(TArgs&&... args)
     {
-        auto entity = std::make_shared<Entity>();
+        auto entity = std::make_shared<Entity>(std::forward<TArgs>(args)...);
 
         entity->id = nextEntityId++;
 
         entities.push_back(entity);
 
         return entity;
+    }
+
+    void removeEntity(std::shared_ptr<Entity> entity)
+    {
+        auto it = std::remove(entities.begin(), entities.end(), entity);
+        if (it != entities.end())
+        {
+            entities.erase(it, entities.end());
+        }
     }
 
     uint32_t size() const

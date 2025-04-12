@@ -9,7 +9,6 @@
 #include "../../ecs/Entity.h"
 #include "../../ecs/components/MaterialComponent.h"
 #include "../../ecs/components/MeshComponent.h"
-#include "../../ecs/components/RenderComponent.h"
 #include "../../ecs/components/TransformComponent.h"
 #include "../../rendering/TextureManager.h"
 
@@ -19,12 +18,13 @@ class EngineModelLoader
 {
 public:
     EngineModelLoader(VulkanRenderer &renderer) : vulkanRenderer(renderer) {}
-    bool LoadModel(const std::string &path, std::shared_ptr<Entity> entity);
+    std::shared_ptr<Entity> LoadModel(const std::string &path, std::shared_ptr<Entity> parentEntity = nullptr);
 
 private:
-    void ProcessNode(aiNode *node, const aiScene *scene, std::shared_ptr<Entity> entity);
+    std::shared_ptr<Entity> ProcessNode(aiNode *node, const aiScene *scene, std::shared_ptr<Entity> parentEntity);
     void ProcessMesh(aiMesh *mesh, const aiScene *scene, std::shared_ptr<Entity> entity);
     void ProcessMaterial(aiMesh *mesh, const aiScene *scene, MaterialComponent &materialComponent);
+    void ProcessTransform(aiNode *node, TransformComponent &transform);
 
     void ConfigureTransform(std::shared_ptr<Entity> entity);
     std::vector<Vertex> ExtractVertices(aiMesh *mesh);

@@ -19,6 +19,7 @@ private:
     id_t id;
     std::unordered_map<std::type_index, std::shared_ptr<Component>> components;
 
+    std::string name;
     std::weak_ptr<Entity> parent;                  // Referência ao pai
     std::vector<std::shared_ptr<Entity>> children; // Lista de filhos
 
@@ -30,6 +31,8 @@ public:
 
     id_t getId() const { return id; }
 
+    std::string getName() const { return name; }
+    void setName(const std::string &newName) { name = newName; }
     // --- Hierarquia ---
 
     // Define o pai desta entidade

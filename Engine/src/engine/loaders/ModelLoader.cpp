@@ -1,32 +1,50 @@
 #include "ModelLoader.h"
 #include "../../VulkanRenderer.h"
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-bool EngineModelLoader::LoadModel(const std::string &path, std::shared_ptr<Entity> entity)
-{
-    Assimp::Importer importer;
-    unsigned int flags = aiProcess_Triangulate |
-                         aiProcess_GenNormals |
-                         aiProcess_CalcTangentSpace |
-                         aiProcess_JoinIdenticalVertices |
-                         aiProcess_OptimizeMeshes;
 
-    const aiScene *scene = importer.ReadFile(path, flags);
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-    {
-        throw std::runtime_error("Falha ao carregar modelo: " + std::string(importer.GetErrorString()));
-    }
-
-    directory = path.substr(0, path.find_last_of('/'));
-    ProcessNode(scene->mRootNode, scene, entity);
-    return true;
-}
 
 void EngineModelLoader::ConfigureTransform(std::shared_ptr<Entity> entity)
 {
     auto &transform = entity->AddOrGetComponent<TransformComponent>();
-    transform.setPosition(glm::vec3(0.0f, 0.0f, -5.0f));
+    transform.setPosition(glm::vec3(0.0f, 0.0f, 0.0f));
     transform.setRotation(glm::vec3(0.0f));
     transform.setScale(glm::vec3(1.0f));
+}
+void EngineModelLoader::ProcessTransform(aiNode *node, TransformComponent &transform)
+{
+    // Extract transformation from the node
+    aiMatrix4x4 nodeTransform = node->mTransformation;
+    
+    // Convert to glm matrix
+    glm::mat4 glmTransform;
+    glmTransform[0][0] = nodeTransform.a1; glmTransform[0][1] = nodeTransform.b1; glmTransform[0][2] = nodeTransform.c1; glmTransform[0][3] = nodeTransform.d1;
+    glmTransform[1][0] = nodeTransform.a2; glmTransform[1][1] = nodeTransform.b2; glmTransform[1][2] = nodeTransform.c2; glmTransform[1][3] = nodeTransform.d2;
+    glmTransform[2][0] = nodeTransform.a3; glmTransform[2][1] = nodeTransform.b3; glmTransform[2][2] = nodeTransform.c3; glmTransform[2][3] = nodeTransform.d3;
+    glmTransform[3][0] = nodeTransform.a4; glmTransform[3][1] = nodeTransform.b4; glmTransform[3][2] = nodeTransform.c4; glmTransform[3][3] = nodeTransform.d4;
+    
+    // Extract position, rotation, and scale
+    glm::vec3 scale;
+    glm::quat rotation;
+    glm::vec3 translation;
+    glm::vec3 skew;
+    glm::vec4 perspective;
+    
+    glm::decompose(glmTransform, scale, rotation, translation, skew, perspective);
+    
+    // Convert quaternion to euler angles
+    glm::vec3 eulerAngles = glm::degrees(glm::eulerAngles(rotation));
+    
+    // Apply a scale factor to reduce the size (0.01 = 1/100 of original size)
+    const float scaleFactor = 0.01f;
+    scale *= scaleFactor;
+    translation *= scaleFactor;
+    
+    // Set the transform component
+    transform.setPosition(translation);
+    transform.setRotation(eulerAngles);
+    transform.setScale(scale);
 }
 
 std::vector<Vertex> EngineModelLoader::ExtractVertices(aiMesh *mesh)
@@ -110,9 +128,6 @@ void EngineModelLoader::CreateIndexBuffer(MeshComponent &meshComponent, const st
 
 void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::shared_ptr<Entity> entity)
 {
-    ConfigureTransform(entity);
-
-    auto &renderComponent = entity->AddOrGetComponent<RenderComponent>();
     auto &meshComponent = entity->AddOrGetComponent<MeshComponent>();
     auto &materialComponent = entity->AddOrGetComponent<MaterialComponent>();
 
@@ -126,7 +141,12 @@ void EngineModelLoader::ProcessMesh(aiMesh *mesh, const aiScene *scene, std::sha
     CreateMaterialPipeline(materialComponent);
     SetupDescriptors(materialComponent);
 
-    renderComponent.name = mesh->mName.length > 0 ? mesh->mName.C_Str() : "Unnamed Mesh";
+    // Set the entity name to the mesh name if it has one
+    if (mesh->mName.length > 0) {
+        entity->setName(mesh->mName.C_Str());
+    } else {
+        entity->setName("Mesh_" + std::to_string(mesh->mMaterialIndex));
+    }
 }
 
 void EngineModelLoader::CreateLightUniformBuffer(MaterialComponent &material)
@@ -198,7 +218,6 @@ void EngineModelLoader::UpdateDescriptorSets(MaterialComponent &material, const 
         throw std::runtime_error("Invalid sampler for albedo map!");
     }
 }
-
 
 void EngineModelLoader::CreateDefaultMaterial(MaterialComponent &material)
 {
@@ -281,20 +300,64 @@ void EngineModelLoader::LoadMaterialTextures(aiMaterial *material, MaterialCompo
     std::cout << "Material texture loading completed." << std::endl;
 }
 
-void EngineModelLoader::ProcessNode(aiNode *node, const aiScene *scene, std::shared_ptr<Entity> entity)
-{
-    // Processa todos os meshes do nó atual
-    for (unsigned int i = 0; i < node->mNumMeshes; i++)
-    {
-        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessMesh(mesh, scene, entity);
-    }
 
-    // Processa recursivamente os nós filhos
-    for (unsigned int i = 0; i < node->mNumChildren; i++)
-    {
-        ProcessNode(node->mChildren[i], scene, entity);
+std::shared_ptr<Entity> EngineModelLoader::ProcessNode(aiNode *node, const aiScene *scene, std::shared_ptr<Entity> parentEntity)
+{
+    // Skip nodes with generic names and no meshes
+    if ((node->mName.length == 0 || 
+         strcmp(node->mName.C_Str(), "RootNode") == 0 || 
+         strcmp(node->mName.C_Str(), "Scene") == 0) && 
+        node->mNumMeshes == 0) {
+        
+        // If this node has only one child, skip directly to that child
+        if (node->mNumChildren == 1) {
+            return ProcessNode(node->mChildren[0], scene, parentEntity);
+        }
+        
+        // If this node has multiple children, process them all with the same parent
+        for (unsigned int i = 0; i < node->mNumChildren; i++) {
+            ProcessNode(node->mChildren[i], scene, parentEntity);
+        }
+        
+        return parentEntity;
     }
+    
+    // Create a new entity for this node
+    std::shared_ptr<Entity> nodeEntity = std::make_shared<Entity>();
+    
+    // Set the entity name
+    if (node->mName.length > 0) {
+        nodeEntity->setName(node->mName.C_Str());
+    } else if (node->mNumMeshes > 0) {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[0]];
+        if (mesh->mName.length > 0) {
+            nodeEntity->setName(mesh->mName.C_Str());
+        } else {
+            nodeEntity->setName("Mesh_" + std::to_string(mesh->mMaterialIndex));
+        }
+    } else {
+        nodeEntity->setName("Node_" + std::to_string(reinterpret_cast<uintptr_t>(node)));
+    }
+    
+    // Add the node entity as a child of the parent entity
+    parentEntity->addChild(nodeEntity);
+    
+    // Add and configure transform component
+    auto &transform = nodeEntity->AddOrGetComponent<TransformComponent>();
+    ProcessTransform(node, transform);
+    
+    // Process all meshes for this node
+    for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        ProcessMesh(mesh, scene, nodeEntity);
+    }
+    
+    // Process all children of this node
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        ProcessNode(node->mChildren[i], scene, nodeEntity);
+    }
+    
+    return nodeEntity;
 }
 
 void EngineModelLoader::ProcessMaterial(aiMesh *mesh, const aiScene *scene, MaterialComponent &materialComponent)
@@ -397,4 +460,123 @@ std::array<VkDescriptorImageInfo, 5> EngineModelLoader::SetupImageInfos(Material
     imageInfos[4] = material.emissiveMap->getDescriptorInfo();
 
     return imageInfos;
+}
+
+std::shared_ptr<Entity> EngineModelLoader::LoadModel(const std::string &path, std::shared_ptr<Entity> parentEntity)
+{
+    Assimp::Importer importer;
+    unsigned int flags = aiProcess_Triangulate |
+                         aiProcess_GenNormals |
+                         aiProcess_CalcTangentSpace |
+                         aiProcess_JoinIdenticalVertices |
+                         aiProcess_OptimizeMeshes;
+
+    const aiScene *scene = importer.ReadFile(path, flags);
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        throw std::runtime_error("Falha ao carregar modelo: " + std::string(importer.GetErrorString()));
+    }
+
+    directory = path.substr(0, path.find_last_of('/'));
+    
+    // If no parent entity was provided, create one
+    if (!parentEntity) {
+        parentEntity = std::make_shared<Entity>();
+        
+        // Extract filename without extension for the entity name
+        std::string filename = path.substr(path.find_last_of('/') + 1);
+        size_t lastDot = filename.find_last_of('.');
+        if (lastDot != std::string::npos) {
+            filename = filename.substr(0, lastDot);
+        }
+        parentEntity->setName(filename);
+    }
+    
+    // Find the first meaningful node in the model
+    aiNode* meaningfulNode = nullptr;
+    
+    // First, look for a node with meshes
+    std::function<aiNode*(aiNode*)> findNodeWithMeshes;
+    findNodeWithMeshes = [&findNodeWithMeshes](aiNode* node) -> aiNode* {
+        if (node->mNumMeshes > 0) {
+            return node;
+        }
+        
+        for (unsigned int i = 0; i < node->mNumChildren; i++) {
+            aiNode* result = findNodeWithMeshes(node->mChildren[i]);
+            if (result) return result;
+        }
+        
+        return nullptr;
+    };
+    
+    // Then, look for a node with a meaningful name
+    std::function<aiNode*(aiNode*)> findNamedNode;
+    findNamedNode = [&findNamedNode](aiNode* node) -> aiNode* {
+        if (node->mName.length > 0 && 
+            strcmp(node->mName.C_Str(), "RootNode") != 0 && 
+            strcmp(node->mName.C_Str(), "Scene") != 0) {
+            return node;
+        }
+        
+        for (unsigned int i = 0; i < node->mNumChildren; i++) {
+            aiNode* result = findNamedNode(node->mChildren[i]);
+            if (result) return result;
+        }
+        
+        return nullptr;
+    };
+    
+    // First try to find a node with meshes
+    meaningfulNode = findNodeWithMeshes(scene->mRootNode);
+    
+    // If no node with meshes was found, try to find a named node
+    if (!meaningfulNode) {
+        meaningfulNode = findNamedNode(scene->mRootNode);
+    }
+    
+    // If still no meaningful node was found, use the root node
+    if (!meaningfulNode) {
+        meaningfulNode = scene->mRootNode;
+    }
+    
+    // Process the meaningful node directly
+    // Instead of creating a new entity, use the parent entity directly
+    for (unsigned int i = 0; i < meaningfulNode->mNumMeshes; i++) {
+        aiMesh *mesh = scene->mMeshes[meaningfulNode->mMeshes[i]];
+        ProcessMesh(mesh, scene, parentEntity);
+    }
+    
+    // Set the parent entity name if it doesn't have one
+    if (parentEntity->getName().empty()) {
+        if (meaningfulNode->mName.length > 0 && 
+            strcmp(meaningfulNode->mName.C_Str(), "RootNode") != 0 && 
+            strcmp(meaningfulNode->mName.C_Str(), "Scene") != 0) {
+            parentEntity->setName(meaningfulNode->mName.C_Str());
+        } else if (meaningfulNode->mNumMeshes > 0) {
+            aiMesh *mesh = scene->mMeshes[meaningfulNode->mMeshes[0]];
+            if (mesh->mName.length > 0) {
+                parentEntity->setName(mesh->mName.C_Str());
+            } else {
+                // Extract filename without extension for the entity name
+                std::string filename = path.substr(path.find_last_of('/') + 1);
+                size_t lastDot = filename.find_last_of('.');
+                if (lastDot != std::string::npos) {
+                    filename = filename.substr(0, lastDot);
+                }
+                parentEntity->setName(filename);
+            }
+        }
+    }
+    
+    // Add transform component to parent entity
+    auto &transform = parentEntity->AddOrGetComponent<TransformComponent>();
+    ProcessTransform(meaningfulNode, transform);
+    
+    // Process children of the meaningful node
+    for (unsigned int i = 0; i < meaningfulNode->mNumChildren; i++) {
+        ProcessNode(meaningfulNode->mChildren[i], scene, parentEntity);
+    }
+    
+    return parentEntity;
 }

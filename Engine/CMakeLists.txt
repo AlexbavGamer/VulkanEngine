@@ -217,14 +217,7 @@ file(GLOB_RECURSE SOURCES
     "src/**.cpp"
 )
 
-message(STATUS "Creating executable target...")
-# Criar executável
-add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_DIR})
-target_sources(VulkanEngine PRIVATE 
-    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
-)
-target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
-
+# Gere os headers de fonte antes de qualquer outra coisa
 message(STATUS "Setting up font generation...")
 set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
@@ -260,7 +253,14 @@ endforeach()
 message(STATUS "Creating font headers target...")
 # Create custom target for font headers
 add_custom_target(FontHeaders ALL DEPENDS ${GENERATED_HEADERS})
-add_dependencies(VulkanEngine FontHeaders)
+
+message(STATUS "Creating executable target...")
+# Criar executável
+add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_HEADERS})
+target_sources(VulkanEngine PRIVATE 
+    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
+)
+target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
 
 message(STATUS "Configuring include directories...")
 # Configurar diretórios de inclusão
@@ -337,7 +337,7 @@ message(STATUS "Creating shader build target...")
 add_custom_target(ShadersBuild ALL DEPENDS ${SPIRV_BINARY_FILES})
 
 # Dependência de shaders
-add_dependencies(VulkanEngine ShadersBuild)
+add_dependencies(VulkanEngine ShadersBuild FontHeaders)
 
 message(STATUS "Setting up asset copying...")
 # Copiar pasta assets para o diretório de build

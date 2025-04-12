@@ -3,4 +3,4 @@ project(MultiProject)
 
 # Adicionar subprojetos
 add_subdirectory(Engine) # Primeiro projeto
-add_subdirectory(Launcher) # Segundo projeto
+# add_subdirectory(Launcher) # Segundo projeto

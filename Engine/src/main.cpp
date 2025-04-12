@@ -70,6 +70,8 @@ int main()
             std::cout << "Failed to load model" << std::endl;
         }
 
+        // plano->setName("Plano");
+
         // std::shared_ptr<Entity> planoEntity = scene->createEntity();
 
         // std::shared_ptr<Entity> cuboEntity = scene->createEntity();
@@ -89,19 +91,6 @@ int main()
                              glm::vec3(0.0f, 1.0f, 0.0f));
 
         std::shared_ptr<Entity> lightEntity = scene->createLightEntity();
-
-        std::cout << "Entities: " << scene->registry->getEntities().size() << std::endl;
-        for(auto& entity : scene->registry->getEntities())
-        {
-            std::cout << "Components: " << entity->getComponents().size() << std::endl;
-
-            for(auto& component : entity->getComponents())
-            {
-                std::cout << "Component Type: " << component.first.name() << std::endl;
-            }
-
-            std::cout << "Children Count: " << entity->getChildren().size() << std::endl;
-        }
 
         scene->camera = camera;
     }

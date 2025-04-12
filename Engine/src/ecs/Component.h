@@ -7,11 +7,12 @@ class Entity;
 struct Component {
 public:
 
-    Component(std::shared_ptr<Entity> owner = nullptr) 
+    [[nodiscard]] Component(std::shared_ptr<Entity> owner = nullptr) 
         : owner(owner) {}
 
     virtual ~Component() = default;
-    virtual void renderComponent() { }
+
+    std::shared_ptr<Entity> getOwner() const { return owner; }
 
 protected:
     std::shared_ptr<Entity> owner;
