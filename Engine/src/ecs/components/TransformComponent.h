@@ -154,6 +154,18 @@ struct TransformComponent : public Component
         glm::decompose(localMatrix, localScale, localRotation, localPosition, skew, perspective);
     }
 
+    void updateLocalMatrix()
+    {
+        glm::mat4 localMatrix = glm::translate(glm::mat4(1.0f), localPosition) *
+                               glm::mat4_cast(localRotation) *
+                               glm::scale(glm::mat4(1.0f), localScale);
+                               
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(localMatrix, localScale, localRotation, localPosition, skew, perspective);
+        updateWorldTransform();
+    }
+
     // Mantendo as funções antigas por compatibilidade
     void setPosition(glm::vec3 position) { setWorldPosition(position); }
     void setRotation(glm::quat rotation) { setWorldRotation(rotation); }

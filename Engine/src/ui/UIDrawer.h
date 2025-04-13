@@ -31,6 +31,9 @@ private:
     void DrawEntityNode(std::shared_ptr<Entity> &selectedEntity, std::shared_ptr<Entity> &entity);
     template <typename T>
     void DrawInspector(T& obj, const std::string_view& title = typeid(T).name());
+    void handleGizmoOperations();
+    void updateEntityTransform(std::shared_ptr<Entity>& selectedEntity);
+    void setupGizmo(const ImVec2& viewportPos, const ImVec2& viewportSize);
 private:
     const char *createProjectFileDialogKey = "ChooseProjectDirectoryKey";
     const char *openProjectFileDialogKey = "OpenProjectFileKey";

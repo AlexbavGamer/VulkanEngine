@@ -50,50 +50,95 @@ void UIDrawer::drawMainMenuBar()
         ImGui::EndMenuBar();
     }
 }
+
 void UIDrawer::drawSceneWindow(VkDescriptorSet sceneDescriptorSet, std::shared_ptr<Entity> &selectedEntity)
 {
+    // Configuração inicial da janela da cena
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoTitleBar);
+    ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
+    // Configuração da viewport
     ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 viewportPos = ImGui::GetWindowContentRegionMin();
+    viewportPos.x += ImGui::GetWindowPos().x;
+    viewportPos.y += ImGui::GetWindowPos().y;
 
-    glm::mat4 projection = core->getScene()->cameraEntity->getComponent<CameraComponent>().projection;
-    glm::mat4 view = core->getScene()->cameraEntity->getComponent<CameraComponent>().view;
-
-    // Draw the scene texture first
+    // Renderiza a textura da cena
     ImGui::Image((ImTextureID)sceneDescriptorSet, viewportSize, ImVec2(0, 0), ImVec2(1, 1));
 
+    // Manipulação do Gizmo
     if (selectedEntity && selectedEntity->hasComponent<TransformComponent>())
     {
-        // Adicione handlers para teclas de atalho
-        if (ImGui::IsKeyPressed(ImGuiKey_W))
-            currentGizmoOperation = ImGuizmo::TRANSLATE;
-        if (ImGui::IsKeyPressed(ImGuiKey_E))
-            currentGizmoOperation = ImGuizmo::ROTATE;
-        if (ImGui::IsKeyPressed(ImGuiKey_R))
-            currentGizmoOperation = ImGuizmo::SCALE;
-
-        ImGuizmo::SetOrthographic(false);
-        ImGuizmo::SetDrawlist();
-        ImGuizmo::SetRect(windowPos.x, windowPos.y, viewportSize.x, viewportSize.y);
-
-        auto &transform = selectedEntity->getComponent<TransformComponent>();
-        glm::mat4 model = transform.getLocalMatrix(); // Use local matrix instead
-
-        if (ImGuizmo::Manipulate(
-                glm::value_ptr(view),
-                glm::value_ptr(projection),
-                currentGizmoOperation,
-                ImGuizmo::LOCAL, // Mudado para LOCAL space
-                glm::value_ptr(model)))
-        {
-            transform.setLocalMatrix(model);
-        }
+        handleGizmoOperations();
+        setupGizmo(viewportPos, viewportSize);
+        updateEntityTransform(selectedEntity);
     }
 
     ImGui::End();
     ImGui::PopStyleVar();
+}
+
+void UIDrawer::handleGizmoOperations()
+{
+    if (ImGui::IsKeyPressed(ImGuiKey_W))
+        currentGizmoOperation = ImGuizmo::TRANSLATE;
+    if (ImGui::IsKeyPressed(ImGuiKey_E))
+        currentGizmoOperation = ImGuizmo::ROTATE;
+    if (ImGui::IsKeyPressed(ImGuiKey_R))
+        currentGizmoOperation = ImGuizmo::SCALE;
+}
+
+void UIDrawer::setupGizmo(const ImVec2& viewportPos, const ImVec2& viewportSize)
+{
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetDrawlist();
+    ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
+}
+
+void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
+{
+    auto& transform = selectedEntity->getComponent<TransformComponent>();
+    auto& camera = core->getScene()->cameraEntity->getComponent<CameraComponent>();
+
+    glm::mat4 projection = camera.getProjectionMatrix();
+    glm::mat4 view = camera.getViewMatrix();
+    glm::mat4 model = transform.getLocalMatrix();
+
+    // Configura o modo de operação e espaço do Gizmo
+    static ImGuizmo::MODE mode = ImGuizmo::WORLD;
+    if (ImGui::IsKeyPressed(ImGuiKey_T))
+        mode = (mode == ImGuizmo::WORLD) ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
+
+    // Aplicar a manipulação do Gizmo com snap opcional
+    float snap[3] = { 1.0f, 1.0f, 1.0f }; // Valores de snap para cada operação
+    bool useSnap = ImGui::IsKeyPressed(ImGuiKey_LeftCtrl);
+    
+    bool manipulated = ImGuizmo::Manipulate(
+        glm::value_ptr(view),
+        glm::value_ptr(projection),
+        currentGizmoOperation,
+        mode,
+        glm::value_ptr(model),
+        nullptr,
+        useSnap ? snap : nullptr
+    );
+
+    if (manipulated)
+    {
+        glm::vec3 translation, rotation, scale;
+        ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), 
+            glm::value_ptr(translation), 
+            glm::value_ptr(rotation), 
+            glm::value_ptr(scale));
+
+        // Atualiza a transformação mantendo as coordenadas locais
+        transform.setPosition(translation);
+        transform.setRotation(glm::radians(rotation));
+        transform.setScale(scale);
+
+        // Força a atualização da matriz local
+        transform.updateLocalMatrix();
+    }
 }
 
 void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)

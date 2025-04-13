@@ -56,10 +56,12 @@ int main()
 
         glfwSetWindowUserPointer(window, renderer.getCore()->getScene());
         glfwSetCursorPosCallback(window, [](GLFWwindow *window, double xpos, double ypos)
-                                 {
+        {
             Scene* scene = static_cast<Scene*>(glfwGetWindowUserPointer(window));
-            scene->handleMouseInput(window, xpos, ypos); });
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            scene->handleMouseInput(window, xpos, ypos); 
+        });
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // Começa com o cursor desabilitado
+        CameraComponent::isCursorEnabled() = false; // Sincroniza o estado do cursor
 
         Scene* scene = renderer.getCore()->getScene();
 
@@ -70,26 +72,14 @@ int main()
             std::cout << "Failed to load model" << std::endl;
         }
 
-        // plano->setName("Plano");
-
-        // std::shared_ptr<Entity> planoEntity = scene->createEntity();
-
-        // std::shared_ptr<Entity> cuboEntity = scene->createEntity();
-
-        // if (!renderer.getModelLoader()->LoadModel("engine/models/cubo.fbx", cuboEntity))
-        // {
-        //     throw std::runtime_error("Failed load 'cubo.fbx' model in engine/models folder");
-        // }
-
-        // Ajustar câmera para ver o cubo
         std::shared_ptr<Entity> cameraEntity = scene->createEntity();
         cameraEntity->setName("Camera");
         CameraComponent camera = cameraEntity->addComponent<CameraComponent>();
         camera.width = WIDTH;
         camera.height = HEIGHT;
-        camera::updateCamera(camera,camera.position, camera.front, camera.up);
-        std::shared_ptr<Entity> lightEntity = scene->createLightEntity();
         scene->cameraEntity = cameraEntity;
+
+        std::shared_ptr<Entity> lightEntity = scene->createLightEntity();
     }
     catch (const std::exception &e)
     {
@@ -102,43 +92,36 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-        renderer.getCore()->getScene()->handleKeyboardInput(window);
 
         // ImGui input handling
         ImGuiIO &io = ImGui::GetIO();
+        Scene* scene = static_cast<Scene*>(glfwGetWindowUserPointer(window));
+        
+        // Processa input do teclado primeiro
+        scene->handleKeyboardInput(window);
 
-        // Capture mouse position
-        double mouseX, mouseY;
-        glfwGetCursorPos(window, &mouseX, &mouseY);
-        io.MousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
+        // Trata o mouse baseado no estado do cursor
+        if (!CameraComponent::isCursorEnabled())
+        {
+            // Camera control mode
+            double mouseX, mouseY;
+            glfwGetCursorPos(window, &mouseX, &mouseY);
+            scene->handleMouseInput(window, mouseX, mouseY);
+        }
+        else
+        {
+            // UI mode - update ImGui mouse info
+            double mouseX, mouseY;
+            glfwGetCursorPos(window, &mouseX, &mouseY);
+            io.MousePos = ImVec2(static_cast<float>(mouseX), static_cast<float>(mouseY));
+        }
 
-        // Mouse button states
+        // Mouse button states for ImGui
         io.MouseDown[0] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
         io.MouseDown[1] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
         io.MouseDown[2] = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
 
-        // Scroll wheel
-        glfwSetScrollCallback(window, [](GLFWwindow *, double, double yoffset)
-                              {
-            ImGuiIO& io = ImGui::GetIO();
-            io.MouseWheel += static_cast<float>(yoffset); });
-
-        // Keyboard input
-        io.KeyCtrl = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-                     glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-        io.KeyShift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-                      glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-        io.KeyAlt = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-                    glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-        io.KeySuper = glfwGetKey(window, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS ||
-                      glfwGetKey(window, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS;
-
-        // Character input callback
-        glfwSetCharCallback(window, [](GLFWwindow *, unsigned int c)
-                            {
-            ImGuiIO& io = ImGui::GetIO();
-            io.AddInputCharacter(c); });
-
+        scene->updateCamera();
         renderer.getCore()->renderFrame();
     }
 

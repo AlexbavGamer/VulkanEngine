@@ -88,8 +88,8 @@ UBO RenderSystem::prepareUBO(const TransformComponent &transform, VulkanRenderer
 {
     UBO ubo{};
     ubo.model = transform.getWorldMatrix();
-    ubo.view = vulkanRender.getCore()->getScene()->cameraEntity->getComponent<CameraComponent>().view;
-    ubo.proj = vulkanRender.getCore()->getScene()->cameraEntity->getComponent<CameraComponent>().projection;
+    ubo.view = vulkanRender.getCore()->getScene()->cameraEntity->getComponent<CameraComponent>().getViewMatrix();
+    ubo.proj = vulkanRender.getCore()->getScene()->cameraEntity->getComponent<CameraComponent>().getViewProjection();
     ubo.material.color = glm::vec4(1.0f); // Exemplos de valores
     ubo.material.metallic = 0.5f;
     ubo.material.roughness = 0.8f;
