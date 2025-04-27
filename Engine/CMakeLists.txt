@@ -12,6 +12,32 @@ endif()
 
 message(STATUS "Starting VulkanEngine CMake configuration...")
 
+# Para Linux, verificar e instalar dependências necessárias
+if(UNIX)
+    message(STATUS "Checking Linux dependencies...")
+    
+    # Verificar pacotes necessários
+    find_package(PkgConfig REQUIRED)
+    
+    # Verificar GLFW3
+    pkg_check_modules(GLFW3 REQUIRED glfw3)
+    if(NOT GLFW3_FOUND)
+        message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo apt-get install libglfw3-dev")
+    endif()
+    
+    # Verificar GLM
+    pkg_check_modules(GLM REQUIRED glm)
+    if(NOT GLM_FOUND)
+        message(FATAL_ERROR "GLM não encontrado! Por favor, instale com: sudo apt-get install libglm-dev")
+    endif()
+    
+    # Verificar Vulkan
+    find_package(Vulkan)
+    if(NOT Vulkan_FOUND)
+        message(FATAL_ERROR "Vulkan não encontrado! Por favor, instale com: sudo apt-get install vulkan-tools libvulkan-dev")
+    endif()
+endif()
+
 # Definir o padrão C++ como C++17
 message(STATUS "Setting C++ standard to C++17")
 set(CMAKE_CXX_STANDARD 17)
@@ -124,21 +150,9 @@ message(STATUS "Fetching GLM (OpenGL Mathematics) from GitHub...")
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.1
+    GIT_TAG        1.0.1
 )
 FetchContent_MakeAvailable(glm)
-
-# Configuração adicional do GLM
-set(GLM_INCLUDE_DIR ${glm_SOURCE_DIR})
-if(UNIX)
-    find_package(GLM QUIET)
-    if(NOT GLM_FOUND)
-        message(STATUS "GLM not found in system, using fetched version")
-    endif()
-endif()
-add_definitions(-DGLM_ENABLE_EXPERIMENTAL)
-add_definitions(-DGLM_FORCE_RADIANS)
-add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 # STB (carregamento de texturas)
 message(STATUS "Fetching STB image library from GitHub...")
@@ -147,32 +161,15 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG master
 )
-if(UNIX)
-    set(STB_INCLUDE_PATH ${stb_SOURCE_DIR})
-    mark_as_advanced(STB_INCLUDE_PATH)
-endif()
 FetchContent_MakeAvailable(stb)
 
 # Assimp
 message(STATUS "Fetching Assimp (Asset Import Library) from GitHub...")
-if(UNIX)
-    find_package(assimp QUIET)
-    if(NOT assimp_FOUND)
-        message(STATUS "Assimp not found in system, using fetched version")
-        FetchContent_Declare(
-            assimp
-            GIT_REPOSITORY https://github.com/assimp/assimp.git
-            GIT_TAG v5.3.1
-        )
-        set(ASSIMP_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-    endif()
-else()
-    FetchContent_Declare(
-        assimp
-        GIT_REPOSITORY https://github.com/assimp/assimp.git
-        GIT_TAG v5.3.1
-    )
-endif()
+FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+)
 
 message(STATUS "Configuring Assimp build options...")
 # Configurações do Assimp
@@ -216,12 +213,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
-if(UNIX)
-    # Configurações específicas do ImGui para Linux
-    set(IMGUI_IMPL_LINUX_INCLUDE_DIR ${imgui_SOURCE_DIR}/backends)
-    target_include_directories(VulkanEngine PRIVATE ${IMGUI_IMPL_LINUX_INCLUDE_DIR})
-endif()
-
 message(STATUS "Setting up ImGui source files...")
 # Arquivos fonte do ImGui
 set(IMGUI_SOURCES
@@ -256,14 +247,9 @@ FetchContent_Declare(
     GIT_TAG master
 )
 FetchContent_MakeAvailable(imguifiledialog)
-
-if(UNIX)
-    # Configurações específicas do ImGuiFileDialog para Linux
-    target_include_directories(ImGuiFileDialog PRIVATE
-        ${imgui_SOURCE_DIR}
-        ${IMGUI_IMPL_LINUX_INCLUDE_DIR}
-    )
-endif()
+target_include_directories(ImGuiFileDialog PRIVATE
+    ${imgui_SOURCE_DIR}
+)
 
 message(STATUS "Collecting source files...")
 # Encontrar todos os arquivos fonte
@@ -317,6 +303,7 @@ target_sources(VulkanEngine PRIVATE
 )
 target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
 
+# Parte a ser modificada na configuração de diretórios de inclusão
 message(STATUS "Configuring include directories...")
 # Configurar diretórios de inclusão
 set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
@@ -329,7 +316,7 @@ message(STATUS "GLM_INCLUDE_DIR: ${glm_SOURCE_DIR}")
 target_include_directories(VulkanEngine PRIVATE
     ${VULKAN_INCLUDE_DIR}
     ${GLFW_INCLUDE_DIRS}
-    ${glm_SOURCE_DIR}/glm
+    ${glm_SOURCE_DIR}
     ${stb_SOURCE_DIR}
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
@@ -343,6 +330,21 @@ target_include_directories(VulkanEngine PRIVATE
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+
+# Adicionar inclusões específicas para Linux
+if(UNIX)
+    message(STATUS "Adding Linux-specific include directories...")
+    find_path(GLFW3_INCLUDE_DIR GLFW/glfw3.h
+        PATHS
+        /usr/include
+        /usr/local/include
+        ${GLFW3_INCLUDE_DIRS}
+    )
+    if(GLFW3_INCLUDE_DIR)
+        message(STATUS "Found GLFW3 include directory: ${GLFW3_INCLUDE_DIR}")
+        target_include_directories(VulkanEngine PRIVATE ${GLFW3_INCLUDE_DIR})
+    endif()
+endif()
 
 message(STATUS "Setting up library linkage...")
 # Links de biblioteca
