@@ -15,80 +15,59 @@ message(STATUS "Starting VulkanEngine CMake configuration...")
 # Definir o padrão C++ como C++17
 message(STATUS "Setting C++ standard to C++17")
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Configurar caminhos do Vulkan SDK
+message(STATUS "Configuring Vulkan SDK paths...")
 if(WIN32)
-message(STATUS "Configuring custom Boost paths for Windows...")
-set(BOOST_ROOT "C:/Boost")
-set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
-set(BOOST_LIBRARYDIR "C:/Boost/lib")
-
-# Desabilitar o auto-link do Boost no Windows
-add_definitions(-DBOOST_ALL_NO_LIB)
-endif()
-
-set(Boost_USE_STATIC_LIBS        ON)
-set(Boost_USE_STATIC_RUNTIME     ON)
-set(Boost_USE_MULTITHREADED      ON)
-
-# Encontrar Boost do sistema
-message(STATUS "Looking for Boost 1.88.0...")
-find_package(Boost 1.88.0 REQUIRED COMPONENTS 
-    filesystem
-    system
-    thread
-    chrono
-)
-
-if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost not found. Check if paths are correct: BOOST_ROOT=${BOOST_ROOT}, BOOST_INCLUDEDIR=${BOOST_INCLUDEDIR}, BOOST_LIBRARYDIR=${BOOST_LIBRARYDIR}")
-endif()
-
-message(STATUS "Boost found:")
-message(STATUS "  Version: ${Boost_VERSION}")
-message(STATUS "  Include dirs: ${Boost_INCLUDE_DIRS}")
-message(STATUS "  Library dirs: ${Boost_LIBRARY_DIRS}")
-
-# Configuração para diferentes plataformas
-message(STATUS "Checking platform-specific configurations...")
-if(WIN32)
-    message(STATUS "Windows platform detected")
-    # Verificação do Vulkan SDK no Windows
     if(NOT DEFINED ENV{VK_SDK_PATH})
         message(FATAL_ERROR "Vulkan SDK não encontrado! Certifique-se de que o Vulkan SDK está instalado e a variável de ambiente VULKAN_SDK está configurada corretamente.")
     endif()
 
-    message(STATUS "Configuring Vulkan SDK paths for Windows...")
-    # Configurações específicas para Windows
     set(VULKAN_SDK $ENV{VK_SDK_PATH})
-    string(REPLACE "\\" "/" VULKAN_SDK ${VULKAN_SDK})  # Troca barras invertidas por barras normais
-    message(STATUS "Vulkan SDK path: ${VULKAN_SDK}")
-
+    string(REPLACE "\\" "/" VULKAN_SDK ${VULKAN_SDK})
     set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
     set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")
     set(GLSLC "${VULKAN_SDK}/Bin/glslc.exe")
-    
-    # Configurações específicas para MinGW no Windows
-    if(MINGW)
-        message(STATUS "MinGW detected, configuring specific flags...")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mconsole -mwindows")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -static")
-    endif()
-
-elseif(UNIX)
-    message(STATUS "Linux platform detected")
-    # Procurar Vulkan SDK no sistema Linux
-    message(STATUS "Searching for Vulkan SDK...")
+else()
     find_package(Vulkan REQUIRED)
+    if(NOT Vulkan_FOUND)
+        message(FATAL_ERROR "Vulkan SDK não encontrado! Por favor, instale o Vulkan SDK.")
+    endif()
     
-    message(STATUS "Configuring Vulkan paths for Linux...")
-    # Definir variáveis para Vulkan no Linux
     set(VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
     set(VULKAN_LIB ${Vulkan_LIBRARIES})
-    
-    message(STATUS "Searching for GLSL compiler...")
-    # Encontrar o compilador de shaders
     find_program(GLSLC glslc REQUIRED)
+    if(NOT GLSLC)
+        message(FATAL_ERROR "glslc não encontrado! Por favor, instale o Vulkan SDK corretamente.")
+    endif()
+endif()
+
+# Configuração do Boost
+message(STATUS "Configuring Boost...")
+if(WIN32)
+    message(STATUS "Configuring custom Boost paths for Windows...")
+    set(BOOST_ROOT "C:/Boost")
+    set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
+    set(BOOST_LIBRARYDIR "C:/Boost/lib")
+    add_definitions(-DBOOST_ALL_NO_LIB)
+else()
+    find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    if(NOT Boost_FOUND)
+        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost (sudo apt-get install libboost-all-dev)")
+    endif()
+endif()
+
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+set(Boost_USE_MULTITHREADED ON)
+
+if(NOT WIN32)
+    message(STATUS "Configuring additional Linux libraries...")
+    find_package(X11 REQUIRED)
+    find_package(Threads REQUIRED)
+    find_package(OpenGL REQUIRED)
 endif()
 
 # Incluir dependências multiplataforma
@@ -291,22 +270,44 @@ target_include_directories(VulkanEngine PRIVATE
 
 message(STATUS "Setting up library linkage...")
 # Links de biblioteca
-target_link_libraries(VulkanEngine
-    ${VULKAN_LIB}
-    glfw
-    assimp
-    Boost::filesystem
-    Boost::system
-    Boost::thread
-    Boost::chrono
-)
+if(UNIX)
+    message(STATUS "Adding Linux-specific libraries...")
+    target_link_libraries(VulkanEngine
+        ${VULKAN_LIB}
+        glfw
+        assimp
+        Boost::filesystem
+        Boost::system
+        Boost::thread
+        Boost::chrono
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${X11_LIBRARIES}
+        dl
+        pthread
+        m
+    )
+    
+    target_include_directories(VulkanEngine PRIVATE
+        ${X11_INCLUDE_DIR}
+    )
+else()
+    target_link_libraries(VulkanEngine
+        ${VULKAN_LIB}
+        glfw
+        assimp
+        Boost::filesystem
+        Boost::system
+        Boost::thread
+        Boost::chrono
+    )
+endif()
 
 message(STATUS "Setting up shader compilation...")
 # Configuração de shaders
 file(GLOB SHADERS "${CMAKE_SOURCE_DIR}/shaders/*.vert" "${CMAKE_SOURCE_DIR}/shaders/*.frag")
 
 # Diretório de saída dos shaders compilados
-set(COMPILED_SHADERS_DIR "${CMAKE_BINARY_DIR}/shaders")
+set(COMPILED_SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders")
 
 # Criar diretório de saída
 file(MAKE_DIRECTORY ${COMPILED_SHADERS_DIR})

@@ -79,9 +79,12 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
     uint32_t height,
     VkFormat format
 ) {
+    // Validar dimensões antes de criar a textura
+    vulkanCore->validateImageDimensions(width, height);
+    
     auto texture = std::make_shared<Texture>();
     
-    // Criação da imagem e buffer temporário
+    // Criação do buffer temporário
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     
@@ -107,16 +110,16 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
         texture->image,
         texture->imageMemory
     );
-    
-    // Transição de layout e cópia do buffer para a imagem
+
+    // Transição de layout e cópia
     vulkanCore->transitionImageLayout(texture->image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     vulkanCore->copyBufferToImage(stagingBuffer, texture->image, width, height);
     vulkanCore->transitionImageLayout(texture->image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     
-    // Criação da imageView
+    // Criação da image view
     texture->imageView = vulkanCore->createImageView(texture->image, format, VK_IMAGE_ASPECT_COLOR_BIT);
     
-    // Criação do sampler
+    // Configuração do sampler
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -135,10 +138,9 @@ std::shared_ptr<Texture> TextureManager::createTextureFromData(
     samplerInfo.maxLod = 0.0f;
     samplerInfo.mipLodBias = 0.0f;
 
-    if (vkCreateSampler(vulkanCore->getDevice(), &samplerInfo, nullptr, &texture->sampler) != VK_SUCCESS) {
-        throw std::runtime_error("Falha ao criar sampler!");
-    }
-    // Limpa recursos temporários
+    texture->sampler = vulkanCore->createTextureSampler(samplerInfo);
+    
+    // Limpeza dos recursos temporários
     vkDestroyBuffer(vulkanCore->getDevice(), stagingBuffer, nullptr);
     vkFreeMemory(vulkanCore->getDevice(), stagingBufferMemory, nullptr);
     

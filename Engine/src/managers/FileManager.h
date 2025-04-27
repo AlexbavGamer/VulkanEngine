@@ -133,6 +133,33 @@ public:
 	size_t getFileSize(const std::string &path);
 	std::string getFileExtension(const std::string &path);
 
+	std::string getResourcePath(const std::string &relativePath)
+	{
+		std::filesystem::path exePath = std::filesystem::current_path();
+		std::filesystem::path enginePath = exePath;
+
+		// Em debug, o executável está em build/
+		// Em release, o executável está no diretório raiz
+		if (exePath.filename() == "build")
+		{
+			enginePath = exePath.parent_path();
+		}
+
+		std::filesystem::path resourcePath = enginePath / relativePath;
+
+		// Log do caminho para debug
+		std::ofstream logFile("engine_log.txt", std::ios::app);
+		if (logFile.is_open())
+		{
+			logFile << "[PATH] Resource path: " << resourcePath << std::endl;
+		}
+
+		return resourcePath.string();
+	}
+
 private:
 	FileManager() = default;
+	~FileManager() = default;
+	FileManager(const FileManager &) = delete;
+	FileManager &operator=(const FileManager &) = delete;
 };

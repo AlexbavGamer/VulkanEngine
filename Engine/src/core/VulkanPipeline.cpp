@@ -5,6 +5,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanDescriptor.h"
 #include "VulkanImGui.h"
+#include <managers/FileManager.h>
 
 VulkanPipeline::VulkanPipeline(VulkanCore &core) : core(core),
                                                    graphicsPipeline(VK_NULL_HANDLE),
@@ -36,9 +37,27 @@ void VulkanPipeline::cleanup()
     }
 }
 
-void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D extent)
+void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D swapChainExtent)
 {
-    createScenePipeline(renderPass, extent);
+    try {
+        std::string vertPath = FileManager::getInstance().getResourcePath("shaders/vertex.vert.spv");
+        std::string fragPath = FileManager::getInstance().getResourcePath("shaders/fragment.frag.spv");
+
+        auto vertShaderCode = VulkanCore::readFile(vertPath);
+        auto fragShaderCode = VulkanCore::readFile(fragPath);
+
+        std::ofstream logFile("engine_log.txt", std::ios::app);
+        logFile << "[INFO] Carregando shaders:\n";
+        logFile << "  Vertex: " << vertPath << " (" << vertShaderCode.size() << " bytes)\n";
+        logFile << "  Fragment: " << fragPath << " (" << fragShaderCode.size() << " bytes)\n";
+
+        // ...resto do código de criação do pipeline...
+    }
+    catch (const std::exception& e) {
+        std::ofstream logFile("engine_log.txt", std::ios::app);
+        logFile << "[ERRO] Falha ao criar pipeline: " << e.what() << std::endl;
+        throw;
+    }
 }
 
 void VulkanPipeline::recreate(VkRenderPass renderPass, VkExtent2D extent)

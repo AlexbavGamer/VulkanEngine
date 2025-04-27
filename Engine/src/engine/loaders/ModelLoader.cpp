@@ -2,6 +2,7 @@
 #include "../../VulkanRenderer.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <managers/FileManager.h>
 
 
 
@@ -467,6 +468,7 @@ std::array<VkDescriptorImageInfo, 5> EngineModelLoader::SetupImageInfos(Material
     return imageInfos;
 }
 
+
 std::shared_ptr<Entity> EngineModelLoader::LoadModel(const std::string &path, std::shared_ptr<Entity> parentEntity)
 {
     Assimp::Importer importer;
@@ -476,7 +478,8 @@ std::shared_ptr<Entity> EngineModelLoader::LoadModel(const std::string &path, st
                          aiProcess_JoinIdenticalVertices |
                          aiProcess_OptimizeMeshes;
 
-    const aiScene *scene = importer.ReadFile(path, flags);
+    std::string fullPath = FileManager::getInstance().getResourcePath(path);
+    const aiScene *scene = importer.ReadFile(fullPath, flags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         throw std::runtime_error("Falha ao carregar modelo: " + std::string(importer.GetErrorString()));

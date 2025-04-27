@@ -16,14 +16,65 @@ VulkanSwapChain::~VulkanSwapChain() {
     cleanup();
 }
 
-void VulkanSwapChain::create() 
-{
-    createSwapChain();
-    createImageViews();
-    core.createRenderPass();
-    createFramebuffers();
-}
+void VulkanSwapChain::create() {
+    SwapChainSupportDetails swapChainSupport = core.querySwapChainSupport(core.getPhysicalDevice());
+    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
 
+    // Validar dimensões antes de criar a swapchain
+    if (extent.width == 0 || extent.height == 0) {
+        throw std::runtime_error("Invalid swapchain dimensions: width and height must be greater than 0");
+    }
+
+    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+    if (swapChainSupport.capabilities.maxImageCount > 0 && 
+        imageCount > swapChainSupport.capabilities.maxImageCount) {
+        imageCount = swapChainSupport.capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.surface = core.getSurface();
+    createInfo.minImageCount = imageCount;
+    createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    createInfo.imageExtent = extent;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    QueueFamilyIndices indices = core.findQueueFamilies(core.getPhysicalDevice());
+    uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+
+    if (indices.graphicsFamily != indices.presentFamily) {
+        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        createInfo.queueFamilyIndexCount = 2;
+        createInfo.pQueueFamilyIndices = queueFamilyIndices;
+    } else {
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.queueFamilyIndexCount = 0;
+        createInfo.pQueueFamilyIndices = nullptr;
+    }
+
+    createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode = presentMode;
+    createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+    if (vkCreateSwapchainKHR(core.getDevice(), &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create swap chain!");
+    }
+
+    vkGetSwapchainImagesKHR(core.getDevice(), swapChain, &imageCount, nullptr);
+    swapChainImages.resize(imageCount);
+    vkGetSwapchainImagesKHR(core.getDevice(), swapChain, &imageCount, swapChainImages.data());
+
+    swapChainImageFormat = surfaceFormat.format;
+    swapChainExtent = extent;
+
+    createImageViews();
+}
 
 void VulkanSwapChain::createFramebuffers() {
     // Limpar framebuffers existentes
@@ -203,11 +254,20 @@ VkPresentModeKHR VulkanSwapChain::chooseSwapPresentMode(const std::vector<VkPres
 
 VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        // Validar a extensão atual
+        if (capabilities.currentExtent.width == 0 || capabilities.currentExtent.height == 0) {
+            throw std::runtime_error("Invalid surface dimensions from capabilities");
+        }
         return capabilities.currentExtent;
     }
     
     int width, height;
     glfwGetFramebufferSize(core.getWindow(), &width, &height);
+    
+    // Validar as dimensões do framebuffer
+    if (width <= 0 || height <= 0) {
+        throw std::runtime_error("Invalid framebuffer dimensions from GLFW window");
+    }
     
     VkExtent2D actualExtent = {
         static_cast<uint32_t>(width),
@@ -220,6 +280,11 @@ VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& cap
     actualExtent.height = std::clamp(actualExtent.height, 
         capabilities.minImageExtent.height, 
         capabilities.maxImageExtent.height);
+    
+    // Validação final após o clamp
+    if (actualExtent.width == 0 || actualExtent.height == 0) {
+        throw std::runtime_error("Invalid extent dimensions after clamping");
+    }
     
     return actualExtent;
 }

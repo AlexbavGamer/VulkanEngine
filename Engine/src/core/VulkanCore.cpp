@@ -685,42 +685,159 @@ void VulkanCore::cleanup()
     vkDestroyInstance(instance, nullptr);
 }
 
-void VulkanCore::handleResize()
-{
+void VulkanCore::releaseResources() {
+    for (auto framebuffer : framebuffers) {
+        if (framebuffer != VK_NULL_HANDLE)
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+    }
+    framebuffers.clear();
+
+    if (sceneFramebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(device, sceneFramebuffer, nullptr);
+        sceneFramebuffer = VK_NULL_HANDLE;
+    }
+
+    if (sceneImageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, sceneImageView, nullptr);
+        sceneImageView = VK_NULL_HANDLE;
+    }
+
+    if (sceneImage != VK_NULL_HANDLE) {
+        vkDestroyImage(device, sceneImage, nullptr);
+        sceneImage = VK_NULL_HANDLE;
+    }
+
+    if (sceneImageMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, sceneImageMemory, nullptr);
+        sceneImageMemory = VK_NULL_HANDLE;
+    }
+
+    if (depthImageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, depthImageView, nullptr);
+        depthImageView = VK_NULL_HANDLE;
+    }
+
+    if (depthImage != VK_NULL_HANDLE) {
+        vkDestroyImage(device, depthImage, nullptr);
+        depthImage = VK_NULL_HANDLE;
+    }
+
+    if (depthImageMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, depthImageMemory, nullptr);
+        depthImageMemory = VK_NULL_HANDLE;
+    }
+
+    if (defaultTextureView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, defaultTextureView, nullptr);
+        defaultTextureView = VK_NULL_HANDLE;
+    }
+
+    if (defaultTexture != VK_NULL_HANDLE) {
+        vkDestroyImage(device, defaultTexture, nullptr);
+        defaultTexture = VK_NULL_HANDLE;
+    }
+
+    if (defaultTextureMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, defaultTextureMemory, nullptr);
+        defaultTextureMemory = VK_NULL_HANDLE;
+    }
+
+    if (sceneRenderPass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(device, sceneRenderPass, nullptr);
+        sceneRenderPass = VK_NULL_HANDLE;
+    }
+
+    if (renderPass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(device, renderPass, nullptr);
+        renderPass = VK_NULL_HANDLE;
+    }
+
+    if (textureSampler != VK_NULL_HANDLE) {
+        vkDestroySampler(device, textureSampler, nullptr);
+        textureSampler = VK_NULL_HANDLE;
+    }
+
+    if (sceneDescriptorSetLayout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(device, sceneDescriptorSetLayout, nullptr);
+        sceneDescriptorSetLayout = VK_NULL_HANDLE;
+    }
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (imageAvailableSemaphores[i] != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+        if (renderFinishedSemaphores[i] != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+        if (inFlightFences[i] != VK_NULL_HANDLE)
+            vkDestroyFence(device, inFlightFences[i], nullptr);
+    }
+
+    if (commandPool != VK_NULL_HANDLE) {
+        vkDestroyCommandPool(device, commandPool, nullptr);
+        commandPool = VK_NULL_HANDLE;
+    }
+
+    if (surface != VK_NULL_HANDLE) {
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+        surface = VK_NULL_HANDLE;
+    }
+
+    imgui.reset();
+    descriptor.reset();
+    pipeline.reset();
+    swapChain.reset();
+    scene.reset();
+
+    if (device != VK_NULL_HANDLE) {
+        vkDestroyDevice(device, nullptr);
+        device = VK_NULL_HANDLE;
+    }
+}
+
+void VulkanCore::handleResize() {
     int width = 0, height = 0;
     glfwGetFramebufferSize(window, &width, &height);
-    while (width == 0 || height == 0)
-    {
+
+    // Aguardar até que a janela tenha dimensões válidas
+    while (width == 0 || height == 0) {
         glfwGetFramebufferSize(window, &width, &height);
         glfwWaitEvents();
     }
 
+    // Validar limites máximos
+    VkPhysicalDeviceProperties deviceProperties;
+    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+    
+    width = std::min(width, static_cast<int>(deviceProperties.limits.maxImageDimension2D));
+    height = std::min(height, static_cast<int>(deviceProperties.limits.maxImageDimension2D));
+
+    // Se as dimensões foram ajustadas, atualizar a janela
+    if (width != static_cast<int>(swapChain->getExtent().width) ||
+        height != static_cast<int>(swapChain->getExtent().height)) {
+        glfwSetWindowSize(window, width, height);
+    }
+
     vkDeviceWaitIdle(device);
 
-    // First destroy framebuffers that use the image views
-    for (auto framebuffer : framebuffers)
-    {
-        if (framebuffer != VK_NULL_HANDLE)
-        {
+    // Primeiro destruir framebuffers que usam as image views
+    for (auto framebuffer : framebuffers) {
+        if (framebuffer != VK_NULL_HANDLE) {
             vkDestroyFramebuffer(device, framebuffer, nullptr);
         }
     }
     framebuffers.clear();
 
-    if (sceneFramebuffer != VK_NULL_HANDLE)
-    {
+    if (sceneFramebuffer != VK_NULL_HANDLE) {
         vkDestroyFramebuffer(device, sceneFramebuffer, nullptr);
         sceneFramebuffer = VK_NULL_HANDLE;
     }
 
-    // Now safe to destroy image views
-    if (sceneImageView != VK_NULL_HANDLE)
-    {
+    // Agora é seguro destruir as image views
+    if (sceneImageView != VK_NULL_HANDLE) {
         vkDestroyImageView(device, sceneImageView, nullptr);
         sceneImageView = VK_NULL_HANDLE;
     }
 
-    // Recreate swapchain and dependent resources
+    // Recriar swapchain e recursos dependentes
     swapChain->cleanup();
     swapChain->create();
     createRenderPass();
@@ -949,54 +1066,39 @@ void VulkanCore::createImage(uint32_t width, uint32_t height, VkFormat format,
                              VkMemoryPropertyFlags properties, VkImage &image,
                              VkDeviceMemory &imageMemory)
 {
-    // Verificar dimensões contra os limites do dispositivo
-    VkPhysicalDeviceProperties deviceProperties;
-    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+    validateImageDimensions(width, height);
 
-    if (width > deviceProperties.limits.maxImageDimension2D ||
-        height > deviceProperties.limits.maxImageDimension2D)
-    {
-        throw std::runtime_error("Image dimensions exceed device limits!");
-    }
-
-    // Configuração de VkImageCreateInfo
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent = {width, height, 1}; // Dimensões da imagem
-    imageInfo.mipLevels = 1;               // Apenas 1 nível de mip
-    imageInfo.arrayLayers = 1;             // Apenas 1 camada
+    imageInfo.extent = {width, height, 1};
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // Layout inicial
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;         // Sem multisampling
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // Apenas 1 fila usa
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS)
-    {
+    if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create image!");
     }
 
-    // Obter requisitos de memória
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device, image, &memRequirements);
 
-    // Alocar memória para a imagem
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-    {
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
         vkDestroyImage(device, image, nullptr);
         throw std::runtime_error("Failed to allocate image memory!");
     }
 
-    // Associar memória à imagem
-    if (vkBindImageMemory(device, image, imageMemory, 0) != VK_SUCCESS)
-    {
+    if (vkBindImageMemory(device, image, imageMemory, 0) != VK_SUCCESS) {
         vkFreeMemory(device, imageMemory, nullptr);
         vkDestroyImage(device, image, nullptr);
         throw std::runtime_error("Failed to bind image memory!");
@@ -1194,6 +1296,8 @@ void VulkanCore::createSceneResources()
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
+    validateImageDimensions(width, height);
+
     // Certifique-se de que o formato é consistente
     createImage(width, height, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -1226,6 +1330,7 @@ void VulkanCore::createDefaultImage()
     uint32_t width = swapChain->getExtent().width;
     uint32_t height = swapChain->getExtent().height;
 
+    // Validar e ajustar as dimensões da imagem se necessário
     validateImageDimensions(width, height);
 
     createImage(width, height,
@@ -1255,7 +1360,7 @@ void VulkanCore::createSceneRenderPass()
     depthAttachment.format = findDepthFormat();
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -1439,9 +1544,26 @@ SwapChainSupportDetails VulkanCore::querySwapChainSupport(VkPhysicalDevice devic
 
 void VulkanCore::validateImageDimensions(uint32_t &width, uint32_t &height)
 {
+    if (width == 0 || height == 0) {
+        throw std::runtime_error("Dimensões da imagem não podem ser zero");
+    }
+
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
+    // Verifica e ajusta para os limites máximos do dispositivo
     width = std::min(width, deviceProperties.limits.maxImageDimension2D);
     height = std::min(height, deviceProperties.limits.maxImageDimension2D);
+
+    // Verifica os limites mínimos (1x1 é o mínimo suportado pelo Vulkan)
+    width = std::max(width, 1u);
+    height = std::max(height, 1u);
+
+    // Log para debug em modo de desenvolvimento
+#ifndef NDEBUG
+    if (width != deviceProperties.limits.maxImageDimension2D || 
+        height != deviceProperties.limits.maxImageDimension2D) {
+        std::cout << "Dimensões da imagem ajustadas: " << width << "x" << height << std::endl;
+    }
+#endif
 }

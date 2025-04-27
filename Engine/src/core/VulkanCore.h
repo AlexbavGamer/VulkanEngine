@@ -7,6 +7,9 @@
 #include <optional>
 #include <memory>
 #include <array>
+#include <fstream>
+#include <chrono>
+#include <ctime>
 
 #include "VulkanTypes.h"
 
@@ -86,10 +89,26 @@ private:
     const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 #ifdef NDEBUG
-    const bool enableValidationLayers = true;
+    const bool enableValidationLayers = false;
 #else
     const bool enableValidationLayers = true;
 #endif
+
+    static constexpr bool DEBUG_MESSAGES = 
+#ifdef NDEBUG
+        false;
+#else
+        true;
+#endif
+    
+    void logError(const std::string& message) {
+        std::ofstream log("vulkan_error.log", std::ios::app);
+        if (log.is_open()) {
+            auto now = std::chrono::system_clock::now();
+            auto time = std::chrono::system_clock::to_time_t(now);
+            log << std::ctime(&time) << "[ERROR] " << message << std::endl;
+        }
+    }
 
     GLFWwindow* window;
     VkInstance instance{VK_NULL_HANDLE};
@@ -177,4 +196,7 @@ private:
 
     VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger);
     void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks *pAllocator);
+
+private:
+    void releaseResources();
 };
