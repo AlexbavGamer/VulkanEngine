@@ -390,16 +390,19 @@ endif()
 
 message(STATUS "Setting up library linkage...")
 # Links de biblioteca
+target_link_libraries(VulkanEngine PRIVATE
+    ${VULKAN_LIB}
+    glfw
+    assimp
+    Boost::filesystem
+    Boost::system
+    Boost::thread
+    Boost::chrono
+)
+
 if(UNIX)
     message(STATUS "Adding Linux-specific libraries...")
     target_link_libraries(VulkanEngine PRIVATE
-        ${VULKAN_LIB}
-        glfw
-        assimp
-        Boost::filesystem
-        Boost::system
-        Boost::thread
-        Boost::chrono
         ${CMAKE_THREAD_LIBS_INIT}
         ${X11_LIBRARIES}
         dl
@@ -409,16 +412,6 @@ if(UNIX)
     
     target_include_directories(VulkanEngine PRIVATE
         ${X11_INCLUDE_DIR}
-    )
-else()
-    target_link_libraries(VulkanEngine PRIVATE
-        ${VULKAN_LIB}
-        glfw
-        assimp
-        Boost::filesystem
-        Boost::system
-        Boost::thread
-        Boost::chrono
     )
 endif()
 
@@ -473,12 +466,6 @@ add_custom_command(
 # Configurações adicionais para Linux
 if(UNIX)
     message(STATUS "Configuring additional Linux settings...")
-    # Links adicionais para Linux
-    target_link_libraries(VulkanEngine
-        dl      # Biblioteca de carregamento dinâmico
-        pthread # Suporte a threads
-    )
-
     # Flags adicionais para Linux
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
