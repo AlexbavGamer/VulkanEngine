@@ -69,17 +69,28 @@ if(WIN32)
     set(BOOST_ROOT "C:/Boost")
     set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
     set(BOOST_LIBRARYDIR "C:/Boost/lib")
+    
+    # Configurações específicas para MinGW
+    if(MINGW)
+        set(Boost_COMPILER "-mgw14") # Ajuste para sua versão do MinGW
+    endif()
+    
+    set(Boost_USE_STATIC_LIBS ON)
+    set(Boost_USE_MULTITHREADED ON)
+    set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
     add_definitions(-DBOOST_ALL_NO_LIB)
+    add_definitions(-DBOOST_THREAD_USE_LIB)
+    
+    find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    if(NOT Boost_FOUND)
+        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
+    endif()
 else()
     find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
         message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost (sudo apt-get install libboost-all-dev)")
     endif()
 endif()
-
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
-set(Boost_USE_MULTITHREADED ON)
 
 if(NOT WIN32)
     message(STATUS "Configuring additional Linux libraries...")
