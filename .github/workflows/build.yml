@@ -1,53 +1,70 @@
-name: Build Engine
+name: Build VulkanEngine
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
-        include:
-          - os: windows-latest
-            cmake_generator: "Visual Studio 17 2022"
-          - os: ubuntu-latest
-            cmake_generator: "Unix Makefiles"
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        compiler: [gcc, clang]
+        exclude:
+          - os: macos-latest
+            compiler: gcc
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-    - name: Install Linux Dependencies
+    - name: Setup Vulkan SDK
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y vulkan-sdk libvulkan-dev
+      shell: bash
+
+    - name: Set up Vulkan SDK for Windows
+      if: runner.os == 'Windows'
+      env:
+        VK_SDK_PATH: 'C:/VulkanSDK/1.3.250.0'
+      run: |
+        echo "Setting Vulkan SDK for Windows"
+        echo "VULKAN_SDK=${{env.VK_SDK_PATH}}" >> $env:GITHUB_ENV
+
+    - name: Install dependencies
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libvulkan-dev vulkan-validationlayers-dev xorg-dev libglu1-mesa-dev
+        sudo apt-get install -y libx11-dev libgl1-mesa-dev libboost-all-dev cmake g++ gcc
+      shell: bash
 
-    - name: Install Windows Dependencies
+    - name: Install dependencies for macOS
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install boost cmake
+      shell: bash
+
+    - name: Install dependencies for Windows
       if: runner.os == 'Windows'
       run: |
-        # O Vulkan SDK será instalado automaticamente pelo próprio CMake
+        choco install cmake boost
+      shell: bash
 
     - name: Configure CMake
       run: |
-        cmake -B build -G "${{ matrix.cmake_generator }}" -DCMAKE_BUILD_TYPE=Release
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      shell: bash
 
-    - name: Build
+    - name: Build with CMake
       run: |
         cmake --build build --config Release
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: vulkan-engine-${{ runner.os }}
-        path: |
-          build/VulkanEngine*
-          build/engine/
+      shell: bash
