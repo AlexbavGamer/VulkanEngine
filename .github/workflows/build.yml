@@ -24,7 +24,6 @@ jobs:
         with:
           platform: x64
           version: 13.2.0
-          threads: win32
 
       - name: Install Vulkan SDK (Windows)
         if: matrix.os == 'windows-latest'

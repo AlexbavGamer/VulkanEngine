@@ -66,24 +66,21 @@ endif()
 message(STATUS "Configuring Boost...")
 if(WIN32)
     message(STATUS "Configuring custom Boost paths for Windows...")
-    set(BOOST_ROOT "C:/Boost")
-    set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
-    set(BOOST_LIBRARYDIR "C:/Boost/lib")
-    
-    # Configurações específicas para MinGW
+    # Ajuste para MinGW 13.2.0
     if(MINGW)
-        set(Boost_COMPILER "-mgw14") # Ajuste para sua versão do MinGW
+        set(Boost_COMPILER "-mgw13")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0601")
     endif()
     
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
+    set(Boost_USE_STATIC_RUNTIME OFF)
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
     
-    find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    find_package(Boost REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
+        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost usando pacman -S mingw-w64-x86_64-boost")
     endif()
 else()
     find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
