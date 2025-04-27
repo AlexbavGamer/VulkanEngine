@@ -121,11 +121,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-mingw-
 
+       # Build para Windows
       - name: Build project (Windows)
-        env:
-          MINGW_DIR: C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64
+        if: matrix.os == 'windows-latest'
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc.exe -DCMAKE_CXX_COMPILER=g++.exe -DGLM_INCLUDE_DIR=$env:GLM_INCLUDE_DIR
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
 
       - name: Package release (Windows)
