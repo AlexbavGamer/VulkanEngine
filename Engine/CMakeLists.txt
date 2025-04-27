@@ -130,13 +130,6 @@ message(STATUS "Starting third-party dependencies configuration...")
 include(FetchContent)
 
 # GLFW
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE)
-
-# GLFW
 message(STATUS "Fetching GLFW from GitHub...")
 FetchContent_Declare(
     glfw
@@ -144,6 +137,21 @@ FetchContent_Declare(
     GIT_TAG        3.4
 )
 FetchContent_MakeAvailable(glfw)
+
+# Configurar caminhos do GLFW
+set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
+message(STATUS "GLFW include directory: ${GLFW_INCLUDE_DIRS}")
+
+if(UNIX)
+    # Verificar se o GLFW está instalado no sistema
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GLFW3 REQUIRED glfw3)
+    
+    if(GLFW3_FOUND)
+        message(STATUS "System GLFW3 found. Include dirs: ${GLFW3_INCLUDE_DIRS}")
+        list(APPEND GLFW_INCLUDE_DIRS ${GLFW3_INCLUDE_DIRS})
+    endif()
+endif()
 
 # GLM (matemática 3D)
 message(STATUS "Fetching GLM (OpenGL Mathematics) from GitHub...")
@@ -306,9 +314,6 @@ target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
 # Parte a ser modificada na configuração de diretórios de inclusão
 message(STATUS "Configuring include directories...")
 # Configurar diretórios de inclusão
-set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
-
-# Mensagens de depuração
 message(STATUS "GLFW_INCLUDE_DIRS: ${GLFW_INCLUDE_DIRS}")
 message(STATUS "GLM_INCLUDE_DIR: ${glm_SOURCE_DIR}")
 
