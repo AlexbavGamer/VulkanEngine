@@ -136,22 +136,34 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG        3.4
 )
+
+# Configurar opções do GLFW
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(glfw)
 
-# Configurar caminhos do GLFW
-set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
-message(STATUS "GLFW include directory: ${GLFW_INCLUDE_DIRS}")
+# Configurar caminhos do GLFW de forma mais robusta
+if(glfw_POPULATED)
+    set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
+    message(STATUS "GLFW include directory from source: ${GLFW_INCLUDE_DIRS}")
+endif()
 
 if(UNIX)
     # Verificar se o GLFW está instalado no sistema
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GLFW3 REQUIRED glfw3)
+    pkg_check_modules(GLFW3 glfw3)
     
     if(GLFW3_FOUND)
         message(STATUS "System GLFW3 found. Include dirs: ${GLFW3_INCLUDE_DIRS}")
         list(APPEND GLFW_INCLUDE_DIRS ${GLFW3_INCLUDE_DIRS})
     endif()
 endif()
+
+# Garantir que o diretório de inclusão do GLFW seja único
+list(REMOVE_DUPLICATES GLFW_INCLUDE_DIRS)
 
 # GLM (matemática 3D)
 message(STATUS "Fetching GLM (OpenGL Mathematics) from GitHub...")
