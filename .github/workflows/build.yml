@@ -16,52 +16,47 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     steps:
-      # Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Vulkan SDK
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/vulkan-sdk
-          key: ${{ runner.os }}-vulkan-sdk-${{ hashFiles('**/vulkan-config.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vulkan-sdk-
-
-      - name: Install Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
-        with:
-          version: latest
-          cache: true
-          strip: false
-
-      - name: Add Vulkan SDK to PATH
+      # Configuração específica para Windows
+      - name: Setup MSVC (Windows)
         if: matrix.os == 'windows-latest'
-        run: echo "${VULKAN_SDK}/bin" >> $GITHUB_PATH
+        uses: microsoft/setup-msbuild@v1.1
 
-      - name: Verify Vulkan SDK installation (Windows)
+      - name: Install Vulkan SDK (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          vulkaninfo --summary || echo "Vulkan SDK not found on Windows!"
+          $vulkanUrl = "https://sdk.lunarg.com/sdk/download/1.4.309.0/windows/VulkanSDK-1.4.309.0-Installer.exe"
+          $installerPath = "$env:TEMP\VulkanSDK-Installer.exe"
+          Invoke-WebRequest -Uri $vulkanUrl -OutFile $installerPath
+          Start-Process -FilePath $installerPath -Args "--accept-licenses --default-answer --confirm-command install" -Wait
+          [Environment]::SetEnvironmentVariable("VULKAN_SDK", "$env:VULKAN_SDK", [EnvironmentVariableTarget]::Machine)
+          echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
+          echo "$env:VULKAN_SDK\Bin" >> $env:GITHUB_PATH
 
-      - name: Verify Vulkan SDK installation (Linux)
+      # Configuração específica para Linux
+      - name: Install Vulkan SDK (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          vulkaninfo --summary || echo "Vulkan SDK not found on Linux!"
-      # Set up the CMake environment
+          wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+          sudo apt update
+          sudo apt install vulkan-sdk
+
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: '3.10'
+          cmake-version: '3.14'
 
-      # Install dependencies (Linux-specific)
-      - name: Install dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      # Build para Windows
+      - name: Build project (Windows)
+        if: matrix.os == 'windows-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
 
-      # Build the project (Linux)
+      # Build para Linux
       - name: Build project (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
