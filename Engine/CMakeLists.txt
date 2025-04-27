@@ -12,6 +12,32 @@ endif()
 
 message(STATUS "Starting VulkanEngine CMake configuration...")
 
+# Para Linux, verificar e instalar dependências necessárias
+if(UNIX)
+    message(STATUS "Checking Linux dependencies...")
+    
+    # Verificar pacotes necessários
+    find_package(PkgConfig REQUIRED)
+    
+    # Verificar GLFW3
+    pkg_check_modules(GLFW3 REQUIRED glfw3)
+    if(NOT GLFW3_FOUND)
+        message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo apt-get install libglfw3-dev")
+    endif()
+    
+    # Verificar GLM
+    pkg_check_modules(GLM REQUIRED glm)
+    if(NOT GLM_FOUND)
+        message(FATAL_ERROR "GLM não encontrado! Por favor, instale com: sudo apt-get install libglm-dev")
+    endif()
+    
+    # Verificar Vulkan
+    find_package(Vulkan)
+    if(NOT Vulkan_FOUND)
+        message(FATAL_ERROR "Vulkan não encontrado! Por favor, instale com: sudo apt-get install vulkan-tools libvulkan-dev")
+    endif()
+endif()
+
 # Definir o padrão C++ como C++17
 message(STATUS "Setting C++ standard to C++17")
 set(CMAKE_CXX_STANDARD 17)
@@ -66,21 +92,24 @@ endif()
 message(STATUS "Configuring Boost...")
 if(WIN32)
     message(STATUS "Configuring custom Boost paths for Windows...")
-    # Ajuste para MinGW 13.2.0
+    set(BOOST_ROOT "C:/Boost")
+    set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
+    set(BOOST_LIBRARYDIR "C:/Boost/lib")
+    
+    # Configurações específicas para MinGW
     if(MINGW)
-        set(Boost_COMPILER "-mgw13")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0601")
+        set(Boost_COMPILER "-mgw14") # Ajuste para sua versão do MinGW
     endif()
     
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_RUNTIME OFF)
+    set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
     
-    find_package(Boost REQUIRED COMPONENTS filesystem system thread chrono)
+    find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost usando pacman -S mingw-w64-x86_64-boost")
+        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
     endif()
 else()
     find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
