@@ -47,6 +47,7 @@ jobs:
             vulkan-utility-libraries-dev \
             vulkan-validationlayers \
             spirv-tools \
+            glslang-tools \
             cmake \
             libglm-dev \
             libxrandr-dev \
@@ -56,14 +57,8 @@ jobs:
             libx11-dev \
             mesa-vulkan-drivers
           
-          # Download e instale a versão pré-compilada do shaderc
-          wget -O shaderc.deb https://packages.debian.org/experimental/amd64/libshaderc/download
-          sudo dpkg -i shaderc.deb || true
-          sudo apt-get install -f
-          
           # Verificar instalação
-          which glslc || echo "glslc não encontrado"
-          glslc --version || echo "glslc não pode ser executado"
+          glslangValidator --version || echo "glslangValidator não encontrado"
           vulkaninfo || echo "vulkaninfo falhou"
 
       - name: Set up CMake
