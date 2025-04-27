@@ -1,4 +1,4 @@
-name: Build VulkanEngine
+name: Build Project
 
 on:
   push:
@@ -10,61 +10,91 @@ on:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        compiler: [gcc, clang]
-        exclude:
-          - os: macos-latest
-            compiler: gcc
+        os: [ubuntu-latest, windows-latest]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Vulkan SDK
-      if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y vulkan-sdk libvulkan-dev
-      shell: bash
+      - name: Cache Vulkan SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vulkan-sdk
+          key: ${{ runner.os }}-vulkan-sdk-${{ hashFiles('**/vulkan-config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vulkan-sdk-
 
-    - name: Set up Vulkan SDK for Windows
-      if: runner.os == 'Windows'
-      env:
-        VK_SDK_PATH: 'C:/VulkanSDK/1.3.250.0'
-      run: |
-        echo "Setting Vulkan SDK for Windows"
-        echo "VULKAN_SDK=${{env.VK_SDK_PATH}}" >> $env:GITHUB_ENV
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: latest
+          cache: true
+          strip: false
 
-    - name: Install dependencies
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libx11-dev libgl1-mesa-dev libboost-all-dev cmake g++ gcc
-      shell: bash
+      - name: Add Vulkan SDK to PATH
+        if: matrix.os == 'windows-latest'
+        run: echo "${VULKAN_SDK}/bin" >> $GITHUB_PATH
 
-    - name: Install dependencies for macOS
-      if: runner.os == 'macOS'
-      run: |
-        brew update
-        brew install boost cmake
-      shell: bash
+      - name: Verify Vulkan SDK installation (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          vulkaninfo --summary || echo "Vulkan SDK not found on Windows!"
 
-    - name: Install dependencies for Windows
-      if: runner.os == 'Windows'
-      run: |
-        choco install cmake boost
-      shell: bash
+      - name: Verify Vulkan SDK installation (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          vulkaninfo --summary || echo "Vulkan SDK not found on Linux!"
+      # Set up the CMake environment
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.10'
 
-    - name: Configure CMake
-      run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-      shell: bash
+      # Install dependencies (Linux-specific)
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
 
-    - name: Build with CMake
-      run: |
-        cmake --build build --config Release
-      shell: bash
+      # Build the project (Linux)
+      - name: Build project (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      # Build the project (Windows)
+      - name: Build project (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      # Package release artifacts (Linux)
+      - name: Package release (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir release
+          cp -r build/* release/
+          zip -r VulkanEngine-linux.zip release/
+
+      # Package release artifacts (Windows)
+      - name: Package release (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir release
+          xcopy /E /I build\* release\
+          7z a VulkanEngine-windows.zip ./release/*
+
+      # Upload release artifacts
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: VulkanEngine-build
+          path: |
+            build/*
