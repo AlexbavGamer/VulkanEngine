@@ -33,7 +33,8 @@ jobs:
             mesa \
             git \
             zip \
-            glm
+            glm \
+            glfw-x11
 
       - name: Cache CMake build
         uses: actions/cache@v3
@@ -124,7 +125,6 @@ jobs:
         env:
           MINGW_DIR: C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64
         run: |
-          $env:PATH = "$env:MINGW_DIR\bin;$env:PATH"
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc.exe -DCMAKE_CXX_COMPILER=g++.exe -DGLM_INCLUDE_DIR=$env:GLM_INCLUDE_DIR
           cmake --build build --config Release
 
