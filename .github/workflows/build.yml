@@ -39,13 +39,19 @@ jobs:
       - name: Install Vulkan SDK (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
+          wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
           sudo apt update
+          sudo apt install -y vulkan-sdk
           sudo apt install -y wget software-properties-common
           sudo apt install -y libvulkan-dev vulkan-tools
           sudo apt install -y libglm-dev
           sudo apt install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
           sudo apt install -y libwayland-dev libxkbcommon-dev
           sudo apt install -y spirv-tools
+          # Verificar instalação do glslc
+          which glslc || echo "glslc não encontrado"
+          vulkaninfo || echo "vulkaninfo falhou"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
@@ -64,13 +70,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      # Build the project (Windows)
-      - name: Build project (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
 
       # Package release artifacts (Linux)
