@@ -93,6 +93,13 @@ message(STATUS "Starting third-party dependencies configuration...")
 include(FetchContent)
 
 # GLFW
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+set(GLFW_USE_WAYLAND OFF CACHE BOOL "" FORCE)
+
+# GLFW
 message(STATUS "Fetching GLFW from GitHub...")
 FetchContent_Declare(
     glfw
