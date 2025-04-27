@@ -48,11 +48,12 @@ jobs:
             libxcursor-dev \
             libxi-dev \
             libx11-dev \
+            mesa-common-dev \
+            mesa-vulkan-drivers \
             glslang-tools
           
-          # Verificar instalação
+          # Verificar apenas o compilador de shaders
           glslangValidator --version
-          vulkaninfo
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
