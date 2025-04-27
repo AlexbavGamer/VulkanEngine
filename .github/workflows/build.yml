@@ -40,8 +40,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update
-          sudo apt install -y wget gnupg software-properties-common
-          # Instalar dependências base do Vulkan
           sudo apt install -y \
             libvulkan1 \
             vulkan-tools \
@@ -50,19 +48,18 @@ jobs:
             vulkan-validationlayers \
             spirv-tools \
             cmake \
-            python3 \
-            ninja-build
+            libglm-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libx11-dev \
+            mesa-vulkan-drivers
           
-          # Clonar e compilar shaderc
-          git clone https://github.com/google/shaderc
-          cd shaderc
-          ./utils/git-sync-deps
-          mkdir build
-          cd build
-          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ..
-          ninja
-          sudo ninja install
-          cd ../..
+          # Download e instale a versão pré-compilada do shaderc
+          wget -O shaderc.deb https://packages.debian.org/experimental/amd64/libshaderc/download
+          sudo dpkg -i shaderc.deb || true
+          sudo apt-get install -f
           
           # Verificar instalação
           which glslc || echo "glslc não encontrado"
