@@ -67,7 +67,11 @@ jobs:
         run: |
           # Definir GLM_INCLUDE_DIR manualmente para o CMake
           export GLM_INCLUDE_DIR=/usr/include/glm
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGLM_INCLUDE_DIR=/usr/include/glm
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGLM_INCLUDE_DIR=/usr/include/glm \
+            -DGLFW_INCLUDE_DIR=/usr/include \
+            -DCMAKE_PREFIX_PATH=/usr/lib/cmake/glfw3
           cmake --build build --config Release
 
       - name: Package release (Linux)
@@ -143,8 +147,13 @@ jobs:
       # Corrigido: Removido o condicional que estava incorreto
       - name: Build project (Windows)
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
+          $Env:GLFW_DIR = "${{ github.workspace }}/build/_deps/glfw-src"
+          cmake -S . -B build -G "MinGW Makefiles" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DGLFW_BUILD_DOCS=OFF `
+            -DGLFW_BUILD_TESTS=OFF `
+            -DGLFW_BUILD_EXAMPLES=OFF
+          cmake --build build --config Release --verbose
 
       - name: Package release (Windows)
         run: |
