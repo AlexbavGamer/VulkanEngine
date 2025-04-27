@@ -7,64 +7,113 @@ on:
     tags: ['*']
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies in Arch Linux
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            base-devel \
+            cmake \
+            vulkan-devel \
+            boost \
+            glslang \
+            libxrandr \
+            libxinerama \
+            libxcursor \
+            libxi \
+            libx11 \
+            mesa \
+            git \
+            zip
+
+      - name: Cache CMake build
+        uses: actions/cache@v3
+        with:
+          path: |
+            build/
+            ~/.cache/
+          key: ${{ runner.os }}-cmake-archlinux-${{ hashFiles('**/*.cpp', '**/*.h', '**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-archlinux-
+
+      - name: Build project (Linux)
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      - name: Package release (Linux)
+        run: |
+          mkdir release
+          cp -r build/* release/
+          zip -r VulkanEngine-linux.zip release/
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: VulkanEngine-linux-build
+          path: |
+            VulkanEngine-linux.zip
+
+  build-windows:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Configuração específica para Windows
       - name: Setup MinGW (Windows)
-        if: matrix.os == 'windows-latest'
         uses: egor-tensin/setup-mingw@v2
         with:
           platform: x64
           version: 13.2.0
 
+      - name: Cache Vulkan SDK
+        uses: actions/cache@v3
+        id: cache-vulkan
+        with:
+          path: |
+            ${{ env.TEMP }}\VulkanSDK
+            C:\VulkanSDK
+          key: ${{ runner.os }}-vulkan-1.4.309.0
+
       - name: Install Vulkan SDK (Windows)
-        if: matrix.os == 'windows-latest'
+        if: steps.cache-vulkan.outputs.cache-hit != 'true'
         run: |
           $vulkanUrl = "https://sdk.lunarg.com/sdk/download/1.4.309.0/windows/VulkanSDK-1.4.309.0-Installer.exe"
           $installerPath = "$env:TEMP\VulkanSDK-Installer.exe"
           Invoke-WebRequest -Uri $vulkanUrl -OutFile $installerPath
           Start-Process -FilePath $installerPath -Args "--accept-licenses --default-answer --confirm-command install" -Wait
+          
+      - name: Setup Vulkan paths
+        run: |
           [Environment]::SetEnvironmentVariable("VULKAN_SDK", "$env:VULKAN_SDK", [EnvironmentVariableTarget]::Machine)
           echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
           echo "$env:VULKAN_SDK\Bin" >> $env:GITHUB_PATH
-
-      # Configuração específica para Linux
-      - name: Install Vulkan SDK and dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            libboost-all-dev \
-            libvulkan-dev \
-            vulkan-tools \
-            libxrandr-dev \
-            libxinerama-dev \
-            libxcursor-dev \
-            libxi-dev \
-            libx11-dev \
-            mesa-common-dev \
-            mesa-vulkan-drivers \
-            glslang-tools
-          
-          # Verificar apenas o compilador de shaders
-          glslangValidator --version
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.14'
 
-      # Build para Windows
+      - name: Cache CMake build
+        uses: actions/cache@v3
+        with:
+          path: |
+            build/
+            ~\.cmake\
+          key: ${{ runner.os }}-cmake-mingw-${{ hashFiles('**/*.cpp', '**/*.h', '**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-mingw-
+
       - name: Build project (Windows)
-        if: matrix.os == 'windows-latest'
         env:
           MINGW_DIR: C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64
         run: |
@@ -72,33 +121,15 @@ jobs:
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc.exe -DCMAKE_CXX_COMPILER=g++.exe
           cmake --build build --config Release
 
-      # Build para Linux
-      - name: Build project (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      # Package release artifacts (Linux)
-      - name: Package release (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          mkdir release
-          cp -r build/* release/
-          zip -r VulkanEngine-linux.zip release/
-
-      # Package release artifacts (Windows)
       - name: Package release (Windows)
-        if: matrix.os == 'windows-latest'
         run: |
           mkdir release
           xcopy /E /I build\* release\
           7z a VulkanEngine-windows.zip ./release/*
 
-      # Upload release artifacts
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: VulkanEngine-build
+          name: VulkanEngine-windows-build
           path: |
-            build/*
+            VulkanEngine-windows.zip
