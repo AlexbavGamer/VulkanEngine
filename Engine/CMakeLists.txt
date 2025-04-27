@@ -40,12 +40,26 @@ else()
     set(VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
     set(VULKAN_LIB ${Vulkan_LIBRARIES})
     
-    # Procurar o glslangValidator
-    find_program(SHADER_COMPILER glslangValidator)
-    if(NOT SHADER_COMPILER)
-        message(FATAL_ERROR "glslangValidator não encontrado! Por favor, instale o pacote glslang-tools")
+    # Procurar o glslc em vários locais comuns
+    find_program(GLSLC glslc
+        PATHS
+        /usr/bin
+        /usr/local/bin
+        ${Vulkan_INCLUDE_DIRS}/../bin
+        /usr/lib/x86_64-linux-gnu/
+        NO_DEFAULT_PATH
+    )
+    
+    if(NOT GLSLC)
+        # Se não encontrar glslc, usar glslangValidator
+        find_program(GLSLC glslangValidator)
+        if(NOT GLSLC)
+            message(FATAL_ERROR "Nem glslc nem glslangValidator foram encontrados! Por favor, instale o pacote glslang-tools")
+        endif()
+        set(SHADER_COMPILER_ARGS "-V")
+    else()
+        set(SHADER_COMPILER_ARGS "")
     endif()
-    set(SHADER_COMPILER_OPTIONS "-V")
 endif()
 
 # Configuração do Boost
@@ -330,7 +344,7 @@ foreach(SHADER ${SHADERS})
     message(STATUS "Setting up compilation for shader: ${SHADER_NAME}")
     add_custom_command(
         OUTPUT ${SPIRV_BINARY}
-        COMMAND ${SHADER_COMPILER} ${SHADER_COMPILER_OPTIONS} ${SHADER} -o ${SPIRV_BINARY}
+        COMMAND ${GLSLC} ${SHADER_COMPILER_ARGS} ${SHADER} -o ${SPIRV_BINARY}
         DEPENDS ${SHADER}
         COMMENT "Compilando shader ${SHADER_NAME}"
         VERBATIM
