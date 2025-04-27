@@ -1,100 +1,53 @@
-name: Build Project
+name: Build Engine
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   build:
+    name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            cmake_generator: "Visual Studio 17 2022"
+          - os: ubuntu-latest
+            cmake_generator: "Unix Makefiles"
 
     steps:
-      # Checkout the repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
-      - name: Cache Vulkan SDK
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/vulkan-sdk
-          key: ${{ runner.os }}-vulkan-sdk-${{ hashFiles('**/vulkan-config.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vulkan-sdk-
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libvulkan-dev vulkan-validationlayers-dev xorg-dev libglu1-mesa-dev
 
-      - name: Install Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
-        with:
-          version: latest
-          cache: true
-          strip: false
+    - name: Install Windows Dependencies
+      if: runner.os == 'Windows'
+      run: |
+        # O Vulkan SDK será instalado automaticamente pelo próprio CMake
 
-      - name: Add Vulkan SDK to PATH
-        if: matrix.os == 'windows-latest'
-        run: echo "${VULKAN_SDK}/bin" >> $GITHUB_PATH
+    - name: Configure CMake
+      run: |
+        cmake -B build -G "${{ matrix.cmake_generator }}" -DCMAKE_BUILD_TYPE=Release
 
-      - name: Verify Vulkan SDK installation (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          vulkaninfo --summary || echo "Vulkan SDK not found on Windows!"
+    - name: Build
+      run: |
+        cmake --build build --config Release
 
-      - name: Verify Vulkan SDK installation (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          vulkaninfo --summary || echo "Vulkan SDK not found on Linux!"
-      # Set up the CMake environment
-      - name: Set up CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.10'
-
-      # Install dependencies (Linux-specific)
-      - name: Install dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake
-
-      # Build the project (Linux)
-      - name: Build project (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      # Build the project (Windows)
-      - name: Build project (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      # Package release artifacts (Linux)
-      - name: Package release (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          mkdir release
-          cp -r build/* release/
-          zip -r VulkanEngine-linux.zip release/
-
-      # Package release artifacts (Windows)
-      - name: Package release (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          mkdir release
-          xcopy /E /I build\* release\
-          7z a VulkanEngine-windows.zip ./release/*
-
-      # Upload release artifacts
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: VulkanEngine-build
-          path: |
-            build/*
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: vulkan-engine-${{ runner.os }}
+        path: |
+          build/VulkanEngine*
+          build/engine/
