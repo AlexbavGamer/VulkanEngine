@@ -16,6 +16,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache pacman packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            /var/cache/pacman/pkg
+            /var/lib/pacman/sync
+          key: ${{ runner.os }}-pacman-${{ hashFiles('**/.github/workflows/build.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pacman-
+
       - name: Setup dependencies in Arch Linux
         run: |
           pacman -Syu --noconfirm
@@ -94,7 +104,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache MinGW
+        uses: actions/cache@v3
+        id: cache-mingw
+        with:
+          path: C:\ProgramData\chocolatey\lib\mingw
+          key: ${{ runner.os }}-mingw-13.2.0
+
       - name: Install MinGW and dependencies
+        if: steps.cache-mingw.outputs.cache-hit != 'true'
         run: |
           choco install -y mingw --version=13.2.0
           echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append

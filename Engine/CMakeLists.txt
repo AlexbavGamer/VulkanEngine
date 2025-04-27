@@ -316,6 +316,11 @@ message(STATUS "Creating font headers target...")
 add_custom_target(FontHeaders ALL DEPENDS ${GENERATED_HEADERS})
 
 message(STATUS "Creating executable target...")
+# Garantir que o target do GLFW esteja definido antes de usá-lo
+if(NOT TARGET glfw)
+    message(FATAL_ERROR "GLFW target não encontrado")
+endif()
+
 # Criar executável
 add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_HEADERS})
 target_sources(VulkanEngine PRIVATE 
@@ -367,7 +372,7 @@ message(STATUS "Setting up library linkage...")
 # Links de biblioteca
 if(UNIX)
     message(STATUS "Adding Linux-specific libraries...")
-    target_link_libraries(VulkanEngine
+    target_link_libraries(VulkanEngine PRIVATE
         ${VULKAN_LIB}
         glfw
         assimp
@@ -386,7 +391,7 @@ if(UNIX)
         ${X11_INCLUDE_DIR}
     )
 else()
-    target_link_libraries(VulkanEngine
+    target_link_libraries(VulkanEngine PRIVATE
         ${VULKAN_LIB}
         glfw
         assimp
