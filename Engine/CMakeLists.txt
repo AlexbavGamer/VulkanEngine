@@ -330,7 +330,26 @@ target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
 
 # Parte a ser modificada na configuração de diretórios de inclusão
 message(STATUS "Configuring include directories...")
-# Configurar diretórios de inclusão
+
+# Configurar diretórios de inclusão do GLFW
+if(UNIX)
+    find_path(GLFW_INCLUDE_PATH GLFW/glfw3.h
+        PATHS
+        /usr/include
+        /usr/local/include
+        ${GLFW_INCLUDE_DIRS}
+        ${glfw_SOURCE_DIR}/include
+        NO_DEFAULT_PATH
+    )
+    if(NOT GLFW_INCLUDE_PATH)
+        message(FATAL_ERROR "GLFW headers not found!")
+    endif()
+    message(STATUS "Found GLFW include path: ${GLFW_INCLUDE_PATH}")
+    set(GLFW_INCLUDE_DIRS ${GLFW_INCLUDE_PATH})
+else()
+    set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
+endif()
+
 message(STATUS "GLFW_INCLUDE_DIRS: ${GLFW_INCLUDE_DIRS}")
 message(STATUS "GLM_INCLUDE_DIR: ${glm_SOURCE_DIR}")
 
@@ -351,6 +370,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${GENERATED_DIR}
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${glfw_SOURCE_DIR}/include  # Adiciona o diretório de include do GLFW diretamente
 )
 
 # Adicionar inclusões específicas para Linux
