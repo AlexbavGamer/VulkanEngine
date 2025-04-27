@@ -38,9 +38,24 @@ else()
     
     set(VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
     set(VULKAN_LIB ${Vulkan_LIBRARIES})
-    find_program(GLSLC glslc REQUIRED)
+    
+    # Procurar o glslc em vários locais comuns
+    find_program(GLSLC glslc
+        PATHS
+        /usr/bin
+        /usr/local/bin
+        ${Vulkan_INCLUDE_DIRS}/../bin
+        /usr/lib/x86_64-linux-gnu/
+        NO_DEFAULT_PATH
+    )
+    
     if(NOT GLSLC)
-        message(FATAL_ERROR "glslc não encontrado! Por favor, instale o Vulkan SDK corretamente.")
+        # Tentar encontrar em qualquer lugar do PATH
+        find_program(GLSLC glslc)
+    endif()
+    
+    if(NOT GLSLC)
+        message(FATAL_ERROR "glslc não encontrado! Por favor, instale o pacote shaderc usando: sudo apt install shaderc")
     endif()
 endif()
 
