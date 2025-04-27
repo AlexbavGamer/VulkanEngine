@@ -34,6 +34,7 @@ jobs:
             git \
             zip \
             glm \
+            pkgconf \
             glfw-x11
 
       - name: Cache CMake build
@@ -46,9 +47,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-archlinux-
 
+      # Link para o GLM manualmente caso necessário
+      - name: Setup GLM manually
+        run: |
+          # Verificar se o pkg-config para glm está funcionando
+          if ! pkg-config --exists glm; then
+            # Verificar onde o GLM está instalado
+            ls -la /usr/include/glm
+            # Criar manualmente um arquivo .pc para o GLM
+            echo "prefix=/usr" > /usr/lib/pkgconfig/glm.pc
+            echo "includedir=\${prefix}/include" >> /usr/lib/pkgconfig/glm.pc
+            echo "Name: GLM" >> /usr/lib/pkgconfig/glm.pc
+            echo "Description: OpenGL Mathematics" >> /usr/lib/pkgconfig/glm.pc
+            echo "Version: 0.9.9" >> /usr/lib/pkgconfig/glm.pc
+            echo "Cflags: -I\${includedir}" >> /usr/lib/pkgconfig/glm.pc
+          fi
+
       - name: Build project (Linux)
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          # Definir GLM_INCLUDE_DIR manualmente para o CMake
+          export GLM_INCLUDE_DIR=/usr/include/glm
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGLM_INCLUDE_DIR=/usr/include/glm
           cmake --build build --config Release
 
       - name: Package release (Linux)
@@ -121,11 +140,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-mingw-
 
-       # Build para Windows
+      # Corrigido: Removido o condicional que estava incorreto
       - name: Build project (Windows)
-        if: matrix.os == 'windows-latest'
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGLM_INCLUDE_DIR=${{ github.workspace }}\include\glm
           cmake --build build --config Release
 
       - name: Package release (Windows)
