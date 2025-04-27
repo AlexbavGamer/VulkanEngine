@@ -29,7 +29,8 @@ if(WIN32)
     set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
     set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")
-    set(GLSLC "${VULKAN_SDK}/Bin/glslc.exe")
+    set(SHADER_COMPILER "${VULKAN_SDK}/Bin/glslc.exe")
+    set(SHADER_COMPILER_OPTIONS "")
 else()
     find_package(Vulkan REQUIRED)
     if(NOT Vulkan_FOUND)
@@ -39,24 +40,12 @@ else()
     set(VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
     set(VULKAN_LIB ${Vulkan_LIBRARIES})
     
-    # Procurar o glslc em vários locais comuns
-    find_program(GLSLC glslc
-        PATHS
-        /usr/bin
-        /usr/local/bin
-        ${Vulkan_INCLUDE_DIRS}/../bin
-        /usr/lib/x86_64-linux-gnu/
-        NO_DEFAULT_PATH
-    )
-    
-    if(NOT GLSLC)
-        # Tentar encontrar em qualquer lugar do PATH
-        find_program(GLSLC glslc)
+    # Procurar o glslangValidator
+    find_program(SHADER_COMPILER glslangValidator)
+    if(NOT SHADER_COMPILER)
+        message(FATAL_ERROR "glslangValidator não encontrado! Por favor, instale o pacote glslang-tools")
     endif()
-    
-    if(NOT GLSLC)
-        message(FATAL_ERROR "glslc não encontrado! Por favor, instale o pacote shaderc usando: sudo apt install shaderc")
-    endif()
+    set(SHADER_COMPILER_OPTIONS "-V")
 endif()
 
 # Configuração do Boost
@@ -341,7 +330,7 @@ foreach(SHADER ${SHADERS})
     message(STATUS "Setting up compilation for shader: ${SHADER_NAME}")
     add_custom_command(
         OUTPUT ${SPIRV_BINARY}
-        COMMAND ${GLSLC} ${SHADER} -o ${SPIRV_BINARY}
+        COMMAND ${SHADER_COMPILER} ${SHADER_COMPILER_OPTIONS} ${SHADER} -o ${SPIRV_BINARY}
         DEPENDS ${SHADER}
         COMMENT "Compilando shader ${SHADER_NAME}"
         VERBATIM

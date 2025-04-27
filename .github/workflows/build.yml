@@ -41,25 +41,18 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y \
-            libvulkan1 \
-            vulkan-tools \
             libvulkan-dev \
-            vulkan-utility-libraries-dev \
-            vulkan-validationlayers \
-            spirv-tools \
-            glslang-tools \
-            cmake \
-            libglm-dev \
+            vulkan-tools \
             libxrandr-dev \
             libxinerama-dev \
             libxcursor-dev \
             libxi-dev \
             libx11-dev \
-            mesa-vulkan-drivers
+            glslang-tools
           
           # Verificar instalação
-          glslangValidator --version || echo "glslangValidator não encontrado"
-          vulkaninfo || echo "vulkaninfo falhou"
+          glslangValidator --version
+          vulkaninfo
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
