@@ -36,14 +36,29 @@ jobs:
           echo "$env:VULKAN_SDK\Bin" >> $env:GITHUB_PATH
 
       # Configuração específica para Linux
-      - name: Install Vulkan SDK (Linux)
+      - name: Install Vulkan SDK and dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt update
-          sudo apt install -y shaderc spirv-tools vulkan-tools libvulkan-dev vulkan-validationlayers-dev
-          # Verificar instalação do glslc
+          sudo apt install -y wget gnupg software-properties-common
+          # Instalar dependências base do Vulkan
+          sudo apt install -y \
+            libvulkan1 \
+            vulkan-tools \
+            libvulkan-dev \
+            vulkan-utility-libraries-dev \
+            vulkan-validationlayers \
+            spirv-tools
+          # Instalar compilador de shaders manualmente
+          wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+          sudo apt update
+          sudo apt install -y vulkan-sdk
+          # Instalar compilador de shaders do LLVM
+          sudo apt install -y clang llvm
+          # Verificar instalação
           which glslc || echo "glslc não encontrado"
-          glslc --version || echo "glslc não pode ser executado"
+          vulkaninfo || echo "vulkaninfo falhou"
 
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
