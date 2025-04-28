@@ -187,7 +187,7 @@ jobs:
           Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
         shell: pwsh
 
-        - name: Build Boost
+      - name: Build Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
           # Build Boost with MinGW 14
