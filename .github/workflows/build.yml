@@ -176,21 +176,23 @@ jobs:
           # Create Boost directory
           mkdir -p C:/Boost/include
           mkdir -p C:/Boost/lib
-          
+              
           # Download and extract Boost
           $boostUrl = "https://archives.boost.io/release/1.88.0/source/boost_1_88_0.zip"
           $boostZip = "$env:TEMP\boost_1_88_0.zip"
           Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip
           Expand-Archive -Path $boostZip -DestinationPath "$env:TEMP"
-          
+              
           # Copy headers
-          Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
-          
+          Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include" -Recurse
+              
           # Build Boost
           cd "$env:TEMP\boost_1_88_0"
           .\bootstrap.bat gcc
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static runtime-link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
-
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+              
+          # Verify libraries were created
+          ls C:/Boost/lib
         shell: pwsh
 
       - name: Cache GLM Library
