@@ -270,3 +270,58 @@ jobs:
           name: VulkanEngine-windows-build
           path: |
             VulkanEngine-windows.zip
+
+  # New publish job that only runs when a tag is pushed
+  publish-release:
+    name: Publish Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    # Only run this job when a tag is pushed
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get tag name
+        id: get_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+      
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: VulkanEngine ${{ steps.get_tag.outputs.TAG_NAME }}
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/VulkanEngine-linux-build/VulkanEngine-linux.zip
+            artifacts/VulkanEngine-windows-build/VulkanEngine-windows.zip
+          body: |
+            # VulkanEngine Release ${{ steps.get_tag.outputs.TAG_NAME }}
+            
+            ## What's New
+            
+            - Release version ${{ steps.get_tag.outputs.TAG_NAME }}
+            
+            ## Downloads
+            
+            - [Windows Build](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_tag.outputs.TAG_NAME }}/VulkanEngine-windows.zip)
+            - [Linux Build](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_tag.outputs.TAG_NAME }}/VulkanEngine-linux.zip)
+            
+            ## Installation
+            
+            1. Download the appropriate zip file for your platform
+            2. Extract the contents
+            3. Run the VulkanEngine executable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
