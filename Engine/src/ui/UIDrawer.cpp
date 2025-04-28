@@ -103,6 +103,9 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
 
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
+    auto& transform = selectedEntity->getComponent<TransformComponent>();
+    auto& camera = core->getScene()->cameraEntity->getComponent<CameraComponent>();
+
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
     glm::mat4 model = transform.getWorldMatrix();
@@ -130,13 +133,10 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
     {
         // Atualiza a transformação mundial diretamente
         transform.setWorldMatrix(model);
+    }
+}
 
 void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)
-{
-    ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, -1.0f), ImVec2(350.0f, -1.0f));
-    ImGui::Begin("Inspector");
-
-    if (selectedEntity)
     {
         // Display entity name and ID
         ImGui::Text("Entity: %s", selectedEntity->getName().c_str());
