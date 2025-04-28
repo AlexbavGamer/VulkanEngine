@@ -5,7 +5,11 @@
 #include "Components.h"
 #include "ecs/Registry.h"
 #include "ecs/RenderSystem.h"
+#ifdef _WIN32
 #include <glfw/glfw3.h>
+#else
+#include <GLFW/glfw3.h>
+#endif
 #include "ecs/components/LightComponent.h"
 
 

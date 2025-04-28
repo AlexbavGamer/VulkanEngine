@@ -22,19 +22,39 @@ if(UNIX)
     # Verificar GLFW3
     pkg_check_modules(GLFW3 REQUIRED glfw3)
     if(NOT GLFW3_FOUND)
-        message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo apt-get install libglfw3-dev")
+        message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo pacman -S glfw-x11 ou sudo apt-get install libglfw3-dev")
     endif()
     
-    # Verificar GLM
-    pkg_check_modules(GLM REQUIRED glm)
+    # Tentar encontrar GLM usando pkg-config primeiro
+    pkg_check_modules(GLM glm)
+    
+    # Se pkg-config falhar, tentar encontrar GLM diretamente
     if(NOT GLM_FOUND)
-        message(FATAL_ERROR "GLM não encontrado! Por favor, instale com: sudo apt-get install libglm-dev")
+        # Tentar encontrar os headers do GLM diretamente
+         # Try multiple possible paths for GLFW headers
+        find_path(GLFW_INCLUDE_PATH GLFW/glfw3.h
+            PATHS
+            /usr/include
+            /usr/local/include
+            /usr/include/GLFW
+            /usr/local/include/GLFW
+            ${GLFW_INCLUDE_DIRS}
+            ${GLFW3_INCLUDE_DIRS}
+            ${glfw_SOURCE_DIR}/include
+        )
+        
+        if(GLM_INCLUDE_DIR)
+            message(STATUS "Encontrados headers do GLM em: ${GLM_INCLUDE_DIR}")
+            set(GLM_FOUND TRUE)
+        else()
+            message(FATAL_ERROR "GLM não encontrado! Por favor, instale com: sudo pacman -S glm ou sudo apt-get install libglm-dev")
+        endif()
     endif()
     
     # Verificar Vulkan
     find_package(Vulkan)
     if(NOT Vulkan_FOUND)
-        message(FATAL_ERROR "Vulkan não encontrado! Por favor, instale com: sudo apt-get install vulkan-tools libvulkan-dev")
+        message(FATAL_ERROR "Vulkan não encontrado! Por favor, instale com: sudo pacman -S vulkan-icd-loader vulkan-headers ou sudo apt-get install vulkan-tools libvulkan-dev")
     endif()
 endif()
 
@@ -130,40 +150,20 @@ message(STATUS "Starting third-party dependencies configuration...")
 include(FetchContent)
 
 # GLFW
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_X11 ON CACHE BOOL "" FORCE)
+
+# GLFW
 message(STATUS "Fetching GLFW from GitHub...")
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG        3.4
 )
-
-# Configurar opções do GLFW
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-
 FetchContent_MakeAvailable(glfw)
-
-# Configurar caminhos do GLFW de forma mais robusta
-if(glfw_POPULATED)
-    set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
-    message(STATUS "GLFW include directory from source: ${GLFW_INCLUDE_DIRS}")
-endif()
-
-if(UNIX)
-    # Verificar se o GLFW está instalado no sistema
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GLFW3 glfw3)
-    
-    if(GLFW3_FOUND)
-        message(STATUS "System GLFW3 found. Include dirs: ${GLFW3_INCLUDE_DIRS}")
-        list(APPEND GLFW_INCLUDE_DIRS ${GLFW3_INCLUDE_DIRS})
-    endif()
-endif()
-
-# Garantir que o diretório de inclusão do GLFW seja único
-list(REMOVE_DUPLICATES GLFW_INCLUDE_DIRS)
 
 # GLM (matemática 3D)
 message(STATUS "Fetching GLM (OpenGL Mathematics) from GitHub...")
@@ -316,11 +316,6 @@ message(STATUS "Creating font headers target...")
 add_custom_target(FontHeaders ALL DEPENDS ${GENERATED_HEADERS})
 
 message(STATUS "Creating executable target...")
-# Garantir que o target do GLFW esteja definido antes de usá-lo
-if(NOT TARGET glfw)
-    message(FATAL_ERROR "GLFW target não encontrado")
-endif()
-
 # Criar executável
 add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_HEADERS})
 target_sources(VulkanEngine PRIVATE 
@@ -331,33 +326,41 @@ target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
 # Parte a ser modificada na configuração de diretórios de inclusão
 message(STATUS "Configuring include directories...")
 
-# Configurar diretórios de inclusão do GLFW
+# Improve GLFW header detection
 if(UNIX)
+    message(STATUS "Checking for GLFW headers on Linux...")
+    
+    # Try multiple possible paths for GLFW headers
     find_path(GLFW_INCLUDE_PATH GLFW/glfw3.h
         PATHS
         /usr/include
         /usr/local/include
+        /usr/include/GLFW
+        /usr/local/include/GLFW
         ${GLFW_INCLUDE_DIRS}
+        ${GLFW3_INCLUDE_DIRS}
         ${glfw_SOURCE_DIR}/include
-        NO_DEFAULT_PATH
     )
-    if(NOT GLFW_INCLUDE_PATH)
-        message(FATAL_ERROR "GLFW headers not found!")
+    
+    if(GLFW_INCLUDE_PATH)
+        message(STATUS "Found GLFW include path: ${GLFW_INCLUDE_PATH}")
+        set(GLFW_INCLUDE_DIRS ${GLFW_INCLUDE_PATH})
+    else()
+        message(STATUS "GLFW headers not found in system paths, using fetched version")
+        set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
     endif()
-    message(STATUS "Found GLFW include path: ${GLFW_INCLUDE_PATH}")
-    set(GLFW_INCLUDE_DIRS ${GLFW_INCLUDE_PATH})
 else()
     set(GLFW_INCLUDE_DIRS ${glfw_SOURCE_DIR}/include)
 endif()
 
 message(STATUS "GLFW_INCLUDE_DIRS: ${GLFW_INCLUDE_DIRS}")
-message(STATUS "GLM_INCLUDE_DIR: ${glm_SOURCE_DIR}")
+message(STATUS "GLM_INCLUDE_DIR: ${GLM_INCLUDE_DIR}")
 
 # Adicionar diretórios de inclusão
 target_include_directories(VulkanEngine PRIVATE
     ${VULKAN_INCLUDE_DIR}
     ${GLFW_INCLUDE_DIRS}
-    ${glm_SOURCE_DIR}
+    $<IF:$<BOOL:${GLM_INCLUDE_DIR}>,${GLM_INCLUDE_DIR},${glm_SOURCE_DIR}>
     ${stb_SOURCE_DIR}
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
@@ -390,19 +393,16 @@ endif()
 
 message(STATUS "Setting up library linkage...")
 # Links de biblioteca
-target_link_libraries(VulkanEngine PRIVATE
-    ${VULKAN_LIB}
-    glfw
-    assimp
-    Boost::filesystem
-    Boost::system
-    Boost::thread
-    Boost::chrono
-)
-
 if(UNIX)
     message(STATUS "Adding Linux-specific libraries...")
-    target_link_libraries(VulkanEngine PRIVATE
+    target_link_libraries(VulkanEngine
+        ${VULKAN_LIB}
+        glfw
+        assimp
+        Boost::filesystem
+        Boost::system
+        Boost::thread
+        Boost::chrono
         ${CMAKE_THREAD_LIBS_INIT}
         ${X11_LIBRARIES}
         dl
@@ -412,6 +412,16 @@ if(UNIX)
     
     target_include_directories(VulkanEngine PRIVATE
         ${X11_INCLUDE_DIR}
+    )
+else()
+    target_link_libraries(VulkanEngine
+        ${VULKAN_LIB}
+        glfw
+        assimp
+        Boost::filesystem
+        Boost::system
+        Boost::thread
+        Boost::chrono
     )
 endif()
 
@@ -466,6 +476,12 @@ add_custom_command(
 # Configurações adicionais para Linux
 if(UNIX)
     message(STATUS "Configuring additional Linux settings...")
+    # Links adicionais para Linux
+    target_link_libraries(VulkanEngine
+        dl      # Biblioteca de carregamento dinâmico
+        pthread # Suporte a threads
+    )
+
     # Flags adicionais para Linux
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
