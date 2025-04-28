@@ -126,9 +126,24 @@ endif()
 message(STATUS "Configuring Boost...")
 if(WIN32)
     message(STATUS "Configuring custom Boost paths for Windows...")
-    set(BOOST_ROOT "C:/Boost")
-    set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
-    set(BOOST_LIBRARYDIR "C:/Boost/lib")
+    
+    # Permitir sobrescrever os caminhos do Boost via variáveis de ambiente ou linha de comando
+    if(NOT DEFINED BOOST_ROOT)
+        set(BOOST_ROOT "C:/Boost")
+    endif()
+    
+    if(NOT DEFINED BOOST_INCLUDEDIR)
+        # Verificar ambos os caminhos possíveis para os headers
+        if(EXISTS "${BOOST_ROOT}/include/boost-1_88")
+            set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include/boost-1_88")
+        elseif(EXISTS "${BOOST_ROOT}/include")
+            set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include")
+        endif()
+    endif()
+    
+    if(NOT DEFINED BOOST_LIBRARYDIR)
+        set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
+    endif()
 
     # Configurações específicas para MinGW
     if(MINGW)
@@ -140,17 +155,42 @@ if(WIN32)
     set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
+    
+    # Imprimir informações de debug para ajudar na solução de problemas
+    message(STATUS "BOOST_ROOT: ${BOOST_ROOT}")
+    message(STATUS "BOOST_INCLUDEDIR: ${BOOST_INCLUDEDIR}")
+    message(STATUS "BOOST_LIBRARYDIR: ${BOOST_LIBRARYDIR}")
 
-    find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    # Tentar encontrar o Boost com versão específica
+    find_package(Boost 1.88.0 COMPONENTS filesystem system thread chrono)
+    
+    # Se não encontrar, tentar com versões mais antigas
     if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
+        message(STATUS "Boost 1.88.0 não encontrado, tentando versões alternativas...")
+        find_package(Boost 1.71.0 COMPONENTS filesystem system thread chrono)
+    endif()
+    
+    # Verificação final
+    if(NOT Boost_FOUND)
+        message(FATAL_ERROR "Boost não encontrado! Por favor, verifique a instalação do Boost em ${BOOST_ROOT}.\n"
+                           "Diretório de include: ${BOOST_INCLUDEDIR}\n"
+                           "Diretório de bibliotecas: ${BOOST_LIBRARYDIR}\n"
+                           "Você pode definir manualmente BOOST_ROOT, BOOST_INCLUDEDIR e BOOST_LIBRARYDIR.")
     endif()
 else()
-    find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    # Linux/macOS
+    find_package(Boost 1.71.0 COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
         message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost (sudo apt-get install libboost-all-dev)")
     endif()
 endif()
+
+# Imprimir informações do Boost encontrado
+message(STATUS "Boost found:")
+message(STATUS "  Version: ${Boost_VERSION}")
+message(STATUS "  Include dirs: ${Boost_INCLUDE_DIRS}")
+message(STATUS "  Library dirs: ${Boost_LIBRARY_DIRS}")
+message(STATUS "  Libraries: ${Boost_LIBRARIES}")
 
 if(NOT WIN32)
     message(STATUS "Configuring additional Linux libraries...")
