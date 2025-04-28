@@ -217,8 +217,10 @@ jobs:
 
       - name: Build project (Windows)
         run: |
+          $env:PATH = ($env:PATH.Split(';') | Where-Object { $_ -notmatch 'Git' }) -join ';'
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
+        shell: pwsh
 
       - name: Package release (Windows)
         run: |
