@@ -85,7 +85,7 @@ if(WIN32)
     endif()
 
     set(VULKAN_SDK $ENV{VK_SDK_PATH})
-    string(REPLACE "\\" "/" VULKAN_SDK ${VULKAN_SDK})
+    string(REPLACE "\\" "/" VULKAN_SDK "${VULKAN_SDK}")
     set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
     set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")
@@ -162,12 +162,12 @@ if(WIN32)
     message(STATUS "BOOST_LIBRARYDIR: ${BOOST_LIBRARYDIR}")
 
     # Tentar encontrar o Boost com versão específica
-    find_package(Boost 1.88.0 COMPONENTS filesystem system thread chrono)
+    find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
     
     # Se não encontrar, tentar com versões mais antigas
     if(NOT Boost_FOUND)
         message(STATUS "Boost 1.88.0 não encontrado, tentando versões alternativas...")
-        find_package(Boost 1.71.0 COMPONENTS filesystem system thread chrono)
+        find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
     endif()
     
     # Verificação final
@@ -179,7 +179,7 @@ if(WIN32)
     endif()
 else()
     # Linux/macOS
-    find_package(Boost 1.71.0 COMPONENTS filesystem system thread chrono)
+    find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
         message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost (sudo apt-get install libboost-all-dev)")
     endif()
