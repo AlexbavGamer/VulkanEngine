@@ -448,6 +448,11 @@ file(MAKE_DIRECTORY ${COMPILED_SHADERS_DIR})
 set(SPIRV_BINARY_FILES "")
 set(SHADER_COMMANDS "")
 
+# Debug information
+message(STATUS "GLSLC compiler path: ${GLSLC}")
+message(STATUS "Shader compiler args: ${SHADER_COMPILER_ARGS}")
+message(STATUS "Number of shaders found: ${SHADERS}")
+
 # Compilação de shaders
 foreach(SHADER ${SHADERS})
     get_filename_component(SHADER_NAME ${SHADER} NAME)
@@ -455,7 +460,7 @@ foreach(SHADER ${SHADERS})
     set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_BINARY})
     
-    message(STATUS "Setting up compilation for shader: ${SHADER_NAME}")
+    message(STATUS "Setting up compilation for shader: ${SHADER_NAME} -> ${SPIRV_BINARY}")
     add_custom_command(
         OUTPUT ${SPIRV_BINARY}
         COMMAND ${GLSLC} ${SHADER_COMPILER_ARGS} ${SHADER} -o ${SPIRV_BINARY}
@@ -464,6 +469,11 @@ foreach(SHADER ${SHADERS})
         VERBATIM
     )
 endforeach()
+
+# Make sure we have shaders to build
+if(NOT SPIRV_BINARY_FILES)
+    message(WARNING "No shader files found in ${CMAKE_SOURCE_DIR}/shaders/. Shader build target will be empty.")
+endif()
 
 message(STATUS "Creating shader build target...")
 # Target para shaders

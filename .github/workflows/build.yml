@@ -18,6 +18,7 @@ jobs:
 
       - name: Cache pacman packages
         uses: actions/cache@v3
+        id: cache-pacman
         with:
           path: |
             /var/cache/pacman/pkg
@@ -50,6 +51,22 @@ jobs:
             pkgconf \
             glfw
 
+      - name: Cache GLM headers
+        uses: actions/cache@v3
+        id: cache-glm
+        with:
+          path: /usr/include/glm
+          key: ${{ runner.os }}-glm-headers-${{ hashFiles('**/.github/workflows/build.yml') }}
+
+      - name: Cache shader compilation
+        uses: actions/cache@v3
+        with:
+          path: |
+            shaders/*.spv
+          key: ${{ runner.os }}-shaders-${{ hashFiles('shaders/**/*.vert', 'shaders/**/*.frag') }}
+          restore-keys: |
+            ${{ runner.os }}-shaders-
+
       - name: Cache CMake build
         uses: actions/cache@v3
         with:
@@ -62,6 +79,7 @@ jobs:
 
       # Link para o GLM manualmente caso necessário
       - name: Setup GLM manually
+        if: steps.cache-glm.outputs.cache-hit != 'true'
         run: |
           # Verificar se o pkg-config para glm está funcionando
           if ! pkg-config --exists glm; then
@@ -143,17 +161,49 @@ jobs:
           echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
           echo "$env:VULKAN_SDK\Bin" >> $env:GITHUB_PATH
 
+      - name: Cache GLM Library
+        uses: actions/cache@v3
+        id: cache-glm-windows
+        with:
+          path: ${{ github.workspace }}\include\glm
+          key: ${{ runner.os }}-glm-0.9.9.8
+
       - name: Install GLM Library
+        if: steps.cache-glm-windows.outputs.cache-hit != 'true'
         run: |
           mkdir -p include
           Invoke-WebRequest -Uri "https://github.com/g-truc/glm/releases/download/0.9.9.8/glm-0.9.9.8.zip" -OutFile "glm.zip"
           Expand-Archive -Path "glm.zip" -DestinationPath "include"
           echo "GLM_INCLUDE_DIR=${{ github.workspace }}\include\glm" >> $env:GITHUB_ENV
 
+      - name: Cache GLFW Library
+        uses: actions/cache@v3
+        id: cache-glfw-windows
+        with:
+          path: ${{ github.workspace }}\include\glfw
+          key: ${{ runner.os }}-glfw-3.3.8
+
+      - name: Install GLFW Library
+        if: steps.cache-glfw-windows.outputs.cache-hit != 'true'
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/glfw/glfw/releases/download/3.3.8/glfw-3.3.8.bin.WIN64.zip" -OutFile "glfw.zip"
+          Expand-Archive -Path "glfw.zip" -DestinationPath "include"
+          Rename-Item -Path "${{ github.workspace }}\include\glfw-3.3.8.bin.WIN64" -NewName "glfw"
+          echo "GLFW_DIR=${{ github.workspace }}\include\glfw" >> $env:GITHUB_ENV
+
       - name: Set up CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.14'
+
+      - name: Cache shader compilation
+        uses: actions/cache@v3
+        with:
+          path: |
+            shaders/*.spv
+          key: ${{ runner.os }}-shaders-${{ hashFiles('shaders/**/*.vert', 'shaders/**/*.frag') }}
+          restore-keys: |
+            ${{ runner.os }}-shaders-
 
       - name: Cache CMake build
         uses: actions/cache@v3
@@ -166,9 +216,8 @@ jobs:
             ${{ runner.os }}-cmake-mingw-
 
       - name: Build project (Windows)
-        if: matrix.os == 'windows-latest'
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DGLM_INCLUDE_DIR=${{ github.workspace }}\include\glm -DGLFW_DIR=${{ github.workspace }}\include\glfw
           cmake --build build --config Release
 
       - name: Package release (Windows)
