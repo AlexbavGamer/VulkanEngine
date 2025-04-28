@@ -11,6 +11,7 @@
 #include <boost/hana.hpp>
 #include "ImGuiFileDialog.h"
 #include <core/VulkanImGui.h>
+#include <glm/detail/type_quat.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 namespace hana = boost::hana;
@@ -511,42 +512,70 @@ inline void UIDrawer::DrawInspector(T &obj, const std::string_view &title)
     {
         constexpr auto name = hana::first(pair);
         auto accessor = hana::second(pair);
-        using MemberType = std::remove_reference_t<decltype(accessor(obj))>;
         const std::string_view fieldName = hana::to<const char *>(name);
 
-        if constexpr (std::is_same_v<MemberType, float>) {
-            ImGui::DragFloat(fieldName.data(), &accessor(obj), 0.1f);
-        } else if constexpr (std::is_same_v<MemberType, int>) {
-            ImGui::DragInt(fieldName.data(), &accessor(obj));
-        } else if constexpr (std::is_same_v<MemberType, bool>) {
-            ImGui::Checkbox(fieldName.data(), &accessor(obj));
-        } else if constexpr (std::is_same_v<MemberType, glm::vec3>) {
-            ImGui::DragFloat3(fieldName.data(), &accessor(obj)[0], 0.1f);
-        } else if constexpr (std::is_same_v<MemberType, glm::quat>) {
-            ImGui::DragFloat4(fieldName.data(), &accessor(obj)[0], 0.1f);
-        } else if constexpr (std::is_same_v<MemberType, glm::vec4>) {
-            ImGui::DragFloat4(fieldName.data(), &accessor(obj)[0], 0.1f);
-        } else if constexpr (std::is_same_v<MemberType, std::string>) {
-            ImGui::InputText(fieldName.data(), &accessor(obj));
-        } else if constexpr (std::is_enum_v<MemberType>) {
-            auto names = magic_enum::enum_names<MemberType>();
-            std::vector<const char*> items;
-            items.reserve(names.size());
-            
-            // Convertendo cada string_view para const char*
-            for (const auto& name : names) {
-                items.push_back(name.data());
-            }
-            
-            int currentItem = static_cast<int>(accessor(obj));
-            if (ImGui::Combo(fieldName.data(), &currentItem, items.data(), static_cast<int>(items.size()))) {
-                accessor(obj) = static_cast<MemberType>(currentItem);
-            }
-        } else {
-            // Para structs aninhadas que também usam BOOST_HANA_DEFINE_STRUCT
-            // DrawInspector(accessor(obj), fieldName);
-        } 
+        auto& value = accessor(obj);
+        DrawField(fieldName, value);
     });
 
     ImGui::TreePop();
+}
+
+// Especialização para float
+template<>
+void UIDrawer::DrawField<float>(const std::string_view& label, float& value) {
+    ImGui::DragFloat(label.data(), &value, 0.1f);
+}
+
+// Especialização para int
+template<>
+void UIDrawer::DrawField<int>(const std::string_view& label, int& value) {
+    ImGui::DragInt(label.data(), &value, 1);
+}
+
+// Especialização para bool
+template<>
+void UIDrawer::DrawField<bool>(const std::string_view& label, bool& value) {
+    ImGui::Checkbox(label.data(), &value);
+}
+
+// Especialização para glm::vec3
+template<>
+void UIDrawer::DrawField<glm::vec3>(const std::string_view& label, glm::vec3& value) {
+    ImGui::DragFloat3(label.data(), &value[0], 0.1f);
+}
+
+// Especialização para std::string
+template<>
+void UIDrawer::DrawField<std::string>(const std::string_view& label, std::string& value) {
+    static char buffer[256];
+    std::strncpy(buffer, value.c_str(), sizeof(buffer));
+    buffer[sizeof(buffer) - 1] = '\0';
+    if (ImGui::InputText(label.data(), buffer, sizeof(buffer))) {
+        value = buffer;
+    }
+}
+
+template<>
+void UIDrawer::DrawField<glm::qua<float>>(const std::string_view& label, glm::qua<float>& value)
+{
+    ImGui::DragFloat4(label.data(), glm::value_ptr(value), 0.1f);
+}
+
+template <>
+void UIDrawer::DrawField<LightComponent::LightType>(const std::string_view& label, LightComponent::LightType& value) {
+    const char* items[] = { "Directional", "Point", "Spot" };
+    int currentItem = static_cast<int>(value);
+    if (ImGui::Combo(label.data(), &currentItem, items, IM_ARRAYSIZE(items)))
+    {
+        value = static_cast<LightComponent::LightType>(currentItem);
+    }
+}
+
+template <>
+void UIDrawer::DrawField<glm::mat<4, 4, float>>(const std::string_view& label, glm::mat<4, 4, float>& value) {
+    ImGui::InputFloat4(label.data(), glm::value_ptr(value[0]));
+    ImGui::InputFloat4(label.data() + 4, glm::value_ptr(value[1]));
+    ImGui::InputFloat4(label.data() + 8, glm::value_ptr(value[2]));
+    ImGui::InputFloat4(label.data() + 12, glm::value_ptr(value[3]));
 }

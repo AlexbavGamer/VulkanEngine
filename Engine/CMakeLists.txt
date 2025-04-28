@@ -479,7 +479,7 @@ message(STATUS "Number of shaders found: ${SHADERS}")
 foreach(SHADER ${SHADERS})
     get_filename_component(SHADER_NAME ${SHADER} NAME)
     get_filename_component(SHADER_EXT ${SHADER} EXT)
-    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}\\${SHADER_NAME}.spv")
+    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_BINARY})
 
     message(STATUS "Setting up compilation for shader: ${SHADER_NAME} -> ${SPIRV_BINARY}")

@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <vulkan/vulkan.h>
 #include "ImGuizmo.h"
+#include <glm/glm.hpp>
 #include <string_view>
 
 class VulkanCore;
@@ -44,4 +45,7 @@ private:
     bool showOpenProject = false;
 
     ImGuizmo::OPERATION currentGizmoOperation = ImGuizmo::TRANSLATE;
+private:
+    template<typename T>
+    void DrawField(const std::string_view& label, T& value);
 };
