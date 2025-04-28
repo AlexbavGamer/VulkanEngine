@@ -211,10 +211,10 @@ jobs:
       - name: Build Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
-          # Build Boost with MinGW 14
+          # Build Boost
           cd "$env:TEMP\boost_1_88_0"
-          .\bootstrap.bat mingw
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc-mingw-14 variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+          .\bootstrap.bat gcc
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
         shell: pwsh
 
       - name: Cache GLM Library
