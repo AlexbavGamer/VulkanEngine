@@ -35,6 +35,8 @@ jobs:
             vulkan-devel \
             boost \
             glslang \
+            lib32-gcc-libs \
+            gcc-libs \
             libxrandr \
             libxinerama \
             libxcursor \

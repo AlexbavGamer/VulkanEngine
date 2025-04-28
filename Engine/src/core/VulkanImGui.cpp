@@ -7,7 +7,12 @@
 #include "VulkanImGui.h"
 #include <imgui_internal.h>
 
+#ifdef _MSC_VER
 #include <typeinfo.h>
+#else
+#include <typeinfo>
+#endif
+
 #include "../Scene.h"
 #include <iostream>
 #include <variant>
