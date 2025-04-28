@@ -217,7 +217,7 @@ jobs:
 
       - name: Build project (Windows)
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DGLM_INCLUDE_DIR=${{ github.workspace }}\include\glm -DGLFW_DIR=${{ github.workspace }}\include\glfw
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
 
       - name: Package release (Windows)

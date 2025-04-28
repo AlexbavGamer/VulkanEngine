@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.14)
 project(VulkanEngine)
 
 # Set policies to avoid warnings
@@ -19,10 +18,29 @@ if(UNIX)
     # Verificar pacotes necessários
     find_package(PkgConfig REQUIRED)
     
-    # Verificar GLFW3
-    pkg_check_modules(GLFW3 REQUIRED glfw3)
+    # Tentar encontrar GLFW3 usando pkg-config primeiro
+    pkg_check_modules(GLFW3 glfw3)
+    
+    # Se pkg-config falhar para GLFW3, tentar encontrar diretamente
     if(NOT GLFW3_FOUND)
-        message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo pacman -S glfw-x11 ou sudo apt-get install libglfw3-dev")
+        # Tentar encontrar os headers do GLFW diretamente
+        find_path(GLFW_INCLUDE_PATH GLFW/glfw3.h
+            PATHS
+            /usr/include
+            /usr/local/include
+            /usr/include/GLFW
+            /usr/local/include/GLFW
+        )
+        
+        if(GLFW_INCLUDE_PATH AND GLFW_LIBRARY)
+            message(STATUS "Encontrados headers do GLFW em: ${GLFW_INCLUDE_PATH}")
+            message(STATUS "Encontrada biblioteca do GLFW em: ${GLFW_LIBRARY}")
+            set(GLFW3_FOUND TRUE)
+            set(GLFW3_INCLUDE_DIRS ${GLFW_INCLUDE_PATH})
+            set(GLFW3_LIBRARIES ${GLFW_LIBRARY})
+        else()
+            message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo pacman -S glfw-x11 ou sudo apt-get install libglfw3-dev")
+        endif()
     endif()
     
     # Tentar encontrar GLM usando pkg-config primeiro
@@ -31,16 +49,12 @@ if(UNIX)
     # Se pkg-config falhar, tentar encontrar GLM diretamente
     if(NOT GLM_FOUND)
         # Tentar encontrar os headers do GLM diretamente
-         # Try multiple possible paths for GLFW headers
-        find_path(GLFW_INCLUDE_PATH GLFW/glfw3.h
+        find_path(GLM_INCLUDE_DIR glm/glm.hpp
             PATHS
             /usr/include
             /usr/local/include
-            /usr/include/GLFW
-            /usr/local/include/GLFW
-            ${GLFW_INCLUDE_DIRS}
-            ${GLFW3_INCLUDE_DIRS}
-            ${glfw_SOURCE_DIR}/include
+            /usr/include/glm
+            /usr/local/include/glm
         )
         
         if(GLM_INCLUDE_DIR)
@@ -283,11 +297,19 @@ message(STATUS "Setting up font generation...")
 set(GENERATED_DIR ${CMAKE_BINARY_DIR}/generated)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
-# Find font files
-file(GLOB FONT_FILES 
-    "${CMAKE_SOURCE_DIR}/engine/fonts/*.ttf"
-    "${CMAKE_SOURCE_DIR}/engine/fonts/*.otf"
-)
+
+# find all font files in the engine/fonts directory
+if(EXISTS "${CMAKE_SOURCE_DIR}/engine/fonts")
+    file(GLOB FONT_FILES 
+        "${CMAKE_SOURCE_DIR}/engine/fonts/*.ttf"
+        "${CMAKE_SOURCE_DIR}/engine/fonts/*.otf"
+    )
+else()
+    file(GLOB FONT_FILES 
+        "${CMAKE_CURRENT_SOURCE_DIR}/engine/fonts/*.ttf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/engine/fonts/*.otf"
+    )
+endif()
 
 foreach(FONT_FILE ${FONT_FILES})
     get_filename_component(FONT_NAME ${FONT_FILE} NAME_WE)
