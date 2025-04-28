@@ -14,13 +14,13 @@ message(STATUS "Starting VulkanEngine CMake configuration...")
 # Para Linux, verificar e instalar dependências necessárias
 if(UNIX)
     message(STATUS "Checking Linux dependencies...")
-    
+
     # Verificar pacotes necessários
     find_package(PkgConfig REQUIRED)
-    
+
     # Tentar encontrar GLFW3 usando pkg-config primeiro
     pkg_check_modules(GLFW3 glfw3)
-    
+
     # Se pkg-config falhar para GLFW3, tentar encontrar diretamente
     if(NOT GLFW3_FOUND)
         # Tentar encontrar os headers do GLFW diretamente
@@ -31,7 +31,7 @@ if(UNIX)
             /usr/include/GLFW
             /usr/local/include/GLFW
         )
-        
+
         if(GLFW_INCLUDE_PATH AND GLFW_LIBRARY)
             message(STATUS "Encontrados headers do GLFW em: ${GLFW_INCLUDE_PATH}")
             message(STATUS "Encontrada biblioteca do GLFW em: ${GLFW_LIBRARY}")
@@ -42,10 +42,10 @@ if(UNIX)
             message(FATAL_ERROR "GLFW3 não encontrado! Por favor, instale com: sudo pacman -S glfw-x11 ou sudo apt-get install libglfw3-dev")
         endif()
     endif()
-    
+
     # Tentar encontrar GLM usando pkg-config primeiro
     pkg_check_modules(GLM glm)
-    
+
     # Se pkg-config falhar, tentar encontrar GLM diretamente
     if(NOT GLM_FOUND)
         # Tentar encontrar os headers do GLM diretamente
@@ -56,7 +56,7 @@ if(UNIX)
             /usr/include/glm
             /usr/local/include/glm
         )
-        
+
         if(GLM_INCLUDE_DIR)
             message(STATUS "Encontrados headers do GLM em: ${GLM_INCLUDE_DIR}")
             set(GLM_FOUND TRUE)
@@ -64,7 +64,7 @@ if(UNIX)
             message(FATAL_ERROR "GLM não encontrado! Por favor, instale com: sudo pacman -S glm ou sudo apt-get install libglm-dev")
         endif()
     endif()
-    
+
     # Verificar Vulkan
     find_package(Vulkan)
     if(NOT Vulkan_FOUND)
@@ -89,17 +89,17 @@ if(WIN32)
     set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
     set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")
-    set(SHADER_COMPILER "${VULKAN_SDK}/Bin/glslc.exe")
+    set(GLSLC "${VULKAN_SDK}/Bin/glslc.exe")
     set(SHADER_COMPILER_OPTIONS "")
 else()
     find_package(Vulkan REQUIRED)
     if(NOT Vulkan_FOUND)
         message(FATAL_ERROR "Vulkan SDK não encontrado! Por favor, instale o Vulkan SDK.")
     endif()
-    
+
     set(VULKAN_INCLUDE_DIR ${Vulkan_INCLUDE_DIRS})
     set(VULKAN_LIB ${Vulkan_LIBRARIES})
-    
+
     # Procurar o glslc em vários locais comuns
     find_program(GLSLC glslc
         PATHS
@@ -109,7 +109,7 @@ else()
         /usr/lib/x86_64-linux-gnu/
         NO_DEFAULT_PATH
     )
-    
+
     if(NOT GLSLC)
         # Se não encontrar glslc, usar glslangValidator
         find_program(GLSLC glslangValidator)
@@ -129,18 +129,18 @@ if(WIN32)
     set(BOOST_ROOT "C:/Boost")
     set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
     set(BOOST_LIBRARYDIR "C:/Boost/lib")
-    
+
     # Configurações específicas para MinGW
     if(MINGW)
         set(Boost_COMPILER "-mgw14") # Ajuste para sua versão do MinGW
     endif()
-    
+
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
     set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
-    
+
     find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
         message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
@@ -175,7 +175,7 @@ message(STATUS "Fetching GLFW from GitHub...")
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG        3.4
+    GIT_TAG 3.4
 )
 FetchContent_MakeAvailable(glfw)
 
@@ -184,7 +184,7 @@ message(STATUS "Fetching GLM (OpenGL Mathematics) from GitHub...")
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG        1.0.1
+    GIT_TAG 1.0.1
 )
 FetchContent_MakeAvailable(glm)
 
@@ -243,7 +243,7 @@ message(STATUS "Fetching Dear ImGui from GitHub...")
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG        docking
+    GIT_TAG docking
 )
 FetchContent_MakeAvailable(imgui)
 
@@ -287,7 +287,7 @@ target_include_directories(ImGuiFileDialog PRIVATE
 
 message(STATUS "Collecting source files...")
 # Encontrar todos os arquivos fonte
-file(GLOB_RECURSE SOURCES 
+file(GLOB_RECURSE SOURCES
     "src/**.h"
     "src/**.cpp"
 )
@@ -300,12 +300,12 @@ file(MAKE_DIRECTORY ${GENERATED_DIR})
 
 # find all font files in the engine/fonts directory
 if(EXISTS "${CMAKE_SOURCE_DIR}/engine/fonts")
-    file(GLOB FONT_FILES 
+    file(GLOB FONT_FILES
         "${CMAKE_SOURCE_DIR}/engine/fonts/*.ttf"
         "${CMAKE_SOURCE_DIR}/engine/fonts/*.otf"
     )
 else()
-    file(GLOB FONT_FILES 
+    file(GLOB FONT_FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/engine/fonts/*.ttf"
         "${CMAKE_CURRENT_SOURCE_DIR}/engine/fonts/*.otf"
     )
@@ -330,10 +330,10 @@ foreach(FONT_FILE ${FONT_FILES})
     add_custom_command(
         OUTPUT ${OUTPUT_FILE}
         COMMAND ${CMAKE_COMMAND}
-            -DFONT_FILE=${FONT_FILE}
-            -DFONT_VARIABLE=${FONT_VARIABLE}
-            -DOUTPUT_FILE=${OUTPUT_FILE}
-            -P "${GENERATE_FONT_HEADER_SCRIPT}"
+        -DFONT_FILE=${FONT_FILE}
+        -DFONT_VARIABLE=${FONT_VARIABLE}
+        -DOUTPUT_FILE=${OUTPUT_FILE}
+        -P "${GENERATE_FONT_HEADER_SCRIPT}"
         DEPENDS ${FONT_FILE}
         COMMENT "Generating header for font ${FONT_NAME}"
         VERBATIM
@@ -349,7 +349,7 @@ add_custom_target(FontHeaders ALL DEPENDS ${GENERATED_HEADERS})
 message(STATUS "Creating executable target...")
 # Criar executável
 add_executable(VulkanEngine ${SOURCES} ${IMGUI_SOURCES} ${GENERATED_HEADERS})
-target_sources(VulkanEngine PRIVATE 
+target_sources(VulkanEngine PRIVATE
     ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
 )
 target_sources(VulkanEngine PRIVATE ${IMGUZMO_SOURCES})
@@ -360,7 +360,7 @@ message(STATUS "Configuring include directories...")
 # Improve GLFW header detection
 if(UNIX)
     message(STATUS "Checking for GLFW headers on Linux...")
-    
+
     # Try multiple possible paths for GLFW headers
     find_path(GLFW_INCLUDE_PATH GLFW/glfw3.h
         PATHS
@@ -372,7 +372,7 @@ if(UNIX)
         ${GLFW3_INCLUDE_DIRS}
         ${glfw_SOURCE_DIR}/include
     )
-    
+
     if(GLFW_INCLUDE_PATH)
         message(STATUS "Found GLFW include path: ${GLFW_INCLUDE_PATH}")
         set(GLFW_INCLUDE_DIRS ${GLFW_INCLUDE_PATH})
@@ -404,7 +404,7 @@ target_include_directories(VulkanEngine PRIVATE
     ${GENERATED_DIR}
     ${Boost_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${glfw_SOURCE_DIR}/include  # Adiciona o diretório de include do GLFW diretamente
+    ${glfw_SOURCE_DIR}/include # Adiciona o diretório de include do GLFW diretamente
 )
 
 # Adicionar inclusões específicas para Linux
@@ -440,7 +440,7 @@ if(UNIX)
         pthread
         m
     )
-    
+
     target_include_directories(VulkanEngine PRIVATE
         ${X11_INCLUDE_DIR}
     )
@@ -458,10 +458,10 @@ endif()
 
 message(STATUS "Setting up shader compilation...")
 # Configuração de shaders
-file(GLOB SHADERS "${CMAKE_SOURCE_DIR}/shaders/*.vert" "${CMAKE_SOURCE_DIR}/shaders/*.frag")
+file(GLOB SHADERS "${CMAKE_SOURCE_DIR}/engine/shaders/*.vert" "${CMAKE_SOURCE_DIR}/engine/shaders/*.frag")
 
 # Diretório de saída dos shaders compilados
-set(COMPILED_SHADERS_DIR "${CMAKE_SOURCE_DIR}/shaders")
+set(COMPILED_SHADERS_DIR "${CMAKE_SOURCE_DIR}/build/Engine/engine/shaders")
 
 # Criar diretório de saída
 file(MAKE_DIRECTORY ${COMPILED_SHADERS_DIR})
@@ -479,14 +479,14 @@ message(STATUS "Number of shaders found: ${SHADERS}")
 foreach(SHADER ${SHADERS})
     get_filename_component(SHADER_NAME ${SHADER} NAME)
     get_filename_component(SHADER_EXT ${SHADER} EXT)
-    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
+    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}\\${SHADER_NAME}.spv")
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_BINARY})
-    
+
     message(STATUS "Setting up compilation for shader: ${SHADER_NAME} -> ${SPIRV_BINARY}")
     add_custom_command(
-        OUTPUT ${SPIRV_BINARY}
-        COMMAND ${GLSLC} ${SHADER_COMPILER_ARGS} ${SHADER} -o ${SPIRV_BINARY}
-        DEPENDS ${SHADER}
+        OUTPUT "${SPIRV_BINARY}"
+        COMMAND ${GLSLC} ${SHADER_COMPILER_ARGS} "${SHADER}" -o "${SPIRV_BINARY}"
+        DEPENDS "${SHADER}"
         COMMENT "Compilando shader ${SHADER_NAME}"
         VERBATIM
     )
@@ -505,21 +505,32 @@ add_custom_target(ShadersBuild ALL DEPENDS ${SPIRV_BINARY_FILES})
 add_dependencies(VulkanEngine ShadersBuild FontHeaders)
 
 message(STATUS "Setting up asset copying...")
-# Copiar pasta assets para o diretório de build
-add_custom_command(
-    TARGET VulkanEngine PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/engine
-    ${CMAKE_BINARY_DIR}/engine
-    COMMENT "Copiando pasta assets para o diretório de build"
-)
+if(EXISTS "${CMAKE_SOURCE_DIR}/engine")
+    add_custom_command(
+        TARGET VulkanEngine PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/engine
+        ${CMAKE_BINARY_DIR}/engine
+        COMMENT "Copiando pasta assets de ${CMAKE_SOURCE_DIR}/engine para o diretório de build"
+    )
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/engine")
+    add_custom_command(
+        TARGET VulkanEngine PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/engine
+        ${CMAKE_BINARY_DIR}/engine
+        COMMENT "Copiando pasta assets de ${CMAKE_CURRENT_SOURCE_DIR}/engine para o diretório de build"
+    )
+else()
+    message(WARNING "Diretório 'engine' não encontrado em ${CMAKE_SOURCE_DIR} nem em ${CMAKE_CURRENT_SOURCE_DIR}. A cópia de assets será ignorada.")
+endif()
 
 # Configurações adicionais para Linux
 if(UNIX)
     message(STATUS "Configuring additional Linux settings...")
     # Links adicionais para Linux
     target_link_libraries(VulkanEngine
-        dl      # Biblioteca de carregamento dinâmico
+        dl # Biblioteca de carregamento dinâmico
         pthread # Suporte a threads
     )
 

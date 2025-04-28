@@ -437,8 +437,8 @@ void EngineModelLoader::CreateMaterialPipeline(MaterialComponent &material)
     material.pipeline = vulkanRenderer.getCore()->getPipeline()->createMaterialPipeline(
         material.pipelineLayout,
         material.descriptorSetLayout,
-        "shaders/pbr.vert.spv", // Caminho do shader de vértice
-        "shaders/pbr.frag.spv"  // Caminho do shader de fragmento
+        "engine\\shaders\\pbr.vert.spv", // Caminho do shader de vértice
+        "engine\\shaders\\pbr.frag.spv"  // Caminho do shader de fragmento
     );
 }
 

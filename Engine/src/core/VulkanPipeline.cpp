@@ -40,8 +40,8 @@ void VulkanPipeline::cleanup()
 void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D swapChainExtent)
 {
     try {
-        std::string vertPath = FileManager::getInstance().getResourcePath("shaders/vertex.vert.spv");
-        std::string fragPath = FileManager::getInstance().getResourcePath("shaders/fragment.frag.spv");
+        std::string vertPath = FileManager::getInstance().getResourcePath("engine\\shaders\\vertex.vert.spv");
+        std::string fragPath = FileManager::getInstance().getResourcePath("engine\\shaders\\fragment.frag.spv");
 
         auto vertShaderCode = VulkanCore::readFile(vertPath);
         auto fragShaderCode = VulkanCore::readFile(fragPath);
@@ -86,8 +86,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
     }
 
     // Carregar e criar módulos de shader
-    auto vertShaderCode = core.readFile("shaders/vertex.vert.spv"); // Atualizado para PBR
-    auto fragShaderCode = core.readFile("shaders/fragment.frag.spv"); // Atualizado para PBR
+    auto vertShaderCode = core.readFile("engine\\shaders\\vertex.vert.spv"); // Atualizado para PBR
+    auto fragShaderCode = core.readFile("engine\\shaders\\fragment.frag.spv"); // Atualizado para PBR
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
@@ -249,8 +249,8 @@ void VulkanPipeline::createGraphicsPipeline(VkRenderPass renderPass, VkExtent2D 
 }
 
 void VulkanPipeline::createScenePipeline(VkRenderPass renderPass, VkExtent2D extent) {
-    auto vertShaderCode = core.readFile("shaders/vertex.vert.spv"); // Atualizado para PBR
-    auto fragShaderCode = core.readFile("shaders/fragment.frag.spv"); // Atualizado para PBR
+    auto vertShaderCode = core.readFile("engine\\shaders\\vertex.vert.spv"); // Atualizado para PBR
+    auto fragShaderCode = core.readFile("engine\\shaders\\fragment.frag.spv"); // Atualizado para PBR
 
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
