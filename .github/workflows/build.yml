@@ -190,11 +190,7 @@ jobs:
           cd "$env:TEMP\boost_1_88_0"
           .\bootstrap.bat gcc
           .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static runtime-link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
-          
-          # Set environment variables
-          echo "BOOST_ROOT=C:/Boost" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "BOOST_INCLUDEDIR=C:/Boost/include/boost-1_88" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "BOOST_LIBRARYDIR=C:/Boost/lib" | Out-File -FilePath $env:GITHUB_ENV -Append
+
         shell: pwsh
 
       - name: Cache GLM Library
