@@ -25,7 +25,11 @@
 
 #include "Roboto-Regular.h"
 #include "fa-solid-900.h"
+#ifdef _WIN32
 #include <ui/UIdrawer.h>
+#else
+#include "../ui/UIDrawer.h"
+#endif
 
 VulkanImGui::VulkanImGui(VulkanCore *core) : core(core), vulkanRenderer(VulkanRenderer::getInstance()), imguiPool(VK_NULL_HANDLE)
 {

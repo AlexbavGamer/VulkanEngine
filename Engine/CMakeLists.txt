@@ -58,22 +58,6 @@ if(UNIX)
     endif()
 endif()
 
-# Add system include paths for C++ standard library headers
-if(UNIX)
-    # Find the location of typeinfo.h
-    execute_process(
-        COMMAND find /usr/include -name typeinfo.h
-        OUTPUT_VARIABLE TYPEINFO_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    
-    if(TYPEINFO_PATH)
-        get_filename_component(TYPEINFO_DIR ${TYPEINFO_PATH} DIRECTORY)
-        message(STATUS "Found typeinfo.h in: ${TYPEINFO_DIR}")
-        target_include_directories(VulkanEngine PRIVATE ${TYPEINFO_DIR})
-    endif()
-endif()
-
 # Definir o padrão C++ como C++17
 message(STATUS "Setting C++ standard to C++17")
 set(CMAKE_CXX_STANDARD 17)
@@ -318,7 +302,7 @@ foreach(FONT_FILE ${FONT_FILES})
             -DFONT_FILE=${FONT_FILE}
             -DFONT_VARIABLE=${FONT_VARIABLE}
             -DOUTPUT_FILE=${OUTPUT_FILE}
-            -P "${CMAKE_SOURCE_DIR}/cmake/GenerateFontHeader.cmake"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateFontHeader.cmake"
         DEPENDS ${FONT_FILE}
         COMMENT "Generating header for font ${FONT_NAME}"
         VERBATIM

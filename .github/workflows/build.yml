@@ -37,6 +37,7 @@ jobs:
             glslang \
             lib32-gcc-libs \
             gcc-libs \
+            libc++ \
             libxrandr \
             libxinerama \
             libxcursor \
