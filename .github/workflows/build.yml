@@ -181,7 +181,7 @@ jobs:
           [Environment]::SetEnvironmentVariable("VK_SDK_PATH", "$env:VULKAN_SDK", [EnvironmentVariableTarget]::Machine)
           echo "VK_SDK_PATH=$env:VULKAN_SDK" >> $env:GITHUB_ENV
 
-        # Add Boost setup for Windows - Optimized to post cache earlier
+              # Add Boost setup for Windows - Optimized to post cache earlier
       - name: Cache Boost
         uses: actions/cache@v4
         id: cache-boost
@@ -189,7 +189,7 @@ jobs:
           path: |
             C:/Boost/include
             C:/Boost/lib
-          key: ${{ runner.os }}-boost-1.88.0-stable
+          key: ${{ runner.os }}-boost-1.88.0-cmake
 
       - name: Download and Extract Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
@@ -199,22 +199,30 @@ jobs:
           mkdir -p C:/Boost/lib
               
           # Download and extract Boost
-          $boostUrl = "https://archives.boost.io/release/1.88.0/source/boost_1_88_0.zip"
-          $boostZip = "$env:TEMP\boost_1_88_0.zip"
-          Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip
-          Expand-Archive -Path $boostZip -DestinationPath "$env:TEMP"
+          $boostUrl = "https://github.com/boostorg/boost/releases/download/boost-1.88.0/boost-1.88.0-cmake.7z"
+          $boostArchive = "$env:TEMP\boost-1.88.0-cmake.7z"
+          Invoke-WebRequest -Uri $boostUrl -OutFile $boostArchive
+          
+          # Extract using 7zip (needs to be installed)
+          7z x $boostArchive -o"$env:TEMP\boost_extract"
               
           # Copy headers
-          Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
+          Copy-Item -Path "$env:TEMP\boost_extract\include\boost-1_88" -Destination "C:/Boost/include/boost-1_88" -Recurse
+          # Copy libs if they exist in the archive
+          if (Test-Path "$env:TEMP\boost_extract\lib") {
+            Copy-Item -Path "$env:TEMP\boost_extract\lib\*" -Destination "C:/Boost/lib" -Recurse
+          }
         shell: pwsh
 
       - name: Build Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
-          # Build Boost
-          cd "$env:TEMP\boost_1_88_0"
-          .\bootstrap.bat gcc
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+          # Build Boost if libraries weren't included in the archive
+          cd "$env:TEMP\boost_extract"
+          if (Test-Path "bootstrap.bat") {
+            .\bootstrap.bat gcc
+            .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+          }
         shell: pwsh
 
       - name: Cache GLM Library

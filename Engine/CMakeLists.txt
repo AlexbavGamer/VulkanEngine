@@ -152,7 +152,8 @@ if(WIN32)
 
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
+    set(Boost_USE_STATIC_RUNTIME ON)
+    set(Boost_NO_SYSTEM_PATHS=ON)
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
     
