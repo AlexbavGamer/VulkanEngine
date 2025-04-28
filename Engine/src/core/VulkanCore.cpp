@@ -121,26 +121,32 @@ void VulkanCore::pickPhysicalDevice()
 
     if (deviceCount == 0)
     {
-        throw std::runtime_error("failed to find GPUs with Vulkan support!");
+        throw std::runtime_error("Nenhuma GPU com suporte a Vulkan foi encontrada! Verifique se o driver está instalado e o Vulkan configurado.");
     }
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-    for (const auto &device : devices)
+    std::string errorMessages;
+
+    for (const auto& device : devices)
     {
-        if (isDeviceSuitable(device))
+        std::string reason;
+        if (isDeviceSuitable(device, &reason))
         {
             physicalDevice = device;
-            break;
+            return;
+        }
+        else
+        {
+            errorMessages += reason + "\n";
         }
     }
 
-    if (physicalDevice == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("failed to find a suitable GPU!");
-    }
+    throw std::runtime_error("Nenhuma GPU adequada foi encontrada:\n" + errorMessages);
 }
+
+
 
 void VulkanCore::createLogicalDevice()
 {
@@ -1156,32 +1162,61 @@ void VulkanCore::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
     createInfo.pUserData = nullptr;
 }
 
-bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device)
+bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device, std::string* outReason)
 {
-    QueueFamilyIndices indices = findQueueFamilies(device);
-    if (!indices.isComplete())
-        return false;
-
-    bool extensionsSupported = checkDeviceExtensionSupport(device);
-    if (!extensionsSupported)
-        return false;
-
     VkPhysicalDeviceProperties deviceProperties;
     VkPhysicalDeviceFeatures deviceFeatures;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
-    bool swapChainAdequate = false;
-    if (extensionsSupported)
+    if (outReason)
+        *outReason = deviceProperties.deviceName;
+
+    QueueFamilyIndices indices = findQueueFamilies(device);
+    if (!indices.isComplete())
     {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        if (outReason)
+            *outReason += " não possui todas as queue families necessárias.";
+        return false;
     }
 
-    return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-           deviceFeatures.samplerAnisotropy &&
-           swapChainAdequate;
+    bool extensionsSupported = checkDeviceExtensionSupport(device);
+    if (!extensionsSupported)
+    {
+        if (outReason)
+            *outReason += " não suporta as extensões necessárias.";
+        return false;
+    }
+
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+    bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+    if (!swapChainAdequate)
+    {
+        if (outReason)
+            *outReason += " não possui suporte adequado para swapchain.";
+        return false;
+    }
+
+    if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+    {
+        if (outReason)
+            *outReason += " não é uma GPU dedicada.";
+        return false;
+    }
+
+    if (!deviceFeatures.samplerAnisotropy)
+    {
+        if (outReason)
+            *outReason += " não suporta sampler anisotropy.";
+        return false;
+    }
+
+    if (outReason)
+        *outReason += " é adequada.";
+    
+    return true;
 }
+
 
 bool VulkanCore::checkValidationLayerSupport()
 {
