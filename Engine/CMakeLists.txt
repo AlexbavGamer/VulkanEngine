@@ -292,9 +292,18 @@ file(GLOB FONT_FILES
 foreach(FONT_FILE ${FONT_FILES})
     get_filename_component(FONT_NAME ${FONT_FILE} NAME_WE)
     string(MAKE_C_IDENTIFIER ${FONT_NAME} FONT_VARIABLE)
-    
+
     set(OUTPUT_FILE "${GENERATED_DIR}/${FONT_NAME}.h")
-    
+
+    # Tenta usar o caminho padrão, se não existir tenta o alternativo
+    if(EXISTS "${CMAKE_SOURCE_DIR}/cmake/GenerateFontHeader.cmake")
+        set(GENERATE_FONT_HEADER_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/GenerateFontHeader.cmake")
+    elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateFontHeader.cmake")
+        set(GENERATE_FONT_HEADER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateFontHeader.cmake")
+    else()
+        message(FATAL_ERROR "GenerateFontHeader.cmake não encontrado em nenhum dos caminhos esperados!")
+    endif()
+
     message(STATUS "Setting up font generation for ${FONT_NAME}")
     add_custom_command(
         OUTPUT ${OUTPUT_FILE}
@@ -302,12 +311,12 @@ foreach(FONT_FILE ${FONT_FILES})
             -DFONT_FILE=${FONT_FILE}
             -DFONT_VARIABLE=${FONT_VARIABLE}
             -DOUTPUT_FILE=${OUTPUT_FILE}
-            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateFontHeader.cmake"
+            -P "${GENERATE_FONT_HEADER_SCRIPT}"
         DEPENDS ${FONT_FILE}
         COMMENT "Generating header for font ${FONT_NAME}"
         VERBATIM
     )
-    
+
     list(APPEND GENERATED_HEADERS ${OUTPUT_FILE})
 endforeach()
 
