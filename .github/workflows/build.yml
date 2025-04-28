@@ -150,17 +150,52 @@ jobs:
       - name: Install Vulkan SDK (Windows)
         if: runner.os == 'Windows'
         run: |
-          $vulkanSdkUrl = "https://sdk.lunarg.com/sdk/download/1.3.250.1/windows/VulkanSDK-1.3.250.1-Installer.exe"
+          $vulkanSdkUrl = "https://sdk.lunarg.com/sdk/download/1.4.309.0/windows/VulkanSDK-1.4.309.0-Installer.exe"
           $installPath = "$env:TEMP\VulkanSDK-Installer.exe"
           Invoke-WebRequest -Uri $vulkanSdkUrl -OutFile $installPath
           Start-Process -FilePath $installPath -Args "--accept-licenses --default-answer --confirm-command install" -Wait
-          echo "VK_SDK_PATH=C:\VulkanSDK\1.3.250.1" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "VK_SDK_PATH=C:\VulkanSDK\1.4.309.0" | Out-File -FilePath $env:GITHUB_ENV -Append
         shell: pwsh
 
       - name: Setup Vulkan paths
         run: |
           [Environment]::SetEnvironmentVariable("VK_SDK_PATH", "$env:VULKAN_SDK", [EnvironmentVariableTarget]::Machine)
           echo "VK_SDK_PATH=$env:VULKAN_SDK" >> $env:GITHUB_ENV
+
+      # Add Boost setup for Windows
+      - name: Cache Boost
+        uses: actions/cache@v3
+        id: cache-boost
+        with:
+          path: C:/Boost
+          key: ${{ runner.os }}-boost-1.88.0
+
+      - name: Setup Boost
+        if: steps.cache-boost.outputs.cache-hit != 'true'
+        run: |
+          # Create Boost directory
+          mkdir -p C:/Boost/include
+          mkdir -p C:/Boost/lib
+          
+          # Download and extract Boost
+          $boostUrl = "https://archives.boost.io/release/1.88.0/source/boost_1_88_0.zip"
+          $boostZip = "$env:TEMP\boost_1_88_0.zip"
+          Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip
+          Expand-Archive -Path $boostZip -DestinationPath "$env:TEMP"
+          
+          # Copy headers
+          Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
+          
+          # Build Boost
+          cd "$env:TEMP\boost_1_88_0"
+          .\bootstrap.bat gcc
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static runtime-link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+          
+          # Set environment variables
+          echo "BOOST_ROOT=C:/Boost" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "BOOST_INCLUDEDIR=C:/Boost/include/boost-1_88" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "BOOST_LIBRARYDIR=C:/Boost/lib" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: pwsh
 
       - name: Cache GLM Library
         uses: actions/cache@v3
