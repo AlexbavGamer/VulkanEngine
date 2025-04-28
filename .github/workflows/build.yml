@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cache pacman packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-pacman
         with:
           path: |
@@ -52,21 +52,21 @@ jobs:
             glfw
 
       - name: Cache GLM headers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-glm
         with:
           path: /usr/include/glm
           key: ${{ runner.os }}-glm-headers-stable
 
       - name: Cache shader compilation
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             shaders/*.spv
           key: ${{ runner.os }}-shaders-${{ hashFiles('shaders/**/*.vert', 'shaders/**/*.frag') }}
 
       - name: Cache CMake build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             build/
@@ -124,7 +124,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cache MinGW
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-mingw
         with:
           path: C:\ProgramData\chocolatey\lib\mingw
@@ -137,7 +137,7 @@ jobs:
           echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Cache Vulkan SDK
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-vulkan
         with:
           path: |
@@ -162,7 +162,7 @@ jobs:
 
         # Add Boost setup for Windows - Optimized to post cache earlier
       - name: Cache Boost
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-boost
         with:
           path: |
@@ -187,18 +187,17 @@ jobs:
           Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
         shell: pwsh
 
-      - name: Build Boost
+        - name: Build Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
-          # Build Boost
+          # Build Boost with MinGW 14
           cd "$env:TEMP\boost_1_88_0"
-          .\bootstrap.bat gcc
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
-              
+          .\bootstrap.bat mingw
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc-mingw-14 variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
         shell: pwsh
 
       - name: Cache GLM Library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-glm-windows
         with:
           path: ${{ github.workspace }}\include\glm
@@ -213,7 +212,7 @@ jobs:
           echo "GLM_INCLUDE_DIR=${{ github.workspace }}\include\glm" >> $env:GITHUB_ENV
 
       - name: Cache GLFW Library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-glfw-windows
         with:
           path: ${{ github.workspace }}\include\glfw
@@ -233,14 +232,14 @@ jobs:
           cmake-version: '3.14'
 
       - name: Cache shader compilation
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             shaders/*.spv
           key: ${{ runner.os }}-shaders-${{ hashFiles('shaders/**/*.vert', 'shaders/**/*.frag') }}
 
       - name: Cache CMake build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             build/
@@ -295,7 +294,7 @@ jobs:
       
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: VulkanEngine ${{ steps.get_tag.outputs.TAG_NAME }}
           tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
