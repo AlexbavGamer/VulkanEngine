@@ -165,16 +165,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-mingw-
 
-      # Corrigido: Removido o condicional que estava incorreto
       - name: Build project (Windows)
+        if: matrix.os == 'windows-latest'
         run: |
-          $Env:GLFW_DIR = "${{ github.workspace }}/build/_deps/glfw-src"
-          cmake -S . -B build -G "MinGW Makefiles" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DGLFW_BUILD_DOCS=OFF `
-            -DGLFW_BUILD_TESTS=OFF `
-            -DGLFW_BUILD_EXAMPLES=OFF
-          cmake --build build --config Release --verbose
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
 
       - name: Package release (Windows)
         run: |
