@@ -178,7 +178,7 @@ public:
     void createDefaultImage();
 private:
     // Helper Methods
-    bool isDeviceSuitable(VkPhysicalDevice device, bool& suitable, std::string& reason);
+    bool isDeviceSuitable(VkPhysicalDevice device, std::string* reason);
     bool checkValidationLayerSupport();
     bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     bool hasStencilComponent(VkFormat format);
