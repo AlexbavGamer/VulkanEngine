@@ -159,9 +159,8 @@ jobs:
 
       - name: Setup Vulkan paths
         run: |
-          [Environment]::SetEnvironmentVariable("VK_SDK_PATH}", "$env:VK_SDK_PATH}", [EnvironmentVariableTarget]::Machine)
-          echo "VK_SDK_PATH}=$env:VK_SDK_PATH}" >> $env:GITHUB_ENV
-          echo "$env:VK_SDK_PATH}\Bin" >> $env:GITHUB_PATH
+          [Environment]::SetEnvironmentVariable("VK_SDK_PATH", "$env:VULKAN_SDK", [EnvironmentVariableTarget]::Machine)
+          echo "VK_SDK_PATH=$env:VULKAN_SDK" >> $env:GITHUB_ENV
 
       - name: Cache GLM Library
         uses: actions/cache@v3
