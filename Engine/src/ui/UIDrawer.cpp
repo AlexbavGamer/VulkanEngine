@@ -103,7 +103,7 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
 
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
-    glm::mat4 model = transform.getLocalMatrix();
+    glm::mat4 model = transform.getWorldMatrix();
 
     // Configura o modo de operação e espaço do Gizmo
     static ImGuizmo::MODE mode = ImGuizmo::LOCAL;
