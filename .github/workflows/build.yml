@@ -123,18 +123,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache MinGW
-        uses: actions/cache@v4
+      - name: Cache MinGW 14.2.0
+        uses: actions/cache@v3
         id: cache-mingw
         with:
-          path: C:\ProgramData\chocolatey\lib\mingw
-          key: ${{ runner.os }}-mingw-13.2.0-stable
+          path: C:/MinGW14
+          key: ${{ runner.os }}-mingw-14.2.0-stable
 
-      - name: Install MinGW and dependencies
+      - name: Install MinGW 14.2.0 and dependencies
         if: steps.cache-mingw.outputs.cache-hit != 'true'
         run: |
-          choco install -y mingw --version=13.2.0
-          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Create directory for MinGW
+          mkdir -p C:/MinGW14
+
+          # Download MinGW 14.2.0 from MSYS2
+          $mingwUrl = "https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2.7z"
+          $mingwArchive = "$env:TEMP\mingw14.7z"
+          Invoke-WebRequest -Uri $mingwUrl -OutFile $mingwArchive
+
+          # Install 7zip if not already installed
+          if (-not (Test-Path "C:\Program Files\7-Zip\7z.exe")) {
+            choco install -y 7zip
+          }
+
+          # Extract MinGW to C:/MinGW14
+          & "C:\Program Files\7-Zip\7z.exe" x -oC:/MinGW14 $mingwArchive
+
+          # Add MinGW to PATH
+          echo "C:\MinGW14\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          # Verify installation
+          C:\MinGW14\mingw64\bin\g++.exe --version
+        shell: pwsh
+
 
       - name: Cache Vulkan SDK
         uses: actions/cache@v4
