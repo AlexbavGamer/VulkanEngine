@@ -103,7 +103,7 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
 
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
-    glm::mat4 model = transform.getLocalMatrix();
+    glm::mat4 model = transform.getWorldMatrix();
 
     // Configura o modo de operação e espaço do Gizmo
     static ImGuizmo::MODE mode = ImGuizmo::WORLD;
@@ -126,19 +126,8 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
 
     if (manipulated)
     {
-        glm::vec3 translation, rotation, scale;
-        ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(model), 
-            glm::value_ptr(translation), 
-            glm::value_ptr(rotation), 
-            glm::value_ptr(scale));
-
-        // Atualiza a transformação mantendo as coordenadas locais
-        transform.setPosition(translation);
-        transform.setRotation(glm::radians(rotation));
-        transform.setScale(scale);
-
-        // Força a atualização da matriz local
-        transform.updateLocalMatrix();
+        // Atualiza a transformação mundial diretamente
+        transform.setWorldMatrix(model);
     }
 }
 
