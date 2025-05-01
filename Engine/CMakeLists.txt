@@ -85,7 +85,7 @@ if(WIN32)
     endif()
 
     set(VULKAN_SDK $ENV{VK_SDK_PATH})
-    string(REPLACE "\\" "/" VULKAN_SDK ${VULKAN_SDK})
+    string(REPLACE "\\" "/" VULKAN_SDK "${VULKAN_SDK}")
     set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
     set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
     set(VULKAN_LIB "${VULKAN_LIB_DIR}/vulkan-1.lib")
@@ -126,9 +126,24 @@ endif()
 message(STATUS "Configuring Boost...")
 if(WIN32)
     message(STATUS "Configuring custom Boost paths for Windows...")
-    set(BOOST_ROOT "C:/Boost")
-    set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
-    set(BOOST_LIBRARYDIR "C:/Boost/lib")
+    
+    # Permitir sobrescrever os caminhos do Boost via variáveis de ambiente ou linha de comando
+    if(NOT DEFINED BOOST_ROOT)
+        set(BOOST_ROOT "C:/Boost")
+    endif()
+    
+    if(NOT DEFINED BOOST_INCLUDEDIR)
+        # Verificar ambos os caminhos possíveis para os headers
+        if(EXISTS "${BOOST_ROOT}/include/boost-1_88")
+            set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include/boost-1_88")
+        elseif(EXISTS "${BOOST_ROOT}/include")
+            set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include")
+        endif()
+    endif()
+    
+    if(NOT DEFINED BOOST_LIBRARYDIR)
+        set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
+    endif()
 
     # Configurações específicas para MinGW
     if(MINGW)
@@ -137,20 +152,46 @@ if(WIN32)
 
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_RUNTIME ON) # Mudado para ON para MinGW
+    set(Boost_USE_STATIC_RUNTIME ON)
+    set(Boost_NO_SYSTEM_PATHS=ON)
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
+    
+    # Imprimir informações de debug para ajudar na solução de problemas
+    message(STATUS "BOOST_ROOT: ${BOOST_ROOT}")
+    message(STATUS "BOOST_INCLUDEDIR: ${BOOST_INCLUDEDIR}")
+    message(STATUS "BOOST_LIBRARYDIR: ${BOOST_LIBRARYDIR}")
 
+    # Tentar encontrar o Boost com versão específica
     find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    
+    # Se não encontrar, tentar com versões mais antigas
     if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
+        message(STATUS "Boost 1.88.0 não encontrado, tentando versões alternativas...")
+        find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
+    endif()
+    
+    # Verificação final
+    if(NOT Boost_FOUND)
+        message(FATAL_ERROR "Boost não encontrado! Por favor, verifique a instalação do Boost em ${BOOST_ROOT}.\n"
+                           "Diretório de include: ${BOOST_INCLUDEDIR}\n"
+                           "Diretório de bibliotecas: ${BOOST_LIBRARYDIR}\n"
+                           "Você pode definir manualmente BOOST_ROOT, BOOST_INCLUDEDIR e BOOST_LIBRARYDIR.")
     endif()
 else()
+    # Linux/macOS
     find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
         message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost (sudo apt-get install libboost-all-dev)")
     endif()
 endif()
+
+# Imprimir informações do Boost encontrado
+message(STATUS "Boost found:")
+message(STATUS "  Version: ${Boost_VERSION}")
+message(STATUS "  Include dirs: ${Boost_INCLUDE_DIRS}")
+message(STATUS "  Library dirs: ${Boost_LIBRARY_DIRS}")
+message(STATUS "  Libraries: ${Boost_LIBRARIES}")
 
 if(NOT WIN32)
     message(STATUS "Configuring additional Linux libraries...")
@@ -458,9 +499,10 @@ endif()
 
 message(STATUS "Setting up shader compilation...")
 # Configuração de shaders
-set(SHADERS_PATH )
-file(GLOB SHADERS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert" "${CMAKE_SOURCE_DIR}/shaders/*.frag")
-set(COMPILED_SHADERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/engine/shaders")
+file(GLOB SHADERS "${CMAKE_SOURCE_DIR}/engine/shaders/*.vert" "${CMAKE_SOURCE_DIR}/engine/shaders/*.frag")
+
+# Diretório de saída dos shaders compilados
+set(COMPILED_SHADERS_DIR "${CMAKE_SOURCE_DIR}/build/Engine/engine/shaders")
 
 # Criar diretório de saída
 file(MAKE_DIRECTORY ${COMPILED_SHADERS_DIR})
@@ -478,7 +520,7 @@ message(STATUS "Number of shaders found: ${SHADERS}")
 foreach(SHADER ${SHADERS})
     get_filename_component(SHADER_NAME ${SHADER} NAME)
     get_filename_component(SHADER_EXT ${SHADER} EXT)
-    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}/${SHADER_NAME}.spv")
+    set(SPIRV_BINARY "${COMPILED_SHADERS_DIR}\\${SHADER_NAME}.spv")
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_BINARY})
 
     message(STATUS "Setting up compilation for shader: ${SHADER_NAME} -> ${SPIRV_BINARY}")
