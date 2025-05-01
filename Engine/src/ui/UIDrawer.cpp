@@ -103,12 +103,9 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
 
     glm::mat4 projection = camera.getProjectionMatrix();
     glm::mat4 view = camera.getViewMatrix();
-    auto& transform = selectedEntity->getComponent<TransformComponent>();
-    auto& camera = core->getScene()->cameraEntity->getComponent<CameraComponent>();
+    glm::vec3 objectPosition = transform.getWorldPosition();
 
-    glm::mat4 projection = camera.getProjectionMatrix();
-    glm::mat4 view = camera.getViewMatrix();
-    glm::mat4 model = transform.getWorldMatrix();
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), objectPosition);
 
     // Configura o modo de operação e espaço do Gizmo
     static ImGuizmo::MODE mode = ImGuizmo::LOCAL;
@@ -137,6 +134,11 @@ void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)
 }
 
 void UIDrawer::drawInspectorWindow(std::shared_ptr<Entity> &selectedEntity)
+{
+    ImGui::SetNextWindowSizeConstraints(ImVec2(250.0f, -1.0f), ImVec2(350.0f, -1.0f));
+    ImGui::Begin("Inspector");
+
+    if (selectedEntity)
     {
         // Display entity name and ID
         ImGui::Text("Entity: %s", selectedEntity->getName().c_str());

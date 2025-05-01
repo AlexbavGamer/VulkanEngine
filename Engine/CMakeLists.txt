@@ -458,10 +458,9 @@ endif()
 
 message(STATUS "Setting up shader compilation...")
 # Configuração de shaders
-file(GLOB SHADERS "${CMAKE_SOURCE_DIR}/engine/shaders/*.vert" "${CMAKE_SOURCE_DIR}/engine/shaders/*.frag")
-
-# Diretório de saída dos shaders compilados
-set(COMPILED_SHADERS_DIR "${CMAKE_SOURCE_DIR}/build/Engine/engine/shaders")
+set(SHADERS_PATH )
+file(GLOB SHADERS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert" "${CMAKE_SOURCE_DIR}/shaders/*.frag")
+set(COMPILED_SHADERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/engine/shaders")
 
 # Criar diretório de saída
 file(MAKE_DIRECTORY ${COMPILED_SHADERS_DIR})
