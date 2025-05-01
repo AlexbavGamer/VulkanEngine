@@ -585,6 +585,18 @@ void VulkanCore::cleanup()
     // Wait for the device to finish operations before destroying resources
     vkDeviceWaitIdle(device);
     
+    // Clean up material components in all entities
+    if (scene && scene->registry)
+    {
+        for (const auto& entity : scene->registry->getEntities())
+        {
+            if (entity->hasComponent<MaterialComponent>())
+            {
+                entity->getComponent<MaterialComponent>().cleanup(device);
+            }
+        }
+    }
+    
     // Destroy framebuffers
     for (auto framebuffer : framebuffers) {
         if (framebuffer != VK_NULL_HANDLE) {
