@@ -582,113 +582,126 @@ void VulkanCore::createSceneDescriptorSet()
 
 void VulkanCore::cleanup()
 {
-    // Espera o dispositivo ficar inativo antes de liberar os recursos
+    // Wait for the device to finish operations before destroying resources
     vkDeviceWaitIdle(device);
-
-    // Destruir os recursos de sincronização (semaphores, cercas)
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-    {
-        if (renderFinishedSemaphores[i] != VK_NULL_HANDLE) {
-            vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
-        }
-        if (imageAvailableSemaphores[i] != VK_NULL_HANDLE) {
-            vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
-        }
-        if (inFlightFences[i] != VK_NULL_HANDLE) {
-            vkDestroyFence(device, inFlightFences[i], nullptr);
-        }
-    }
-
-    // Destruir os framebuffers
-    for (auto framebuffer : framebuffers)
-    {
+    
+    // Destroy framebuffers
+    for (auto framebuffer : framebuffers) {
         if (framebuffer != VK_NULL_HANDLE) {
             vkDestroyFramebuffer(device, framebuffer, nullptr);
         }
     }
-
-    // Destruir o pool de comandos
-    vkDestroyCommandPool(device, commandPool, nullptr);
-
-    // Destruir os recursos de imagem e memória
-    vkDestroyImageView(device, depthImageView, nullptr);
-    vkDestroyImage(device, depthImage, nullptr);
-    vkFreeMemory(device, depthImageMemory, nullptr);
-
-    vkDestroyImageView(device, defaultTextureView, nullptr);
-    vkDestroyImage(device, defaultTexture, nullptr);
-    vkFreeMemory(device, defaultTextureMemory, nullptr);
-
-    // Destruir o descriptor set
-    vkDestroyDescriptorSetLayout(device, sceneDescriptorSetLayout, nullptr);
-
-    // Destruir o render pass da cena
-    vkDestroyRenderPass(device, sceneRenderPass, nullptr);
-
-    // Destruir a textura padrão
-    vkDestroySampler(device, textureSampler, nullptr);
-
-    // Destruir os recursos relacionados ao pipeline (como os shaders, pipeline layout)
-    pipeline.reset(); // Se o pipeline for um std::unique_ptr, ele será destruído automaticamente
-
-    // Destruir os recursos do Swap Chain
-    swapChain.reset(); // Se o swap chain for um std::unique_ptr, ele será destruído automaticamente
-
-    // Destruir o contexto do ImGui
-    if (imgui)
-    {
+    framebuffers.clear();
+    
+    if (sceneFramebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(device, sceneFramebuffer, nullptr);
+        sceneFramebuffer = VK_NULL_HANDLE;
+    }
+    
+    // Destroy component-specific resources first
+    if (imgui) {
         imgui->cleanup();
+        imgui.reset();
     }
-
-    // Destruição dos componentes de Material e Mesh
-    for (auto entity : scene->registry->viewWithSpecificComponents<MaterialComponent, MeshComponent>())
-    {
-        MaterialComponent& material = entity->getComponent<MaterialComponent>();
-        MeshComponent& mesh = entity->getComponent<MeshComponent>();
-
-        // Destruir recursos de buffer e memória do material
-        vkFreeMemory(device, material.uniformBufferMemory, nullptr);
-        vkDestroyBuffer(device, material.uniformBuffer, nullptr);
-
-        vkFreeMemory(device, material.lightBufferMemory, nullptr);
-        vkDestroyBuffer(device, material.lightBuffer, nullptr);
-
-        // Destruir os pipelines do material
-        vkDestroyPipeline(device, material.pipeline, nullptr);
-        vkDestroyPipelineLayout(device, material.pipelineLayout, nullptr);
-
-        vkDestroyDescriptorSetLayout(device, material.descriptorSetLayout, nullptr);
-
-        // Destruir as texturas do material
-        if (material.albedoMap) {
-            material.albedoMap->Destroy(device);
-        }
-        if (material.normalMap) {
-            material.normalMap->Destroy(device);
-        }
-        if (material.metallicRoughnessMap) {
-            material.metallicRoughnessMap->Destroy(device);
-        }
-        if (material.aoMap) {
-            material.aoMap->Destroy(device);
-        }
-        if (material.emissiveMap) {
-            material.emissiveMap->Destroy(device);
-        }
-
-        // Destruir o mesh
-        mesh.Destroy(device);
+    
+    if (descriptor) {
+        descriptor->cleanup();
+        descriptor.reset();
     }
-
-    // Destruir o dispositivo lógico
-    vkDestroyDevice(device, nullptr);
-
-    // Destruir a instância do Vulkan
-    if (enableValidationLayers)
-    {
+    
+    if (pipeline) {
+        // Let pipeline->cleanup() handle the destruction of pipeline resources
+        pipeline->cleanup();
+        pipeline.reset();
+    }
+    
+    if (swapChain) {
+        swapChain->cleanup();
+        swapChain.reset();
+    }
+    
+    // Destroy image views
+    if (sceneImageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, sceneImageView, nullptr);
+        sceneImageView = VK_NULL_HANDLE;
+    }
+    
+    if (depthImageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, depthImageView, nullptr);
+        depthImageView = VK_NULL_HANDLE;
+    }
+    
+    // Destroy images and free memory
+    if (sceneImage != VK_NULL_HANDLE) {
+        vkDestroyImage(device, sceneImage, nullptr);
+        sceneImage = VK_NULL_HANDLE;
+    }
+    
+    if (sceneImageMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, sceneImageMemory, nullptr);
+        sceneImageMemory = VK_NULL_HANDLE;
+    }
+    
+    if (depthImage != VK_NULL_HANDLE) {
+        vkDestroyImage(device, depthImage, nullptr);
+        depthImage = VK_NULL_HANDLE;
+    }
+    
+    if (depthImageMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(device, depthImageMemory, nullptr);
+        depthImageMemory = VK_NULL_HANDLE;
+    }
+    
+    // Destroy descriptor set layouts
+    if (sceneDescriptorSetLayout != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(device, sceneDescriptorSetLayout, nullptr);
+        sceneDescriptorSetLayout = VK_NULL_HANDLE;
+    }
+    
+    // Destroy render passes
+    if (sceneRenderPass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(device, sceneRenderPass, nullptr);
+        sceneRenderPass = VK_NULL_HANDLE;
+    }
+    
+    if (renderPass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(device, renderPass, nullptr);
+        renderPass = VK_NULL_HANDLE;
+    }
+    
+    // Destroy texture sampler
+    if (textureSampler != VK_NULL_HANDLE) {
+        vkDestroySampler(device, textureSampler, nullptr);
+        textureSampler = VK_NULL_HANDLE;
+    }
+    
+    // Destroy command pool
+    if (commandPool != VK_NULL_HANDLE) {
+        vkDestroyCommandPool(device, commandPool, nullptr);
+        commandPool = VK_NULL_HANDLE;
+    }
+    
+    // Finally destroy the device
+    if (device != VK_NULL_HANDLE) {
+        vkDestroyDevice(device, nullptr);
+        device = VK_NULL_HANDLE;
+    }
+    
+    // Destroy surface and instance
+    if (surface != VK_NULL_HANDLE) {
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+        surface = VK_NULL_HANDLE;
+    }
+    
+    if (debugMessenger != VK_NULL_HANDLE) {
         DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+        debugMessenger = VK_NULL_HANDLE;
     }
-    vkDestroyInstance(instance, nullptr);
+    
+    if (instance != VK_NULL_HANDLE) {
+        vkDestroyInstance(instance, nullptr);
+        instance = VK_NULL_HANDLE;
+    }
 }
 
 void VulkanCore::releaseResources() {
