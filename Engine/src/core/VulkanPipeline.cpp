@@ -35,6 +35,20 @@ void VulkanPipeline::cleanup()
         vkDestroyPipeline(core.getDevice(), graphicsPipeline, nullptr);
         graphicsPipeline = VK_NULL_HANDLE;
     }
+    
+    // Add cleanup for sceneGraphicsPipeline
+    if (sceneGraphicsPipeline != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(core.getDevice(), sceneGraphicsPipeline, nullptr);
+        sceneGraphicsPipeline = VK_NULL_HANDLE;
+    }
+    
+    // Add cleanup for uiPipelineLayout
+    if (uiPipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(core.getDevice(), uiPipelineLayout, nullptr);
+        uiPipelineLayout = VK_NULL_HANDLE;
+    }
 }
 
 void VulkanPipeline::create(VkRenderPass renderPass, VkExtent2D swapChainExtent)
