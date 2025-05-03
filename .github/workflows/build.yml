@@ -182,14 +182,11 @@ jobs:
           $boostZip = "$env:TEMP\boost_1_88_0.zip"
           Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip
           Expand-Archive -Path $boostZip -DestinationPath "$env:TEMP"
-          
-          # Copy headers
-          Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
-          
+
           # Build Boost
           cd "$env:TEMP\boost_1_88_0"
-          .\bootstrap.bat gcc
-          .\b2 toolset=gcc --with-filesystem --with-system --with-thread --with-chrono link=static runtime-link=static threading=multi address-model=64 --build-type=complete --prefix="C:/Boost/" install
+          .\bootstrap.bat mingw
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=debug,release link=static threading=multi -j4 install --prefix=C:/Boost
 
         shell: pwsh
 
