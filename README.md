@@ -16,26 +16,33 @@ Engine 3D baseada em Vulkan com suporte para Windows e Linux.
 - CMake 3.14 ou superior
 - Dependências necessárias:
 
+#### Ubuntu/Debian
+
 ```bash
-# Ubuntu/Debian
 sudo apt-get update
 sudo apt-get install build-essential cmake libboost-all-dev libvulkan-dev vulkan-tools libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+```
+
+#### Arch Linux
+
+```bash
+pacman -Sy --noconfirm base-devel cmake boost vulkan-icd-loader vulkan-tools vulkan-headers libx11 libxrandr libxinerama libxcursor libxi
 ```
 
 ## Configuração do Ambiente
 
 ### Windows
 1. Instale o Vulkan SDK
-2. Configure a variável de ambiente VULKAN_SDK
-3. Execute o script setup.bat
+2. Configure a variável de ambiente `VULKAN_SDK`
+3. Execute o script `setup.bat`
 
 ### Linux
 1. Instale o Vulkan SDK seguindo as instruções do site oficial
-2. Configure a variável de ambiente VULKAN_SDK:
+2. Configure a variável de ambiente `VULKAN_SDK`:
    ```bash
    export VULKAN_SDK=/path/to/vulkan/sdk
    ```
-3. Torne o script setup.sh executável e execute-o:
+3. Torne o script `setup.sh` executável e execute-o:
    ```bash
    chmod +x setup.sh
    ./setup.sh
@@ -80,5 +87,5 @@ Se encontrar erros relacionados ao Vulkan:
 ### Windows
 Se encontrar erros relacionados ao Vulkan:
 1. Verifique se o Vulkan SDK está instalado corretamente
-2. Confirme se a variável de ambiente VULKAN_SDK está configurada
+2. Confirme se a variável de ambiente `VULKAN_SDK` está configurada
 3. Verifique se seu GPU tem suporte a Vulkan
