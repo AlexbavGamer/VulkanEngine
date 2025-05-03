@@ -6,7 +6,7 @@ if(POLICY CMP0144)
 endif()
 
 if(POLICY CMP0167)
-    cmake_policy(SET CMP0167 NEW)
+    cmake_policy(SET CMP0167 OLD)
 endif()
 
 message(STATUS "Starting VulkanEngine CMake configuration...")
@@ -122,63 +122,35 @@ else()
     endif()
 endif()
 
-# Configuração do Boost
+
+# Configuração do Boost# Configuração do Boost
 message(STATUS "Configuring Boost...")
+
 if(WIN32)
     message(STATUS "Configuring custom Boost paths for Windows...")
-    
-    # Permitir sobrescrever os caminhos do Boost via variáveis de ambiente ou linha de comando
-    if(NOT DEFINED BOOST_ROOT)
-        set(BOOST_ROOT "C:/Boost")
-    endif()
-    
-    if(NOT DEFINED BOOST_INCLUDEDIR)
-        # Verificar ambos os caminhos possíveis para os headers
-        if(EXISTS "${BOOST_ROOT}/include/boost-1_88")
-            set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include/boost-1_88")
-        elseif(EXISTS "${BOOST_ROOT}/include")
-            set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include")
-        endif()
-    endif()
-    
-    if(NOT DEFINED BOOST_LIBRARYDIR)
-        set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib")
-    endif()
+    set(BOOST_ROOT "C:/Boost")
+    set(BOOST_INCLUDEDIR "C:/Boost/include/boost-1_88")
+    set(BOOST_LIBRARYDIR "C:/Boost/lib")
 
-    # Configurações específicas para MinGW
     if(MINGW)
-        set(Boost_COMPILER "-mgw14") # Ajuste para sua versão do MinGW
+        set(Boost_COMPILER "-mgw14")
     endif()
 
     set(Boost_USE_STATIC_LIBS ON)
     set(Boost_USE_MULTITHREADED ON)
     set(Boost_USE_STATIC_RUNTIME ON)
-    set(Boost_NO_SYSTEM_PATHS=ON)
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
-    
-    # Imprimir informações de debug para ajudar na solução de problemas
-    message(STATUS "BOOST_ROOT: ${BOOST_ROOT}")
-    message(STATUS "BOOST_INCLUDEDIR: ${BOOST_INCLUDEDIR}")
-    message(STATUS "BOOST_LIBRARYDIR: ${BOOST_LIBRARYDIR}")
 
-    # Tentar encontrar o Boost com versão específica
-    find_package(Boost 1.88.0 REQUIRED COMPONENTS filesystem system thread chrono)
-    
-    # Se não encontrar, tentar com versões mais antigas
+    set(Boost_DEBUG 1) # Debug pra ver onde tá procurando
+
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_ROOT}/Modules")
+
+    find_package(Boost REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
-        message(STATUS "Boost 1.88.0 não encontrado, tentando versões alternativas...")
-        find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
+        message(FATAL_ERROR "Boost não encontrado! Por favor, instale o Boost em C:/Boost")
     endif()
-    
-    # Verificação final
-    if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Boost não encontrado! Por favor, verifique a instalação do Boost em ${BOOST_ROOT}.\n"
-                           "Diretório de include: ${BOOST_INCLUDEDIR}\n"
-                           "Diretório de bibliotecas: ${BOOST_LIBRARYDIR}\n"
-                           "Você pode definir manualmente BOOST_ROOT, BOOST_INCLUDEDIR e BOOST_LIBRARYDIR.")
-    endif()
-else()
+elseif()
     # Linux/macOS
     find_package(Boost 1.71.0 REQUIRED COMPONENTS filesystem system thread chrono)
     if(NOT Boost_FOUND)
