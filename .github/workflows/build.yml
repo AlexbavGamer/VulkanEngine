@@ -189,7 +189,7 @@ jobs:
           # Build Boost
           cd "$env:TEMP\boost_1_88_0"
           .\bootstrap.bat gcc
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static runtime-link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+          .\b2 toolset=gcc --with-filesystem --with-system --with-thread --with-chrono link=static runtime-link=static threading=multi address-model=64 --build-type=complete --prefix="C:/Boost/" install
 
         shell: pwsh
 
