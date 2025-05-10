@@ -2,20 +2,33 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C/C++: g++.exe Compilar e depurar o arquivo ativo",
+            "name": "CMake Debug (Windows/Linux)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
+            "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
-            "environment": [],
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/lib"
+                },
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${env:LD_LIBRARY_PATH}:${workspaceFolder}/lib"
+                },
+                {
+                    "name": "VK_LAYER_PATH",
+                    "value": "${env:VK_LAYER_PATH}"
+                }
+            ],
             "externalConsole": false,
             "MIMode": "gdb",
-            "miDebuggerPath": "C:\\msys64\\mingw64\\bin\\gdb.exe",
+            "miDebuggerPath": "gdb",
             "setupCommands": [
                 {
-                    "description": "Habilitar a reformatação automática para gdb",
+                    "description": "Habilitar a reformatação automática",
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 },
@@ -24,8 +37,49 @@
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
                 }
+            ]
+        },
+        {
+            "name": "CMake Debug with Vulkan Validation (Windows/Linux)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "PATH",
+                    "value": "${env:PATH}:${workspaceFolder}/lib"
+                },
+                {
+                    "name": "LD_LIBRARY_PATH",
+                    "value": "${env:LD_LIBRARY_PATH}:${workspaceFolder}/lib"
+                },
+                {
+                    "name": "VK_LAYER_PATH",
+                    "value": "${env:VK_LAYER_PATH}"
+                },
+                {
+                    "name": "VK_INSTANCE_LAYERS",
+                    "value": "VK_LAYER_KHRONOS_validation"
+                }
             ],
-            "preLaunchTask": "C/C++: g++.exe arquivo de build ativo"
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Habilitar a reformatação automática",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Definir Tipo de Desmontagem como Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

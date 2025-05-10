@@ -17,13 +17,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cache pacman packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-pacman
         with:
           path: |
             /var/cache/pacman/pkg
             /var/lib/pacman/sync
-          key: ${{ runner.os }}-pacman-${{ hashFiles('**/.github/workflows/build.yml') }}
+          key: ${{ runner.os }}-pacman-stable
           restore-keys: |
             ${{ runner.os }}-pacman-
 
@@ -52,28 +52,26 @@ jobs:
             glfw
 
       - name: Cache GLM headers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-glm
         with:
           path: /usr/include/glm
-          key: ${{ runner.os }}-glm-headers-${{ hashFiles('**/.github/workflows/build.yml') }}
+          key: ${{ runner.os }}-glm-headers-stable
 
       - name: Cache shader compilation
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             shaders/*.spv
           key: ${{ runner.os }}-shaders-${{ hashFiles('shaders/**/*.vert', 'shaders/**/*.frag') }}
-          restore-keys: |
-            ${{ runner.os }}-shaders-
 
       - name: Cache CMake build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             build/
             ~/.cache/
-          key: ${{ runner.os }}-cmake-archlinux-${{ hashFiles('**/*.cpp', '**/*.h', '**/CMakeLists.txt') }}
+          key: ${{ runner.os }}-cmake-archlinux-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-cmake-archlinux-
 
@@ -125,30 +123,51 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache MinGW
+      - name: Cache MinGW 14.2.0
         uses: actions/cache@v3
         id: cache-mingw
         with:
-          path: C:\ProgramData\chocolatey\lib\mingw
-          key: ${{ runner.os }}-mingw-13.2.0
+          path: C:/MinGW14
+          key: ${{ runner.os }}-mingw-14.2.0-stable
 
-      - name: Install MinGW and dependencies
+      - name: Install MinGW 14.2.0 and dependencies
         if: steps.cache-mingw.outputs.cache-hit != 'true'
         run: |
-          choco install -y mingw --version=13.2.0
-          echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Create directory for MinGW
+          mkdir -p C:/MinGW14
+
+          # Download MinGW 14.2.0 from MSYS2
+          $mingwUrl = "https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2.7z"
+          $mingwArchive = "$env:TEMP\mingw14.7z"
+          Invoke-WebRequest -Uri $mingwUrl -OutFile $mingwArchive
+
+          # Install 7zip if not already installed
+          if (-not (Test-Path "C:\Program Files\7-Zip\7z.exe")) {
+            choco install -y 7zip
+          }
+
+          # Extract MinGW to C:/MinGW14
+          & "C:\Program Files\7-Zip\7z.exe" x -oC:/MinGW14 $mingwArchive
+
+          # Add MinGW to PATH
+          echo "C:\MinGW14\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+          # Verify installation
+          C:\MinGW14\mingw64\bin\g++.exe --version
+        shell: pwsh
+
 
       - name: Cache Vulkan SDK
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-vulkan
         with:
           path: |
             ${{ env.TEMP }}\VulkanSDK
             C:\VulkanSDK
-          key: ${{ runner.os }}-vulkan-1.4.309.0
+          key: ${{ runner.os }}-vulkan-1.4.309.0-stable
 
       - name: Install Vulkan SDK (Windows)
-        if: runner.os == 'Windows'
+        if: steps.cache-vulkan.outputs.cache-hit != 'true'
         run: |
           $vulkanSdkUrl = "https://sdk.lunarg.com/sdk/download/1.4.309.0/windows/VulkanSDK-1.4.309.0-Installer.exe"
           $installPath = "$env:TEMP\VulkanSDK-Installer.exe"
@@ -162,43 +181,49 @@ jobs:
           [Environment]::SetEnvironmentVariable("VK_SDK_PATH", "$env:VULKAN_SDK", [EnvironmentVariableTarget]::Machine)
           echo "VK_SDK_PATH=$env:VULKAN_SDK" >> $env:GITHUB_ENV
 
-      # Add Boost setup for Windows
+        # Add Boost setup for Windows - Optimized to post cache earlier
       - name: Cache Boost
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-boost
         with:
-          path: C:/Boost
-          key: ${{ runner.os }}-boost-1.88.0
+          path: |
+            C:/Boost/include
+            C:/Boost/lib
+          key: ${{ runner.os }}-boost-1.88.0-cmake
 
-      - name: Setup Boost
+      - name: Download and Extract Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
           # Create Boost directory
           mkdir -p C:/Boost/include
           mkdir -p C:/Boost/lib
-          
+              
           # Download and extract Boost
           $boostUrl = "https://archives.boost.io/release/1.88.0/source/boost_1_88_0.zip"
           $boostZip = "$env:TEMP\boost_1_88_0.zip"
           Invoke-WebRequest -Uri $boostUrl -OutFile $boostZip
           Expand-Archive -Path $boostZip -DestinationPath "$env:TEMP"
-          
+              
           # Copy headers
           Copy-Item -Path "$env:TEMP\boost_1_88_0\boost" -Destination "C:/Boost/include/boost-1_88" -Recurse
-          
-          # Build Boost
-          cd "$env:TEMP\boost_1_88_0"
-          .\bootstrap.bat gcc
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static runtime-link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
 
         shell: pwsh
 
+      - name: Build Boost
+        if: steps.cache-boost.outputs.cache-hit != 'true'
+        run: |
+          # Build Boost
+          cd "$env:TEMP\boost_1_88_0"
+          .\bootstrap.bat gcc
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=release link=static threading=multi address-model=64 -j4 install --prefix=C:/Boost
+        shell: pwsh
+
       - name: Cache GLM Library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-glm-windows
         with:
           path: ${{ github.workspace }}\include\glm
-          key: ${{ runner.os }}-glm-0.9.9.8
+          key: ${{ runner.os }}-glm-0.9.9.8-stable
 
       - name: Install GLM Library
         if: steps.cache-glm-windows.outputs.cache-hit != 'true'
@@ -209,11 +234,11 @@ jobs:
           echo "GLM_INCLUDE_DIR=${{ github.workspace }}\include\glm" >> $env:GITHUB_ENV
 
       - name: Cache GLFW Library
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-glfw-windows
         with:
           path: ${{ github.workspace }}\include\glfw
-          key: ${{ runner.os }}-glfw-3.3.8
+          key: ${{ runner.os }}-glfw-3.3.8-stable
 
       - name: Install GLFW Library
         if: steps.cache-glfw-windows.outputs.cache-hit != 'true'
@@ -229,21 +254,19 @@ jobs:
           cmake-version: '3.14'
 
       - name: Cache shader compilation
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             shaders/*.spv
           key: ${{ runner.os }}-shaders-${{ hashFiles('shaders/**/*.vert', 'shaders/**/*.frag') }}
-          restore-keys: |
-            ${{ runner.os }}-shaders-
 
       - name: Cache CMake build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             build/
             ~\.cmake\
-          key: ${{ runner.os }}-cmake-mingw-${{ hashFiles('**/*.cpp', '**/*.h', '**/CMakeLists.txt') }}
+          key: ${{ runner.os }}-cmake-mingw-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-cmake-mingw-
 
@@ -293,7 +316,7 @@ jobs:
       
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: VulkanEngine ${{ steps.get_tag.outputs.TAG_NAME }}
           tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}

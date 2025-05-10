@@ -127,26 +127,71 @@ void VulkanCore::pickPhysicalDevice()
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-    std::string errorMessages;
-
+    // Estrutura para armazenar dispositivo e sua pontuação
+    struct RatedDevice {
+        VkPhysicalDevice device;
+        int score;
+        std::string reason;
+    };
+    
+    std::vector<RatedDevice> ratedDevices;
+    
     for (const auto& device : devices)
     {
         std::string reason;
-        if (isDeviceSuitable(device, &reason))
-        {
-            physicalDevice = device;
-            return;
-        }
-        else
-        {
-            errorMessages += reason + "\n";
+        bool suitable = isDeviceSuitable(device, &reason);
+        
+        if (suitable) {
+            VkPhysicalDeviceProperties deviceProperties;
+            vkGetPhysicalDeviceProperties(device, &deviceProperties);
+            
+            int score = 0;
+            
+            // Preferência para GPUs dedicadas
+            if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+                score += 1000;
+            }
+            
+            // Considerar tamanho da memória
+            VkPhysicalDeviceMemoryProperties memProperties;
+            vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
+            
+            VkDeviceSize totalMemory = 0;
+            for (uint32_t i = 0; i < memProperties.memoryHeapCount; i++) {
+                if (memProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+                    totalMemory += memProperties.memoryHeaps[i].size;
+                }
+            }
+            
+            // Adicionar pontos baseados na memória (1 ponto por GB)
+            score += static_cast<int>(totalMemory / (1024 * 1024 * 1024));
+            
+            ratedDevices.push_back({device, score, reason});
+        } else {
+            ratedDevices.push_back({device, 0, reason});
         }
     }
-
+    
+    // Ordenar dispositivos por pontuação (maior primeiro)
+    std::sort(ratedDevices.begin(), ratedDevices.end(), 
+              [](const RatedDevice& a, const RatedDevice& b) {
+                  return a.score > b.score;
+              });
+    
+    // Selecionar o dispositivo com maior pontuação se for adequado
+    if (!ratedDevices.empty() && ratedDevices[0].score > 0) {
+        physicalDevice = ratedDevices[0].device;
+        return;
+    }
+    
+    // Se chegamos aqui, nenhum dispositivo adequado foi encontrado
+    std::string errorMessages;
+    for (const auto& rated : ratedDevices) {
+        errorMessages += rated.reason + "\n";
+    }
+    
     throw std::runtime_error("Nenhuma GPU adequada foi encontrada:\n" + errorMessages);
 }
-
-
 
 void VulkanCore::createLogicalDevice()
 {
@@ -1234,10 +1279,13 @@ bool VulkanCore::isDeviceSuitable(VkPhysicalDevice device, std::string* outReaso
         return false;
     }
 
-    if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+    // Remova ou modifique a verificação de GPU dedicada
+    // Agora aceitamos tanto GPUs dedicadas quanto integradas
+    if (deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && 
+        deviceProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
     {
         if (outReason)
-            *outReason += " não é uma GPU dedicada.";
+            *outReason += " não é uma GPU dedicada nem integrada.";
         return false;
     }
 

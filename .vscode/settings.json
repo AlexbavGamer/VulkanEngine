@@ -106,5 +106,19 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "xutility": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": true,
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+    "cmake.installPrefix": "${workspaceFolder}/install/${buildType}",
+    "cmake.generator": "Ninja",
+    "cmake.parallelJobs": 0,
+    "cmake.debugConfig": {
+        "stopAtEntry": false,
+        "MIMode": "gdb",
+        "miDebuggerPath": "gdb"
+    },
+    "cmake.configureSettings": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+    },
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
