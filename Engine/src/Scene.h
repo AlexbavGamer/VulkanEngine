@@ -36,6 +36,11 @@ public:
     }
     std::shared_ptr<Entity> createLightEntity(LightComponent::LightType lightType = LightComponent::LightType::Point);
     
+    CameraComponent getActiveCamera() const
+    {
+        return cameraEntity->getComponent<CameraComponent>();
+    }
+    
     void updateCamera();
     void handleMouseInput(GLFWwindow* window, double xpos, double ypos);
     void handleKeyboardInput(GLFWwindow *window);

@@ -62,6 +62,7 @@ public:
     {
         children.push_back(child);
         child->parent = shared_from_this();
+        updateTransformHierarchy();
     }
 
     // Remove um filho
@@ -137,4 +138,6 @@ public:
     {
         return components.find(std::type_index(typeid(T))) != components.end();
     }
+
+    void updateTransformHierarchy();
 };

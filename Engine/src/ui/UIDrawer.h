@@ -34,7 +34,8 @@ private:
     void DrawInspector(T& obj, const std::string_view& title = typeid(T).name());
     void handleGizmoOperations();
     void updateEntityTransform(std::shared_ptr<Entity>& selectedEntity);
-    void setupGizmo(const ImVec2& viewportPos, const ImVec2& viewportSize);
+    void setupImGuizmoView(const ImVec2& windowPos, const ImVec2& windowSize, const glm::mat4& viewMatrix, const glm::mat4& projMatrix);
+    bool manipulateTransform(std::shared_ptr<Entity>& selectedEntity, const glm::mat4& viewMatrix, const glm::mat4& projMatrix);
 private:
     const char *createProjectFileDialogKey = "ChooseProjectDirectoryKey";
     const char *openProjectFileDialogKey = "OpenProjectFileKey";

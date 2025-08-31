@@ -5,10 +5,6 @@ if(POLICY CMP0144)
     cmake_policy(SET CMP0144 NEW)
 endif()
 
-if(POLICY CMP0167)
-    cmake_policy(SET CMP0167 OLD)
-endif()
-
 message(STATUS "Starting VulkanEngine CMake configuration...")
 
 # Para Linux, verificar e instalar dependências necessárias
@@ -141,8 +137,6 @@ if(WIN32)
     set(Boost_USE_STATIC_RUNTIME ON)
     add_definitions(-DBOOST_ALL_NO_LIB)
     add_definitions(-DBOOST_THREAD_USE_LIB)
-
-    set(Boost_DEBUG 1) # Debug pra ver onde tá procurando
 
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_ROOT}/Modules")
 

@@ -20,7 +20,9 @@ template <typename T>
 constexpr bool is_hana_struct_v = hana::Struct<std::decay_t<T>>::value;
 
 
-UIDrawer::UIDrawer(VulkanCore *core) : core(core) {}
+UIDrawer::UIDrawer(VulkanCore *core) : core(core) {
+    ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
+}
 
 void UIDrawer::drawMainMenuBar()
 {
@@ -52,29 +54,33 @@ void UIDrawer::drawMainMenuBar()
     }
 }
 
-void UIDrawer::drawSceneWindow(VkDescriptorSet sceneDescriptorSet, std::shared_ptr<Entity> &selectedEntity)
-{
+void UIDrawer::drawSceneWindow(VkDescriptorSet sceneDescriptorSet, std::shared_ptr<Entity>& selectedEntity) {
     // Configuração inicial da janela da cena
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    
+    // Obter o tamanho e posição da janela
+    ImVec2 windowPos = ImGui::GetWindowPos();
+    ImVec2 windowSize = ImGui::GetWindowSize();
+    
+    // Renderizar a textura da cena
+    ImGui::Image((ImTextureID)sceneDescriptorSet, windowSize);
+    
+    Scene* scene = core->getScene();
 
-    // Configuração da viewport
-    ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-    ImVec2 viewportPos = ImGui::GetWindowContentRegionMin();
-    viewportPos.x += ImGui::GetWindowPos().x;
-    viewportPos.y += ImGui::GetWindowPos().y;
-
-    // Renderiza a textura da cena
-    ImGui::Image((ImTextureID)sceneDescriptorSet, viewportSize, ImVec2(0, 0), ImVec2(1, 1));
-
-    // Manipulação do Gizmo
-    if (selectedEntity && selectedEntity->hasComponent<TransformComponent>())
-    {
-        handleGizmoOperations();
-        setupGizmo(viewportPos, viewportSize);
-        updateEntityTransform(selectedEntity);
+    // Obter as matrizes de visualização e projeção da câmera atual
+    auto camera = scene->getActiveCamera();
+    glm::mat4 viewMatrix = camera.getViewMatrix();
+    glm::mat4 projMatrix = camera.getProjectionMatrix();
+    
+    // Configurar o ImGuizmo
+    setupImGuizmoView(windowPos, windowSize, viewMatrix, projMatrix);
+    
+    // Manipular a transformação se houver uma entidade selecionada
+    if (selectedEntity) {
+        manipulateTransform(selectedEntity, viewMatrix, projMatrix);
     }
-
+    
     ImGui::End();
     ImGui::PopStyleVar();
 }
@@ -89,11 +95,96 @@ void UIDrawer::handleGizmoOperations()
         currentGizmoOperation = ImGuizmo::SCALE;
 }
 
-void UIDrawer::setupGizmo(const ImVec2& viewportPos, const ImVec2& viewportSize)
+void UIDrawer::setupImGuizmoView(const ImVec2& windowPos, const ImVec2& windowSize, const glm::mat4& viewMatrix, const glm::mat4& projMatrix)
 {
-    ImGuizmo::SetOrthographic(false);
     ImGuizmo::SetDrawlist();
-    ImGuizmo::SetRect(viewportPos.x, viewportPos.y, viewportSize.x, viewportSize.y);
+    ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
+    ImGuizmo::SetOrthographic(false); // Use projeção perspectiva
+}
+
+bool UIDrawer::manipulateTransform(std::shared_ptr<Entity> &selectedEntity, const glm::mat4 &viewMatrix, const glm::mat4 &projMatrix)
+{
+    if (!selectedEntity) return false;
+    
+    // Obter o componente de transformação
+    auto& transform = selectedEntity->getComponent<TransformComponent>();
+    
+    // Obter a matriz de transformação atual
+    glm::mat4 modelMatrix = transform.getLocalMatrix();
+    
+    // Configurar o modo de operação do ImGuizmo
+    static ImGuizmo::OPERATION currentOperation = ImGuizmo::TRANSLATE;
+    static ImGuizmo::MODE currentMode = ImGuizmo::LOCAL;
+    
+    // Permitir alternar entre modos com teclas
+    if (ImGui::IsKeyPressed(ImGuiKey_T))
+        currentOperation = ImGuizmo::TRANSLATE;
+    if (ImGui::IsKeyPressed(ImGuiKey_R))
+        currentOperation = ImGuizmo::ROTATE;
+    if (ImGui::IsKeyPressed(ImGuiKey_S))
+        currentOperation = ImGuizmo::SCALE;
+    if (ImGui::IsKeyPressed(ImGuiKey_G))
+        currentMode = (currentMode == ImGuizmo::LOCAL) ? ImGuizmo::WORLD : ImGuizmo::LOCAL;
+    
+    // Criar controles para o modo de operação
+    ImGui::Begin("Gizmo Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    if (ImGui::RadioButton("Translate", currentOperation == ImGuizmo::TRANSLATE))
+        currentOperation = ImGuizmo::TRANSLATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Rotate", currentOperation == ImGuizmo::ROTATE))
+        currentOperation = ImGuizmo::ROTATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Scale", currentOperation == ImGuizmo::SCALE))
+        currentOperation = ImGuizmo::SCALE;
+    
+    ImGui::Separator();
+    if (ImGui::RadioButton("Local", currentMode == ImGuizmo::LOCAL))
+        currentMode = ImGuizmo::LOCAL;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("World", currentMode == ImGuizmo::WORLD))
+        currentMode = ImGuizmo::WORLD;
+    ImGui::End();
+    
+    // Manipular a transformação
+    float snapValues[3] = {1.0f, 45.0f, 0.5f}; // Snap values para translate, rotate, scale
+    bool snap = ImGui::IsKeyDown(ImGuiKey_LeftCtrl);
+    
+    // Matriz temporária para manipulação
+    glm::mat4 deltaMatrix = modelMatrix;
+    
+    // Manipular a transformação
+    ImGuizmo::Manipulate(
+        glm::value_ptr(viewMatrix),
+        glm::value_ptr(projMatrix),
+        currentOperation,
+        currentMode,
+        glm::value_ptr(deltaMatrix),
+        nullptr,
+        snap ? snapValues : nullptr
+    );
+    
+    // Verificar se houve alteração
+    if (ImGuizmo::IsUsing()) {
+        // Extrair os componentes da matriz
+        glm::vec3 position, rotation, scale;
+        ImGuizmo::DecomposeMatrixToComponents(
+            glm::value_ptr(deltaMatrix),
+            glm::value_ptr(position),
+            glm::value_ptr(rotation),
+            glm::value_ptr(scale)
+        );
+        
+        // Atualizar o componente de transformação
+        transform.worldPosition = position;
+        transform.worldRotation = glm::quat(glm::radians(rotation));
+        transform.worldScale = scale;
+
+        selectedEntity->updateTransformHierarchy();
+        
+        return true;
+    }
+    
+    return false;
 }
 
 void UIDrawer::updateEntityTransform(std::shared_ptr<Entity>& selectedEntity)

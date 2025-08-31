@@ -186,7 +186,7 @@ jobs:
           # Build Boost
           cd "$env:TEMP\boost_1_88_0"
           .\bootstrap.bat mingw
-          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=debug,release link=static threading=multi -j4 install --prefix=C:/Boost
+          .\b2 --with-filesystem --with-system --with-thread --with-chrono toolset=gcc variant=debug,release link=static threading=multi -j4 install --prefix=C:/Boost --includedir=C:/Boost/include --libdir=C:/Boost/lib
 
         shell: pwsh
 
